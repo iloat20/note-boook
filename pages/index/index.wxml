@@ -1,0 +1,20 @@
+<!--pages/index/index.wxml-->
+<view class="home">
+  <view class="header">
+    <text class="title">记事本</text>
+  </view>
+  <view class="date-list">
+    <view 
+      wx:for="{{dates}}" 
+      wx:key="item"
+      class="date-item"
+      bindtap="navigateToChat"
+      data-date="{{item}}"
+    >
+      {{formatDate(item)}}
+    </view>
+    <view class="date-item new-date" bindtap="navigateToChat" data-date="{{today}}">
+      今天
+    </view>
+  </view>
+</view>

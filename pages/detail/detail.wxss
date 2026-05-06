@@ -1,0 +1,17 @@
+/* Minimal + Spatial UI - 详情页 */
+
+.record-item-card {
+  min-height: 44px;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.record-item-card.dissolving {
+  opacity: 0;
+  transform: scaleY(0.6);
+  filter: blur(6px);
+  max-height: 0;
+  margin-bottom: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  overflow: hidden;
+}

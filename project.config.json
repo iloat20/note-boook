@@ -5,6 +5,7 @@
     "minified": true,
     "uglifyFileName": false,
     "enhance": true,
+    "urlCheck": true,
     "packNpmRelationList": [],
     "babelSetting": {
       "ignore": [],
@@ -12,7 +13,37 @@
       "outputPath": ""
     },
     "useCompilerPlugins": false,
-    "minifyWXML": true
+    "minifyWXML": true,
+    "minifyWXSS": true,
+    "autoAudits": true,
+    "showShadowRootInWxmlPanel": true,
+    "packNpmManually": false,
+    "packNpmRelationList": [],
+    "minifyWXSS": true,
+    "showES6CompileOption": false,
+    "checkInvalidKey": true,
+    "checkSiteMap": true,
+    "uploadWithSourceMap": true,
+    "compileHotReLoad": false,
+    "lazyloadPlaceholderEnable": false,
+    "useMultiFrameRuntime": true,
+    "useApiHook": true,
+    "useApiHostProcess": true,
+    "babelSetting": {
+      "ignore": [],
+      "disablePlugins": [],
+      "outputPath": ""
+    },
+    "enableEngineNative": false,
+    "useIsolateContext": true,
+    "userConfirmedBundleSwitch": false,
+    "packNpmMode": "npm",
+    "minifyWASM": false,
+    "showStaticServerLog": true,
+    "useCachingCompiler": true,
+    "ignoreUploadUnusedFiles": true,
+    "nodeModules": false,
+    "useSrcMode": false
   },
   "compileType": "miniprogram",
   "simulatorPluginLibVersion": {},
@@ -20,6 +51,11 @@
     "ignore": [],
     "include": []
   },
-  "appid": "wx8f5fc9d867d731a6",
-  "editorSetting": {}
+  "appid": "wxba8f2431319cc32e",
+  "projectname": "股票交易记录",
+  "condition": {},
+  "editorSetting": {
+    "tabIndent": "insertSpaces",
+    "tabSize": 2
+  }
 }

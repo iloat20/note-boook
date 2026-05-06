@@ -1,0 +1,65 @@
+<view class="page-container">
+  <view style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
+    <view bindtap="goBack" style="min-height: 44px; display: flex; align-items: center; padding-right: 8px;">
+      <text class="body" style="color: var(--color-accent); font-size: 17px;">←</text>
+    </view>
+    <text class="display">{{isEdit ? '编辑分红' : '添加分红'}}</text>
+  </view>
+
+  <scroll-view class="scroll-container" scroll-y>
+    <text class="title" style="display: block; margin-bottom: 12px;">分红信息</text>
+    <view class="card section">
+      <view style="margin-bottom: 12px;">
+        <text class="caption" style="display: block; margin-bottom: 4px;">选择股票</text>
+        <picker mode="selector" :range="stockOptions" range-key="label" bindchange="selStock">
+          <view class="input" style="display: flex; align-items: center; justify-content: space-between;">
+            <text>{{stockText}}</text>
+            <text class="caption">›</text>
+          </view>
+        </picker>
+      </view>
+      <view style="margin-bottom: 12px;">
+        <text class="caption" style="display: block; margin-bottom: 4px;">每股分红金额</text>
+        <input class="input" style="width: 100%;" type="digit" placeholder="0.00" value="{{perShare}}" bindinput="onPS"/>
+      </view>
+      <view style="margin-bottom: 12px;">
+        <text class="caption" style="display: block; margin-bottom: 4px;">分红数量（股）</text>
+        <input class="input" style="width: 100%;" type="digit" placeholder="0" value="{{qty}}" bindinput="onQty"/>
+      </view>
+      <view style="margin-bottom: 12px;">
+        <text class="caption" style="display: block; margin-bottom: 4px;">分红日期</text>
+        <picker mode="date" value="{{date}}" bindchange="onDate">
+          <view class="input" style="display: flex; align-items: center; justify-content: space-between;">
+            <text>{{date || '选择日期'}}</text>
+            <text class="caption">›</text>
+          </view>
+        </picker>
+      </view>
+      <view>
+        <text class="caption" style="display: block; margin-bottom: 4px;">备注（选填）</text>
+        <textarea class="input" style="width: 100%; height: 80px; padding: 12px;" placeholder="添加备注..." value="{{note}}" bindinput="onNote"/>
+      </view>
+    </view>
+
+    <view class="section">
+      <text class="title" style="display: block; margin-bottom: 12px;">预览</text>
+      <view class="card-sm">
+        <view style="display: flex; justify-content: space-between; padding: 8px 0;">
+          <text class="body">每股分红</text>
+          <text class="body" style="color: var(--color-title);">{{perShareText}}</text>
+        </view>
+        <view style="display: flex; justify-content: space-between; padding: 8px 0;">
+          <text class="body">分红数量</text>
+          <text class="body" style="color: var(--color-title);">{{qty}}股</text>
+        </view>
+        <view style="display: flex; justify-content: space-between; padding: 8px 0; border-top: 1px solid var(--color-separator);">
+          <text class="body" style="font-weight: var(--weight-title); color: var(--color-title);">分红总额</text>
+          <text class="body profit" style="font-weight: var(--weight-title);">+{{totalText}}</text>
+        </view>
+      </view>
+    </view>
+    <view style="height: 100px;"></view>
+  </scroll-view>
+
+  <view class="cta-btn" style="margin: 0 var(--space-page); position: fixed; bottom: calc(20px + env(safe-area-inset-bottom)); left: 0; right: 0; z-index: 10;" bindtap="submit">{{isEdit ? '保存修改' : '确认添加'}}</view>
+</view>

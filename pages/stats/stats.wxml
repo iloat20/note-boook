@@ -1,0 +1,100 @@
+<view class="page-container">
+  <view class="display" style="margin-bottom: 20px;">统计</view>
+
+  <view style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: var(--space-module);">
+    <view class="card-sm">
+      <text class="caption" style="display: block;">投入</text>
+      <text class="body" style="color: var(--color-title); font-weight: var(--weight-title); margin-top: 4px;">{{stats.totalInvestmentText}}</text>
+    </view>
+    <view class="card-sm">
+      <text class="caption" style="display: block;">回收</text>
+      <text class="body" style="color: var(--color-title); font-weight: var(--weight-title); margin-top: 4px;">{{stats.totalRecoverText}}</text>
+    </view>
+    <view class="card-sm">
+      <text class="caption" style="display: block;">盈亏</text>
+      <text class="body {{stats.totalPnL >= 0 ? 'profit' : 'loss'}}" style="font-weight: var(--weight-title); margin-top: 4px;">
+        {{stats.totalPnL >= 0 ? '+' : ''}}{{stats.totalPnLText}}
+      </text>
+    </view>
+  </view>
+
+  <view class="tab-bar-line">
+    <view 
+      wx:for="{{periodTabs}}" 
+      wx:key="key"
+      class="tab-line-item {{currentPeriod === item.key ? 'tab-line-active' : ''}}"
+      bindtap="switchPeriod"
+      data-period="{{item.key}}"
+    >{{item.label}}</view>
+  </view>
+
+  <scroll-view class="scroll-container" scroll-y>
+    <view class="section">
+      <text class="title" style="display: block; margin-bottom: 12px;">盈亏趋势</text>
+      <view class="card">
+        <view class="bar-chart">
+          <view class="chart-y-axis">
+            <text wx:for="{{yAxisLabels}}" wx:key="*this" class="caption">{{item}}</text>
+          </view>
+          <view class="chart-bars">
+            <view wx:for="{{chartData}}" wx:key="label" class="bar-item">
+              <view class="bar-wrap">
+                <view class="bar {{item.pnL >= 0 ? 'bar-profit' : 'bar-loss'}}" style="height: {{item.height}}%;">
+                  <text wx:if="{{item.showValue}}" class="bar-val">{{item.pnL >= 0 ? '+' : ''}}{{item.pnLText}}</text>
+                </view>
+              </view>
+              <text class="caption" style="font-size: 10px; text-align: center; margin-top: 4px;">{{item.label}}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="section">
+      <text class="title" style="display: block; margin-bottom: 12px;">累计收益</text>
+      <view class="card" style="position: relative;">
+        <view class="line-chart">
+          <view class="chart-y-axis">
+            <text wx:for="{{cumYAxisLabels}}" wx:key="*this" class="caption">{{item}}</text>
+          </view>
+          <view class="line-area">
+            <view wx:for="{{cumChartData}}" wx:key="label" class="line-dot" style="left: {{item.x}}%; bottom: {{item.y}}%;">
+              <view class="dot {{item.isMax ? 'dot-max' : ''}} {{item.isMin ? 'dot-min' : ''}}"></view>
+              <text class="dot-val">{{item.cumulativeText}}</text>
+            </view>
+          </view>
+        </view>
+        <view class="line-x-axis">
+          <text wx:for="{{cumChartData}}" wx:key="label" class="caption" style="font-size: 10px;">{{item.label}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="section">
+      <text class="title" style="display: block; margin-bottom: 12px;">交易热力图</text>
+      <view class="card">
+        <view class="heatmap-header">
+          <view class="heatmap-nav" bindtap="prevMonth">‹</view>
+          <text class="body" style="color: var(--color-title); font-weight: var(--weight-title);">{{heatmapLabel}}</text>
+          <view class="heatmap-nav" bindtap="nextMonth">›</view>
+        </view>
+        <view class="heatmap-grid">
+          <view wx:for="{{heatmapData}}" wx:key="day" class="heatmap-cell heatmap-level-{{item.level}}" wx:if="{{item.day > 0}}">
+            <text class="heatmap-day">{{item.day}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="section">
+      <text class="title" style="display: block; margin-bottom: 12px;">明细</text>
+      <view class="card">
+        <view wx:for="{{detailItems}}" wx:key="label" style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--color-separator);">
+          <text class="body">{{item.label}}</text>
+          <text class="body {{item.colorClass}}" style="font-weight: var(--weight-title);">{{item.prefix}}{{item.value}}</text>
+        </view>
+      </view>
+    </view>
+    <view style="height: 100px;"></view>
+  </scroll-view>
+</view>

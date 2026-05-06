@@ -1,0 +1,144 @@
+/* Minimal + Spatial UI - 统计页 */
+
+/* === Bar Chart === */
+.bar-chart {
+  display: flex;
+  height: 240px;
+}
+.chart-y-axis {
+  width: 80px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding-right: 8px;
+  text-align: right;
+}
+.chart-bars {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+  border-left: 1px solid var(--color-separator);
+  border-bottom: 1px solid var(--color-separator);
+  padding: 0 4px;
+}
+.bar-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+}
+.bar-wrap {
+  width: 24px;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  position: relative;
+}
+.bar {
+  width: 100%;
+  border-radius: 3px 3px 0 0;
+  min-height: 4px;
+  position: relative;
+}
+.bar-profit { background: var(--color-profit); }
+.bar-loss { background: var(--color-loss); }
+.bar-val {
+  position: absolute;
+  top: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  white-space: nowrap;
+  color: var(--color-caption);
+}
+
+/* === Line Chart === */
+.line-chart {
+  display: flex;
+  height: 200px;
+}
+.line-area {
+  flex: 1;
+  position: relative;
+  border-left: 1px solid var(--color-separator);
+  border-bottom: 1px solid var(--color-separator);
+}
+.line-dot {
+  position: absolute;
+  transform: translate(-50%, 50%);
+}
+.dot {
+  width: 10px;
+  height: 10px;
+  background: var(--color-accent);
+  border-radius: 50%;
+  border: 2px solid #FFF;
+  box-shadow: var(--shadow-sm);
+}
+.dot-val {
+  position: absolute;
+  top: -22px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  white-space: nowrap;
+  color: var(--color-caption);
+}
+.line-x-axis {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0 0 80px;
+  border-top: 1px solid transparent;
+}
+
+/* === Heatmap === */
+.heatmap-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.heatmap-nav {
+  min-height: 44px;
+  min-width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-caption);
+  font-size: 24px;
+}
+.heatmap-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+.heatmap-cell {
+  aspect-ratio: 1;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.heatmap-day {
+  font-size: 10px;
+}
+.heatmap-level-0 { background: #F0F0F5; }
+.heatmap-level-1 { background: #FFE0D0; }
+.heatmap-level-2 { background: #FFC0A0; }
+.heatmap-level-3 { background: #FF8C5A; }
+.heatmap-level-4 { background: var(--color-accent); }
+
+/* === Cum Chart Extremes === */
+.dot-max {
+  width: 14px;
+  height: 14px;
+  background: var(--color-profit);
+}
+.dot-min {
+  width: 14px;
+  height: 14px;
+  background: var(--color-loss);
+}

@@ -1,0 +1,75 @@
+/* Minimal + Spatial UI - 流水页 */
+
+.market-chips {
+  margin-bottom: var(--space-module);
+  white-space: nowrap;
+}
+
+.market-chips .chip {
+  flex-shrink: 0;
+}
+
+.record-card:active {
+  opacity: 0.7;
+}
+
+/* === Liquid Slider === */
+.liquid-slider {
+  display: flex;
+  position: relative;
+  background: var(--color-surface);
+  border-radius: 12px;
+  padding: 4px;
+  box-shadow: var(--shadow-sm);
+}
+
+.liquid-slider-bg {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  background: var(--color-title);
+  border-radius: 10px;
+  transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 0;
+}
+
+.liquid-slider-item {
+  flex: 1;
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  padding: 8px 0;
+  font-size: var(--font-caption);
+  color: var(--color-caption);
+  border-radius: 10px;
+  transition: color 0.3s ease;
+}
+
+.liquid-slider-item.active {
+  color: #FFFFFF;
+  font-weight: var(--weight-title);
+}
+
+/* === Dissolve Delete === */
+.dissolving {
+  animation: dissolve 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  pointer-events: none;
+}
+
+@keyframes dissolve {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(0.95);
+    filter: blur(2px);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.85);
+    filter: blur(6px);
+  }
+}

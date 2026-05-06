@@ -1,0 +1,50 @@
+<view class="page-container">
+  <view class="display" style="margin-bottom: 20px;">流水</view>
+
+  <view class="liquid-slider" style="margin-bottom: 16px; position: relative;">
+    <view class="liquid-slider-bg" style="left: {{sliderLeft}}px; width: {{sliderWidth}}px;"></view>
+    <view wx:for="{{filterTabs}}" wx:key="key" class="liquid-slider-item {{currentFilter === item.key ? 'active' : ''}}" bindtap="switchFilter" data-filter="{{item.key}}">{{item.label}}</view>
+  </view>
+
+  <scroll-view scroll-x class="market-chips">
+    <view style="display: flex; gap: 8px; padding-bottom: 12px; white-space: nowrap;">
+      <view 
+        wx:for="{{marketTabs}}" 
+        wx:key="key"
+        class="chip {{currentMarket === item.key ? 'chip-active' : ''}}"
+        bindtap="switchMarket"
+        data-market="{{item.key}}"
+      >{{item.label}}</view>
+    </view>
+  </scroll-view>
+
+  <scroll-view wx:if="{{groupedHistory.length > 0}}" class="scroll-container" scroll-y>
+    <view wx:for="{{groupedHistory}}" wx:key="date" class="section">
+      <text class="caption" style="display: block; margin-bottom: 12px;">{{item.date}}</text>
+
+      <view wx:for="{{item.items}}" wx:key="id" wx:for-item="record" wx:for-index="index" class="card-sm {{dissolvingId === record.id ? 'dissolving' : ''}}" style="margin-bottom: 8px;" data-record="{{record}}" data-index="{{index}}" bindlongpress="showActions">
+        <view style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+          <view class="tag market-{{record.market === 'A_SHARE' ? 'a' : record.market === 'HK_SHARE' ? 'hk' : 'us'}}">{{record.marketLabel}}</view>
+          <text class="body" style="color: var(--color-title); font-weight: var(--weight-title);">{{record.code}}</text>
+          <text class="caption">{{record.name}}</text>
+          <view class="tag" style="margin-left: auto; background: {{record.type === 'BUY' ? '#E8F5E9' : record.type === 'SELL' ? '#FFEBEE' : '#FFF3E0'}}; color: {{record.type === 'BUY' ? '#2E7D32' : record.type === 'SELL' ? '#C62828' : '#E65100'}};">
+            {{record.typeText}}
+          </view>
+        </view>
+
+        <view style="display: flex; justify-content: space-between; align-items: center;">
+          <text class="caption">{{record.time}}</text>
+          <text class="body {{record.type === 'BUY' ? 'loss' : 'profit'}}" style="font-weight: var(--weight-title);">
+            {{record.type === 'BUY' ? '-' : '+'}}{{record.amountText}}
+          </text>
+        </view>
+      </view>
+    </view>
+    <view style="height: 100px;"></view>
+  </scroll-view>
+
+  <view wx:else class="empty-state">
+    <text class="empty-title">暂无记录</text>
+    <text class="empty-desc">开始记录您的每一笔交易</text>
+  </view>
+</view>

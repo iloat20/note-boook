@@ -1,42 +1,18 @@
-/* pages/index/index.wxss */
-.home {
-  padding: 20rpx;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
+/* Minimal + Spatial UI - 首页 持仓 */
+
+page {
+  background: var(--color-bg);
 }
 
-.header {
-  margin-bottom: 30rpx;
-  text-align: center;
+.position-card:active {
+  opacity: 0.7;
 }
 
-.title {
-  font-size: 36rpx;
-  font-weight: bold;
-  color: #333;
-}
-
-.date-list {
-  flex: 1;
-  overflow-y: auto;
-}
-
-.date-item {
-  padding: 30rpx;
-  margin-bottom: 20rpx;
-  background-color: white;
-  border-radius: 16rpx;
-  box-shadow: 0 4rpx 8rpx rgba(0, 0, 0, 0.1);
-  cursor: pointer;
-  transition: background-color 0.3s;
-}
-
-.date-item:hover {
-  background-color: #f0f0f0;
-}
-
-.new-date {
-  background-color: #e3f2fd;
-  font-weight: bold;
+.price-input {
+  background: transparent;
+  text-align: right;
+  padding-right: 0;
+  font-size: var(--font-body);
+  color: var(--color-title);
+  font-weight: var(--weight-title);
 }

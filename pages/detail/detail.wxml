@@ -1,0 +1,116 @@
+<view class="page-container">
+  <view style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
+    <view bindtap="goBack" style="min-height: 44px; display: flex; align-items: center; padding-right: 8px;">
+      <text class="body" style="color: var(--color-accent); font-size: 17px;">←</text>
+    </view>
+    <text class="display">{{stockName}}</text>
+  </view>
+
+  <scroll-view wx:if="{{stock}}" class="scroll-container" scroll-y>
+    <view style="display: flex; align-items: center; gap: 8px; margin-bottom: var(--space-module);">
+      <view class="tag market-{{stock.market === 'A_SHARE' ? 'a' : stock.market === 'HK_SHARE' ? 'hk' : 'us'}}">{{marketLabel}}</view>
+      <text class="title">{{stock.code}}</text>
+      <text class="body">{{stock.name}}</text>
+    </view>
+
+    <text class="title" style="display: block; margin-bottom: 12px;">持仓信息</text>
+    <view class="card section">
+      <view style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px 12px;">
+        <view>
+          <text class="caption">持仓数量</text>
+          <view class="body" style="color: var(--color-title); margin-top: 2px;">{{position.quantity}}股</view>
+        </view>
+        <view>
+          <text class="caption">成本价</text>
+          <view class="body" style="color: var(--color-title); margin-top: 2px;">{{formatAvgCost}}</view>
+        </view>
+        <view>
+          <text class="caption">现价</text>
+          <input class="input" type="digit" placeholder="--" value="{{position.currentPrice || ''}}" bindblur="updatePrice" style="margin-top: 2px;"/>
+        </view>
+        <view>
+          <text class="caption">市值</text>
+          <view class="body" style="color: var(--color-title); margin-top: 2px;">{{formatMarketValue}}</view>
+        </view>
+      </view>
+    </view>
+
+    <text class="title" style="display: block; margin-bottom: 12px;">盈亏统计</text>
+    <view class="card section">
+      <view style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px 12px;">
+        <view>
+          <text class="caption">浮动盈亏</text>
+          <view class="body {{floatingPnLClass}}" style="font-weight: var(--weight-title); margin-top: 2px;">{{floatingPnLText}}</view>
+        </view>
+        <view>
+          <text class="caption">盈亏比例</text>
+          <view class="body {{floatingPnLClass}}" style="font-weight: var(--weight-title); margin-top: 2px;">{{floatingPnLPercent}}%</view>
+        </view>
+        <view>
+          <text class="caption">已实现盈亏</text>
+          <view class="body {{realizedPnLClass}}" style="font-weight: var(--weight-title); margin-top: 2px;">{{realizedPnLText}}</view>
+        </view>
+        <view>
+          <text class="caption">分红收益</text>
+          <view class="body profit" style="font-weight: var(--weight-title); margin-top: 2px;">+{{formatDividendIncome}}</view>
+        </view>
+      </view>
+      <view style="display: flex; justify-content: space-between; padding-top: 16px; margin-top: 12px; border-top: 1px solid var(--color-separator);">
+        <text class="body" style="font-weight: var(--weight-title); color: var(--color-title);">总盈亏</text>
+        <text class="body {{totalPnLClass}}" style="font-weight: var(--weight-display);">{{totalPnLText}}</text>
+      </view>
+    </view>
+
+    <view class="section">
+      <view class="section-header">
+        <text class="title">交易记录</text>
+        <view class="text-btn" bindtap="goToRecord" style="font-size: var(--font-caption);">+ 添加</view>
+      </view>
+      <view wx:if="{{transactions.length > 0}}">
+        <view wx:for="{{transactions}}" wx:key="id" class="card-sm record-item-card {{disTransId === item.id ? 'dissolving' : ''}}" style="margin-bottom: 8px;" bindtap="showTransactionActions" data-id="{{item.id}}" data-type="transaction">
+          <view style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+            <view class="tag" style="background: {{item.type === 'BUY' ? '#E8F5E9' : '#FFEBEE'}}; color: {{item.type === 'BUY' ? '#2E7D32' : '#C62828'}};">{{item.typeText}}</view>
+            <text class="caption">{{item.dateText}} {{item.timeText}}</text>
+          </view>
+          <view style="display: flex; gap: 16px;">
+            <text class="caption">价格: {{item.priceText}}</text>
+            <text class="caption">数量: {{item.quantity}}股</text>
+            <text class="caption">手续费: {{item.feeText}}</text>
+          </view>
+        </view>
+      </view>
+      <view wx:else class="card-sm" style="text-align: center;">
+        <text class="caption">暂无交易记录</text>
+      </view>
+    </view>
+
+    <view class="section">
+      <view class="section-header">
+        <text class="title">分红记录</text>
+        <view class="text-btn" bindtap="goToDividend" style="font-size: var(--font-caption);">+ 添加</view>
+      </view>
+      <view wx:if="{{dividends.length > 0}}">
+        <view wx:for="{{dividends}}" wx:key="id" class="card-sm record-item-card {{disDivId === item.id ? 'dissolving' : ''}}" style="margin-bottom: 8px;"
+bindtap="showDividendActions" data-id="{{item.id}}" data-type="dividend">
+          <view style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+            <view class="tag" style="background: #FFF3E0; color: #E65100;">分红</view>
+            <text class="caption">{{item.dateText}}</text>
+          </view>
+          <view style="display: flex; gap: 16px;">
+            <text class="caption">每股: {{item.perShareText}}</text>
+            <text class="caption">数量: {{item.quantity}}股</text>
+          </view>
+          <text class="body profit" style="font-weight: var(--weight-title); margin-top: 4px;">+{{item.totalText}}</text>
+        </view>
+      </view>
+      <view wx:else class="card-sm" style="text-align: center;">
+        <text class="caption">暂无分红记录</text>
+      </view>
+    </view>
+    <view style="height: 100px;"></view>
+  </scroll-view>
+
+  <view wx:else class="empty-state">
+    <text class="empty-title">股票不存在</text>
+  </view>
+</view>

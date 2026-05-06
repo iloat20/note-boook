@@ -1,25 +1,43 @@
 {
   "pages": [
     "pages/index/index",
-    "pages/chat/chat"
+    "pages/history/history",
+    "pages/stats/stats",
+    "pages/record/record",
+    "pages/dividend/dividend",
+    "pages/detail/detail"
   ],
   "window": {
     "backgroundTextStyle": "light",
-    "navigationBarBackgroundColor": "#fff",
-    "navigationBarTitleText": "记事本",
-    "navigationBarTextStyle": "black"
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "股票交易记录",
+    "navigationBarBackgroundColor": "#F5F5F7",
+    "backgroundColor": "#F5F5F7",
+    "enablePullDownRefresh": true,
+    "onReachBottomDistance": 50,
+    "navigationStyle": "default"
   },
   "tabBar": {
+    "custom": true,
+    "color": "#86868B",
+    "selectedColor": "#1D1D1F",
+    "backgroundColor": "#FFFFFF",
+    "borderStyle": "white",
     "list": [
       {
         "pagePath": "pages/index/index",
-        "text": "首页"
+        "text": "持仓"
       },
       {
-        "pagePath": "pages/chat/chat",
-        "text": "聊天"
+        "pagePath": "pages/history/history",
+        "text": "流水"
+      },
+      {
+        "pagePath": "pages/stats/stats",
+        "text": "统计"
       }
     ]
   },
-  "sitemapLocation": "sitemap.json"
+  "lazyCodeLoading": "requiredComponents",
+  "componentFramework": "glass-easel"
 }

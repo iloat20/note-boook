@@ -1,0 +1,5 @@
+/* Minimal + Spatial UI - 记录页 */
+
+.form-input:focus {
+  background: var(--color-bg);
+}

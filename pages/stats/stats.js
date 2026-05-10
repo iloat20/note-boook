@@ -1,4 +1,6 @@
-const { getTotalStats, getPeriodStatsList, getPositionSummary, PriceCache, getHeatmapData } = require('../../utils/storage.js')
+const { getTotalStats, getStatsByPeriod, getPeriodStatsList, getHeatmapData, getAllPositionsWithRealizedPnL } = require('../../utils/storage.js')
+const { fmt } = require('../../utils/format.js')
+const { exportCSV } = require('../../utils/export.js')
 
 Page({
   data: {
@@ -8,19 +10,14 @@ Page({
       { key: 'MONTH', label: '月' },
       { key: 'YEAR', label: '年' }
     ],
-    stats: {
-      totalInvestment: 0, totalRecover: 0, totalPnL: 0, totalPnLPercent: 0,
-      totalInvestmentText: '0', totalRecoverText: '0', totalPnLText: '0',
-      realizedPnL: 0, realizedPnLText: '0',
-      floatingPnL: 0, floatingPnLText: '0',
-      dividendIncome: 0, dividendIncomeText: '0',
-      totalBuyFee: 0, totalBuyFeeText: '0',
-      totalSellFee: 0, totalSellFeeText: '0'
-    },
-    chartData: [], yAxisLabels: [],
-    cumChartData: [], cumYAxisLabels: [],
+    stats: {},
     detailItems: [],
-    heatmapData: [], heatmapYear: 2026, heatmapMonth: 5, heatmapLabel: '2026年5月'
+    heatmapData: [],
+    heatmapYear: new Date().getFullYear(),
+    heatmapMonth: new Date().getMonth() + 1,
+    heatmapLabel: '',
+    completeTrades: [],
+    monthlyPnL: []
   },
 
   onShow() {
@@ -28,87 +25,43 @@ Page({
       this.getTabBar().setData({ selected: 2 })
     }
     this.loadStats()
+    this.loadMonthlyPnL()
   },
 
   loadStats() {
-    const stats = getTotalStats()
-    const positions = getPositionSummary()
-    let mv = 0, tc = 0
-    positions.forEach(p => {
-      if (p.currentPrice && p.quantity > 0) mv += p.currentPrice * p.quantity
-      tc += p.avgCost * p.quantity
-    })
-    const fpnl = mv - tc
-    const tpnl = stats.realizedPnL + fpnl + stats.dividendIncome
-    const ti = tc + stats.totalBuyFee
+    const period = this.data.currentPeriod
+    const stats = getStatsByPeriod(period)
+
+    const totalInvestment = stats.buyAmount + stats.buyFee
+    const totalRecover = stats.sellAmount - stats.sellFee
+    const totalPnL = stats.pnL
 
     this.setData({
       stats: {
-        ...stats,
-        floatingPnL: fpnl, totalPnL: tpnl,
-        totalPnLPercent: ti > 0 ? (tpnl / ti * 100) : 0,
-        totalInvestmentText: this.f(stats.totalInvestment + stats.totalBuyFee),
-        totalRecoverText: this.f(stats.totalRecover),
-        realizedPnLText: this.f(stats.realizedPnL),
-        floatingPnLText: this.f(fpnl),
-        dividendIncomeText: this.f(stats.dividendIncome),
-        totalBuyFeeText: this.f(stats.totalBuyFee),
-        totalSellFeeText: this.f(stats.totalSellFee),
-        totalPnLText: this.f(tpnl)
+        totalInvestment,
+        totalRecover,
+        totalPnL,
+        totalInvestmentText: fmt(totalInvestment),
+        totalRecoverText: fmt(totalRecover),
+        totalPnLText: fmt(totalPnL),
+        dividendIncomeText: fmt(stats.dividendIncome),
+        totalBuyFeeText: fmt(stats.buyFee),
+        totalSellFeeText: fmt(stats.sellFee)
       }
     })
 
     const detailItems = [
-      { label: '已实现盈亏', value: this.f(stats.realizedPnL), prefix: stats.realizedPnL >= 0 ? '+' : '', colorClass: stats.realizedPnL >= 0 ? 'profit' : 'loss' },
-      { label: '浮动盈亏', value: this.f(fpnl), prefix: fpnl >= 0 ? '+' : '', colorClass: fpnl >= 0 ? 'profit' : 'loss' },
-      { label: '分红收益', value: this.f(stats.dividendIncome), prefix: '+', colorClass: 'profit' },
-      { label: '买入手续费', value: this.f(stats.totalBuyFee), prefix: '-', colorClass: '' },
-      { label: '卖出手续费', value: this.f(stats.totalSellFee), prefix: '-', colorClass: '' }
+      { label: '已实现盈亏', value: fmt(totalPnL), prefix: totalPnL >= 0 ? '+' : '', colorClass: totalPnL >= 0 ? 'profit' : 'loss' },
+      { label: '分红收益', value: fmt(stats.dividendIncome), prefix: '+', colorClass: 'profit' },
+      { label: '买入手续费', value: fmt(stats.buyFee), prefix: '-', colorClass: '' },
+      { label: '卖出手续费', value: fmt(stats.sellFee), prefix: '-', colorClass: '' }
     ]
-    this.setData({ detailItems })
-    this.loadChart()
+    const completeTrades = getAllPositionsWithRealizedPnL().map(p => ({
+      ...p,
+      totalPnLText: fmt(p.totalPnL)
+    }))
+    this.setData({ detailItems, completeTrades })
     this.loadHeatmap()
-  },
-
-  loadChart() {
-    const ps = getPeriodStatsList(this.data.currentPeriod, 12)
-    if (ps.length === 0) return
-
-    let mx = 0, mn = 0
-    ps.forEach(s => { if (s.pnL > mx) mx = s.pnL; if (s.pnL < mn) mn = s.pnL })
-    const r = Math.max(Math.abs(mx), Math.abs(mn)) || 1
-    mx = Math.ceil(r / 100) * 100
-    mn = -mx
-
-    const yAxisLabels = [this.f(mx), this.f(Math.round(mx * 0.5)), '0', this.f(Math.round(mn * 0.5)), this.f(mn)]
-    const chartData = ps.map(s => {
-      const h = ((s.pnL - mn) / (mx - mn)) * 100
-      return { label: s.label, pnL: s.pnL, pnLText: this.f(s.pnL), height: Math.max(5, Math.min(95, h)), showValue: Math.abs(s.pnL) > 10 }
-    })
-
-    let cum = 0
-    const tmp = ps.map(s => { cum += s.pnL; return { label: s.label, cumulative: parseFloat(cum.toFixed(2)) } })
-    let cmx = tmp.reduce((max, d) => Math.max(max, d.cumulative), 0)
-    let cmn = tmp.reduce((min, d) => Math.min(min, d.cumulative), 0)
-    const cr = Math.max(Math.abs(cmx), Math.abs(cmn), 1)
-    cmx = Math.ceil(cr / 100) * 100
-    cmn = cmn < 0 ? -cmx : 0
-
-    const cumYAxisLabels = [this.f(cmx), this.f(Math.round(cmx * 0.5)), '0', cmn < 0 ? this.f(Math.round(cmn * 0.5)) : '', cmn < 0 ? this.f(cmn) : ''].filter(l => l !== '')
-    const cumChartData = tmp.map((d, i) => {
-      const pct = ((d.cumulative - cmn) / (cmx - cmn)) * 100
-      return { label: d.label, cumulative: d.cumulative, cumulativeText: this.f(d.cumulative), x: (i / (ps.length - 1)) * 100, y: Math.max(5, Math.min(95, pct)) }
-    })
-
-    let cumMaxIdx = 0, cumMinIdx = 0
-    tmp.forEach((d, i) => {
-      if (d.cumulative > tmp[cumMaxIdx].cumulative) cumMaxIdx = i
-      if (d.cumulative < tmp[cumMinIdx].cumulative) cumMinIdx = i
-    })
-    cumChartData[cumMaxIdx].isMax = true
-    cumChartData[cumMinIdx].isMin = true
-
-    this.setData({ yAxisLabels, chartData, cumYAxisLabels, cumChartData })
   },
 
   loadHeatmap() {
@@ -134,22 +87,116 @@ Page({
   },
 
   prevMonth() {
-    let year = this.data.heatmapYear
-    let month = this.data.heatmapMonth - 1
-    if (month === 0) { month = 12; year-- }
-    this.setData({ heatmapYear: year, heatmapMonth: month })
-    this.loadHeatmap()
+    let { heatmapYear, heatmapMonth } = this.data
+    heatmapMonth--
+    if (heatmapMonth === 0) { heatmapMonth = 12; heatmapYear-- }
+    this.setData({ heatmapYear, heatmapMonth }, () => this.loadHeatmap())
   },
 
   nextMonth() {
-    let year = this.data.heatmapYear
-    let month = this.data.heatmapMonth + 1
-    if (month === 13) { month = 1; year++ }
-    this.setData({ heatmapYear: year, heatmapMonth: month })
-    this.loadHeatmap()
+    let { heatmapYear, heatmapMonth } = this.data
+    heatmapMonth++
+    if (heatmapMonth === 13) { heatmapMonth = 1; heatmapYear++ }
+    this.setData({ heatmapYear, heatmapMonth }, () => this.loadHeatmap())
   },
 
-  switchPeriod(e) { this.setData({ currentPeriod: e.currentTarget.dataset.period }); this.loadChart() },
+  switchPeriod(e) {
+    this.setData({ currentPeriod: e.currentTarget.dataset.period }, () => {
+      this.loadStats()
+    })
+  },
 
-  f(num) { if (isNaN(num)) return '0.00'; return parseFloat(num).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',') }
+  onExportCSV() {
+    exportCSV(this)
+  },
+
+  loadMonthlyPnL() {
+    var list = getPeriodStatsList('MONTH', 12)
+    var monthly = list.map(function (item) {
+      return {
+        label: item.label,
+        pnL: item.pnL || 0
+      }
+    })
+    this.setData({ monthlyPnL: monthly })
+    // 等setData渲染完再绘图
+    var that = this
+    setTimeout(function () { that.drawPnlChart() }, 300)
+  },
+
+  drawPnlChart() {
+    var that = this
+    try {
+      var query = wx.createSelectorQuery().in(this)
+      query.select('#pnlChart')
+        .fields({ node: true, size: true })
+        .exec(function (res) {
+          if (!res || !res[0] || !res[0].node) {
+            console.warn('[drawPnlChart] canvas not ready')
+            return
+          }
+          var canvas = res[0].node
+          var ctx = canvas.getContext('2d')
+          var dpr = wx.getSystemInfoSync().pixelRatio || 2
+          canvas.width = res[0].width * dpr
+          canvas.height = res[0].height * dpr
+          ctx.scale(dpr, dpr)
+
+          var data = that.data.monthlyPnL
+          if (!data || data.length === 0) return
+
+          var W = res[0].width
+          var H = res[0].height
+          var padL = 50, padR = 20, padT = 30, padB = 40
+          var plotW = W - padL - padR
+          var plotH = H - padT - padB
+
+          // 清空
+          ctx.clearRect(0, 0, W, H)
+
+          // 计算最大绝对值
+          var maxVal = 1
+          data.forEach(function (d) {
+            var abs = Math.abs(d.pnL)
+            if (abs > maxVal) maxVal = abs
+          })
+
+          var barW = Math.max(8, (plotW / data.length) * 0.6)
+          var gap = (plotW - barW * data.length) / (data.length + 1)
+
+          // 画横线（零线）
+          ctx.beginPath()
+          var zeroY = padT + plotH / 2
+          ctx.moveTo(padL, zeroY)
+          ctx.lineTo(padL + plotW, zeroY)
+          ctx.strokeStyle = '#CCCCCC'
+          ctx.lineWidth = 1
+          ctx.stroke()
+
+          // 画柱
+          data.forEach(function (d, i) {
+            var x = padL + gap + i * (barW + gap)
+            var barH = (Math.abs(d.pnL) / maxVal) * (plotH / 2)
+            var y = d.pnL >= 0 ? zeroY - barH : zeroY
+            ctx.fillStyle = d.pnL >= 0 ? '#E04040' : '#1AA04F'
+            ctx.fillRect(x, y, barW, barH)
+
+            // 标签
+            ctx.fillStyle = '#555555'
+            ctx.font = '9px sans-serif'
+            ctx.textAlign = 'center'
+            ctx.fillText(d.pnL >= 0 ? '+' + d.pnL.toFixed(0) : d.pnL.toFixed(0), x + barW / 2, y - 4)
+
+            // X轴标签
+            ctx.fillStyle = '#888888'
+            ctx.font = '9px sans-serif'
+            ctx.textAlign = 'center'
+            var label = d.label.length > 5 ? d.label.slice(2) : d.label
+            ctx.fillText(label, x + barW / 2, H - padB + 15)
+          })
+        })
+    } catch (e) {
+      console.warn('[drawPnlChart]', e)
+    }
+  }
 })

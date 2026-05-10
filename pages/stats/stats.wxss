@@ -1,106 +1,41 @@
-/* Minimal + Spatial UI - 统计页 */
+/* stats.wxss - Liquid Glass Design */
 
-/* === Bar Chart === */
-.bar-chart {
-  display: flex;
-  height: 240px;
-}
-.chart-y-axis {
-  width: 80px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding-right: 8px;
-  text-align: right;
-}
-.chart-bars {
-  flex: 1;
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-around;
-  border-left: 1px solid var(--color-separator);
-  border-bottom: 1px solid var(--color-separator);
-  padding: 0 4px;
-}
-.bar-item {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
-  height: 100%;
-}
-.bar-wrap {
-  width: 24px;
-  height: 100%;
-  display: flex;
-  align-items: flex-end;
-  position: relative;
-}
-.bar {
-  width: 100%;
-  border-radius: 3px 3px 0 0;
-  min-height: 4px;
-  position: relative;
-}
-.bar-profit { background: var(--color-profit); }
-.bar-loss { background: var(--color-loss); }
-.bar-val {
-  position: absolute;
-  top: -18px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 10px;
-  white-space: nowrap;
-  color: var(--color-caption);
+/* === Glass Card === */
+.card-glass {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: var(--glass-radius);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow-out), var(--glass-shadow-in);
+  padding: var(--space-card-pad);
+  transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* === Line Chart === */
-.line-chart {
-  display: flex;
-  height: 200px;
-}
-.line-area {
-  flex: 1;
-  position: relative;
-  border-left: 1px solid var(--color-separator);
-  border-bottom: 1px solid var(--color-separator);
-}
-.line-dot {
-  position: absolute;
-  transform: translate(-50%, 50%);
-}
-.dot {
-  width: 10px;
-  height: 10px;
-  background: var(--color-accent);
-  border-radius: 50%;
-  border: 2px solid #FFF;
-  box-shadow: var(--shadow-sm);
-}
-.dot-val {
-  position: absolute;
-  top: -22px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 10px;
-  white-space: nowrap;
-  color: var(--color-caption);
-}
-.line-x-axis {
-  display: flex;
-  justify-content: space-between;
-  padding: 8px 0 0 80px;
-  border-top: 1px solid transparent;
+.card-glass:hover {
+  background: var(--glass-bg-hover);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
-/* === Heatmap === */
+.card-glass-sm {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: var(--glass-radius);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  padding: var(--space-card-pad);
+  transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* === Heatmap Liquid Glass === */
 .heatmap-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
+
 .heatmap-nav {
   min-height: 44px;
   min-width: 44px;
@@ -109,36 +44,283 @@
   justify-content: center;
   color: var(--color-caption);
   font-size: 24px;
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  transition: all 200ms ease;
+  position: relative;
+  z-index: 1;
 }
+
+.heatmap-nav:active {
+  background: rgba(255, 255, 255, 0.8);
+  transform: scale(0.95);
+}
+
 .heatmap-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 2px;
+  gap: 6px;
+  padding: 4px;
 }
+
 .heatmap-cell {
   aspect-ratio: 1;
-  border-radius: 4px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
 }
-.heatmap-day {
-  font-size: 10px;
-}
-.heatmap-level-0 { background: #F0F0F5; }
-.heatmap-level-1 { background: #FFE0D0; }
-.heatmap-level-2 { background: #FFC0A0; }
-.heatmap-level-3 { background: #FF8C5A; }
-.heatmap-level-4 { background: var(--color-accent); }
 
-/* === Cum Chart Extremes === */
-.dot-max {
-  width: 14px;
-  height: 14px;
-  background: var(--color-profit);
+.heatmap-cell::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.4), transparent);
+  border-radius: 10px 10px 0 0;
+  pointer-events: none;
 }
-.dot-min {
-  width: 14px;
-  height: 14px;
-  background: var(--color-loss);
+
+.heatmap-cell:active {
+  transform: scale(0.9);
+}
+
+.heatmap-day {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-caption);
+  position: relative;
+  z-index: 1;
+}
+
+/* Heatmap Levels with Beautiful Gradients */
+.heatmap-level-0 {
+  background: linear-gradient(135deg, rgba(240, 240, 245, 0.7), rgba(240, 240, 245, 0.4));
+}
+
+.heatmap-level-1 {
+  background: linear-gradient(135deg, rgba(255, 224, 208, 0.8), rgba(255, 200, 170, 0.5));
+  border-color: rgba(255, 140, 90, 0.3);
+  box-shadow: 0 2px 8px rgba(255, 140, 90, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.heatmap-level-2 {
+  background: linear-gradient(135deg, rgba(255, 192, 160, 0.85), rgba(255, 170, 130, 0.6));
+  border-color: rgba(255, 140, 90, 0.4);
+  box-shadow: 0 3px 10px rgba(255, 140, 90, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.heatmap-level-3 {
+  background: linear-gradient(135deg, rgba(255, 140, 90, 0.9), rgba(255, 120, 70, 0.7));
+  border-color: rgba(255, 140, 90, 0.5);
+  box-shadow: 0 4px 12px rgba(255, 140, 90, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.heatmap-level-3 .heatmap-day {
+  color: #FFF;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.heatmap-level-4 {
+  background: linear-gradient(135deg, rgba(255, 107, 53, 0.95), rgba(255, 87, 33, 0.8));
+  border-color: rgba(255, 107, 53, 0.6);
+  box-shadow: 0 4px 16px rgba(255, 107, 53, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  transform: scale(1.05);
+}
+
+.heatmap-level-4 .heatmap-day {
+  color: #FFF;
+  font-weight: 700;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* === Heatmap Legend === */
+.heatmap-legend {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: var(--color-caption);
+}
+
+.legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* === Tab Bar Liquid Glass === */
+.tab-bar-line {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 0.5px solid rgba(255, 255, 255, 0.3);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.tab-line-item {
+  flex: 1;
+  max-width: 100px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: var(--color-caption);
+  background: transparent;
+  border-radius: 10px;
+  transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.tab-line-item:active {
+  opacity: 0.7;
+}
+
+.tab-line-active {
+  color: #FFF;
+  font-weight: 600;
+  background: var(--color-accent);
+  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+}
+
+.tab-line-active::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.3), transparent);
+  border-radius: 10px 10px 0 0;
+  pointer-events: none;
+}
+
+/* === Stats Card Grid === */
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: var(--space-module);
+  padding-top: 12px;
+}
+
+.stat-card {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: var(--glass-radius);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow-out), var(--glass-shadow-in);
+  padding: 16px;
+  transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.4), transparent);
+  border-radius: var(--glass-radius) var(--glass-radius) 0 0;
+  pointer-events: none;
+}
+
+.stat-card:active {
+  transform: scale(0.98);
+}
+
+.stat-label {
+  font-size: 12px;
+  color: var(--color-caption);
+  font-weight: 400;
+  display: block;
+  margin-bottom: 4px;
+  position: relative;
+  z-index: 1;
+}
+
+.stat-value {
+  font-size: 20px;
+  color: var(--color-title);
+  font-weight: 600;
+  display: block;
+  position: relative;
+  z-index: 1;
+}
+
+/* === Section Title === */
+.section-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--color-title);
+  display: block;
+  margin-bottom: 12px;
+  letter-spacing: 0.02em;
+}
+
+/* === List Item Glass === */
+.list-item-glass {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+  transition: all 200ms ease;
+}
+
+.list-item-glass:last-child {
+  border-bottom: none;
+}
+
+.list-item-glass:active {
+  background: rgba(255, 255, 255, 0.3);
+  margin: 0 -16px;
+  padding-left: 16px;
+  padding-right: 16px;
+  border-radius: 8px;
+}
+
+/* === Empty State Glass === */
+.empty-state-glass {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--color-caption);
+  font-size: 14px;
 }

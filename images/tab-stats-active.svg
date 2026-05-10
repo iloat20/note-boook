@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" fill="none">
+  <!-- 统计图标选中态：深色 -->
+  <rect x="10" y="22" width="8" height="20" rx="2" fill="#1D1D1F"/>
+  <rect x="20" y="12" width="8" height="30" rx="2" fill="#1D1D1F"/>
+  <rect x="30" y="17" width="8" height="25" rx="2" fill="#1D1D1F"/>
+</svg>

@@ -1,5 +1,14 @@
 <view class="page-container">
-  <view class="display" style="margin-bottom: 20px;">流水</view>
+  <view style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+    <text class="display" style="flex: 1;">流水</text>
+    <view bindtap="toggleSearch" style="min-height: 44px; display: flex; align-items: center;">
+      <text class="caption" style="font-size: 20px;">🔍</text>
+    </view>
+  </view>
+
+  <view wx:if="{{showSearchInput}}" style="margin-bottom: 12px;">
+    <input class="input" placeholder="搜索代码/名称..." value="{{searchKeyword}}" bindinput="onSearchInput" style="width: 100%;"/>
+  </view>
 
   <view class="liquid-slider" style="margin-bottom: 16px; position: relative;">
     <view class="liquid-slider-bg" style="left: {{sliderLeft}}px; width: {{sliderWidth}}px;"></view>

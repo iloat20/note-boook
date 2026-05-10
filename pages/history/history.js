@@ -1,4 +1,6 @@
 const { MARKETS, Stock, Transaction, Dividend } = require('../../utils/storage.js')
+const { fmt, fmtDate, fmtTime } = require('../../utils/format.js')
+const { getMarketLabel, getMarketColor } = require('../../utils/market.js')
 
 Page({
   data: {
@@ -19,7 +21,9 @@ Page({
     groupedHistory: [],
     sliderLeft: 0,
     sliderWidth: 0,
-    dissolvingId: null
+    dissolvingId: null,
+    showSearchInput: false,
+    searchKeyword: ''
   },
 
   onLoad() {
@@ -30,7 +34,11 @@ Page({
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({ selected: 1 })
     }
-    this.loadHistory()
+    const app = getApp()
+    if (app.globalData.dataDirty) {
+      this.loadHistory()
+      app.globalData.dataDirty = false
+    }
   },
 
   loadHistory() {
@@ -51,19 +59,19 @@ Page({
           typeText: t.type === 'BUY' ? '买入' : '卖出',
           stockId: t.stockId,
           market: stock.market,
-          marketLabel: this.getMarketLabel(stock.market),
-          marketColor: this.getMarketColor(stock.market),
+          marketLabel: getMarketLabel(stock.market),
+          marketColor: getMarketColor(stock.market),
           code: stock.code,
           name: stock.name,
           price: t.price,
-          priceText: this.fmt(t.price),
+          priceText: fmt(t.price),
           quantity: t.quantity,
           fee: t.fee,
-          feeText: this.fmt(t.fee),
+          feeText: fmt(t.fee),
           amount: amount,
-          amountText: this.fmt(Math.abs(amount)),
-          date: this.formatDate(date),
-          time: this.formatTime(date)
+          amountText: fmt(Math.abs(amount)),
+          date: fmtDate(date),
+          time: fmtTime(date)
         })
       }
     })
@@ -78,17 +86,17 @@ Page({
           typeText: '分红',
           stockId: d.stockId,
           market: stock.market,
-          marketLabel: this.getMarketLabel(stock.market),
-          marketColor: this.getMarketColor(stock.market),
+          marketLabel: getMarketLabel(stock.market),
+          marketColor: getMarketColor(stock.market),
           code: stock.code,
           name: stock.name,
           perShareAmount: d.perShareAmount,
-          perShareAmountText: this.fmt(d.perShareAmount),
+          perShareAmountText: fmt(d.perShareAmount),
           quantity: d.quantity,
           amount: d.totalAmount,
-          amountText: this.fmt(d.totalAmount),
-          date: this.formatDate(date),
-          time: this.formatTime(date)
+          amountText: fmt(d.totalAmount),
+          date: fmtDate(date),
+          time: fmtTime(date)
         })
       }
     })
@@ -105,6 +113,14 @@ Page({
     
     if (this.data.currentMarket) {
       filtered = filtered.filter(r => r.market === this.data.currentMarket)
+    }
+    
+    if (this.data.searchKeyword) {
+      const kw = this.data.searchKeyword.toLowerCase()
+      filtered = filtered.filter(r => 
+        r.code.toLowerCase().includes(kw) || 
+        r.name.toLowerCase().includes(kw)
+      )
     }
     
     const grouped = {}
@@ -124,14 +140,6 @@ Page({
     this.calculateSliderPosition()
   },
 
-  formatDate(date) {
-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-  },
-
-  formatTime(date) {
-    return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
-  },
-
   switchFilter(e) {
     const filter = e.currentTarget.dataset.filter
     this.setData({ currentFilter: filter })
@@ -146,7 +154,7 @@ Page({
   },
 
   calculateSliderPosition() {
-    const systemInfo = wx.getSystemInfoSync()
+    const systemInfo = getApp().globalData.systemInfo || wx.getSystemInfoSync()
     const screenWidth = systemInfo.windowWidth
     const tabs = this.data.filterTabs
     const tabWidth = screenWidth / tabs.length
@@ -159,6 +167,18 @@ Page({
 
   showSearch() {
     wx.showToast({ title: '搜索功能开发中', icon: 'none' })
+  },
+
+  toggleSearch() {
+    const show = !this.data.showSearchInput
+    this.setData({ showSearchInput: show, searchKeyword: show ? this.data.searchKeyword : '' })
+    if (!show) this.loadHistory()
+  },
+
+  onSearchInput(e) {
+    const keyword = e.detail.value.toLowerCase()
+    this.setData({ searchKeyword: keyword })
+    this.loadHistory()
   },
 
   showActions(e) {
@@ -208,28 +228,5 @@ Page({
 
   goToDividend() {
     wx.navigateTo({ url: '/pages/dividend/dividend' })
-  },
-
-  getMarketLabel(market) {
-    const labels = {
-      [MARKETS.A_SHARE]: 'A股',
-      [MARKETS.HK_SHARE]: '港股',
-      [MARKETS.US_SHARE]: '美股'
-    }
-    return labels[market] || ''
-  },
-
-  getMarketColor(market) {
-    const colors = {
-      [MARKETS.A_SHARE]: '#3B82F6',
-      [MARKETS.HK_SHARE]: '#F97316',
-      [MARKETS.US_SHARE]: '#A855F7'
-    }
-    return colors[market] || '#64748B'
-  },
-
-  fmt(num) {
-    if (isNaN(num)) return '0.00'
-    return Math.abs(parseFloat(num)).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
   }
 })

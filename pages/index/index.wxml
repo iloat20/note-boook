@@ -7,8 +7,21 @@
   </view>
 
   <scroll-view wx:if="{{positions.length > 0}}" class="scroll-container parallax-container" scroll-y bindscroll="onScroll">
-    <view wx:for="{{positions}}" wx:key="id" class="card section parallax-card" style="transform: perspective(800px) {{item.parallaxStyle}};" bindtap="goToDetail" data-stock-id="{{item.id}}">
-      <view style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+    <view wx:for="{{positions}}" wx:key="id" class="swipe-container">
+      <view class="swipe-actions">
+        <view class="swipe-action-btn swipe-action-edit" data-stock-id="{{item.id}}" bindtap="onSwipeEdit">编辑</view>
+        <view class="swipe-action-btn swipe-action-sell" data-stock-id="{{item.id}}" data-item="{{item}}" bindtap="onSwipeSell">卖出</view>
+        <view class="swipe-action-btn swipe-action-delete" data-stock-id="{{item.id}}" bindtap="onSwipeDelete">删除</view>
+      </view>
+      <view class="card section swipe-card {{item.swipeOpen ? 'swipe-card-open' : ''}}"
+        style="transform: perspective(800px) {{item.parallaxStyle}};"
+        bindtouchstart="onTouchStart"
+        bindtouchmove="onTouchMove"
+        bindtouchend="onTouchEnd"
+        bindtap="goToDetail"
+        data-stock-id="{{item.id}}"
+        data-index="{{index}}">
+        <view style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
         <view class="tag market-{{item.market === 'A_SHARE' ? 'a' : item.market === 'HK_SHARE' ? 'hk' : 'us'}}">{{item.marketLabel}}</view>
         <text class="body" style="color: var(--color-title); font-weight: var(--weight-title);">{{item.code}}</text>
         <text class="body">{{item.name}}</text>
@@ -23,18 +36,20 @@
           <text class="caption">成本</text>
           <view class="body" style="color: var(--color-title);">{{item.avgCostText}}</view>
         </view>
-        <view>
-          <text class="caption">现价</text>
-          <input 
-            class="input" 
-            type="digit" 
-            placeholder="--" 
-            value="{{item.currentPrice || ''}}"
+      <view>
+        <text class="caption">现价</text>
+        <view style="display: flex; align-items: center; gap: 8px;">
+          <text wx:if="{{item.currentPrice > 0}}" class="body" style="color: var(--color-title); font-weight: var(--weight-title);">{{item.currentPriceText}}</text>
+          <text wx:else class="caption">--</text>
+          <view 
+            style="min-height: 30px; min-width: 30px; display: flex; align-items: center; justify-content: center;" 
             data-stock-id="{{item.id}}"
-            catchtap="updatePrice"
-            bindblur="updatePrice"
-          />
+            bindtap="onRefreshPrice"
+          >
+            <text class="caption">↻</text>
+          </view>
         </view>
+      </view>
       </view>
 
       <view style="display: flex; justify-content: space-between; align-items: center; padding-top: 12px; border-top: 1px solid var(--color-separator);">
@@ -44,6 +59,7 @@
         <text class="caption {{item.floatingPnL >= 0 ? 'profit' : 'loss'}}">
           {{item.pnlPercentText}}%
         </text>
+      </view>
       </view>
     </view>
     <view style="height: 100px;"></view>

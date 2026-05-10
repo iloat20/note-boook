@@ -1,24 +1,39 @@
+const { MARKETS, TRANSACTION_TYPE } = require('./constants')
+const { validateStockCode, formatStockCode } = require('./market.js')
+
+// 持仓计算结果缓存，数据变更时由 markDataDirty 清空
+let _positionCache = {}
+
+function markDataDirty() {
+  try {
+    const app = getApp()
+    if (app && app.globalData) {
+      app.globalData.dataDirty = true
+    }
+  } catch (e) {
+    console.warn('[markDataDirty]', e)
+  }
+  // 数据变更，清空持仓缓存
+  _positionCache = {}
+}
+
 const STOCK_KEY = 'stock_trade_stocks'
 const TRANSACTION_KEY = 'stock_trade_transactions'
 const DIVIDEND_KEY = 'stock_trade_dividends'
 const PRICE_KEY = 'stock_trade_prices'
 
-const MARKETS = {
-  A_SHARE: 'A_SHARE',
-  HK_SHARE: 'HK_SHARE',
-  US_SHARE: 'US_SHARE'
-}
+let _lastTimestamp = 0
+let _seq = 0
 
-const TRANSACTION_TYPE = {
-  BUY: 'BUY',
-  SELL: 'SELL'
-}
-
-function getNextId(key) {
-  const data = wx.getStorageSync(key) || []
-  if (data.length === 0) return 1
-  const maxId = Math.max(...data.map(item => item.id))
-  return maxId + 1
+function getNextId() {
+  const now = Date.now()
+  if (now === _lastTimestamp) {
+    _seq++
+  } else {
+    _lastTimestamp = now
+    _seq = 0
+  }
+  return now * 1000 + _seq
 }
 
 function saveData(key, data) {
@@ -32,7 +47,7 @@ function getData(key) {
 const Stock = {
   create(code, name, market) {
     return {
-      id: getNextId(STOCK_KEY),
+      id: getNextId(),
       code,
       name,
       market,
@@ -49,6 +64,7 @@ const Stock = {
       stocks.push(stock)
     }
     saveData(STOCK_KEY, stocks)
+    markDataDirty()
     return stock
   },
   
@@ -69,6 +85,7 @@ const Stock = {
   delete(id) {
     const stocks = this.getAll().filter(s => s.id !== id)
     saveData(STOCK_KEY, stocks)
+    markDataDirty()
   },
   
   getByMarket(market) {
@@ -79,7 +96,7 @@ const Stock = {
 const Transaction = {
   create(stockId, type, price, quantity, fee, date, note = '') {
     return {
-      id: getNextId(TRANSACTION_KEY),
+      id: getNextId(),
       stockId,
       type,
       price: parseFloat(price),
@@ -99,6 +116,7 @@ const Transaction = {
       transactions.push(transaction)
     }
     saveData(TRANSACTION_KEY, transactions)
+    markDataDirty()
     return transaction
   },
   
@@ -113,6 +131,7 @@ const Transaction = {
   delete(id) {
     const transactions = this.getAll().filter(t => t.id !== id)
     saveData(TRANSACTION_KEY, transactions)
+    markDataDirty()
   },
   
   getByMarket(market) {
@@ -130,16 +149,20 @@ const Transaction = {
 }
 
 const Dividend = {
-  create(stockId, perShareAmount, quantity, date, note = '') {
-    const totalAmount = parseFloat(perShareAmount) * parseInt(quantity)
+  create(stockId, perShareAmount, quantity, date, note = '', type = 'CASH', shareQuantity = 0) {
+    const totalAmount = type === 'CASH'
+      ? parseFloat(perShareAmount) * parseInt(quantity)
+      : 0
     return {
-      id: getNextId(DIVIDEND_KEY),
+      id: getNextId(),
       stockId,
       perShareAmount: parseFloat(perShareAmount),
       quantity: parseInt(quantity),
       totalAmount: parseFloat(totalAmount.toFixed(2)),
       date: date instanceof Date ? date.toISOString() : date,
-      note
+      note,
+      type: type || 'CASH',
+      shareQuantity: parseInt(shareQuantity) || 0
     }
   },
   
@@ -152,6 +175,7 @@ const Dividend = {
       dividends.push(dividend)
     }
     saveData(DIVIDEND_KEY, dividends)
+    markDataDirty()
     return dividend
   },
   
@@ -166,6 +190,7 @@ const Dividend = {
   delete(id) {
     const dividends = this.getAll().filter(d => d.id !== id)
     saveData(DIVIDEND_KEY, dividends)
+    markDataDirty()
   },
   
   getByMarket(market) {
@@ -180,6 +205,10 @@ const PriceCache = {
     const prices = this.getAll()
     prices[stockId] = parseFloat(price)
     saveData(PRICE_KEY, prices)
+    // 价格变更，清除该股票的持仓缓存
+    if (_positionCache && _positionCache[stockId]) {
+      delete _positionCache[stockId]
+    }
   },
   
   get(stockId) {
@@ -193,6 +222,10 @@ const PriceCache = {
 }
 
 function calculatePosition(stockId) {
+  if (_positionCache[stockId]) {
+    return _positionCache[stockId]
+  }
+
   const transactions = Transaction.getByStockId(stockId)
   let totalBuyQuantity = 0
   let totalBuyAmount = 0
@@ -213,18 +246,29 @@ function calculatePosition(stockId) {
     }
   })
 
-  const positionQuantity = totalBuyQuantity - totalSellQuantity
+  // 处理分红（现金 + 送股）
+  const dividends = Dividend.getByStockId(stockId)
+  let dividendIncome = 0
+  let shareDividendQty = 0
+  dividends.forEach(function (d) {
+    if (d.type === 'SHARE') {
+      shareDividendQty += d.shareQuantity || 0
+    } else {
+      dividendIncome += d.totalAmount
+    }
+  })
+
+  const positionQuantity = totalBuyQuantity + shareDividendQty - totalSellQuantity
   const avgCost = totalBuyQuantity > 0 ? (totalBuyAmount + totalBuyFee) / totalBuyQuantity : 0
 
-  const realizedPnL = totalSellAmount - totalSellFee - (avgCost * totalSellQuantity + totalBuyFee * (totalSellQuantity / totalBuyQuantity))
-
-  const dividends = Dividend.getByStockId(stockId)
-  const dividendIncome = dividends.reduce((sum, d) => sum + d.totalAmount, 0)
+  const realizedPnL = totalBuyQuantity > 0
+    ? totalSellAmount - totalSellFee - avgCost * totalSellQuantity
+    : totalSellAmount - totalSellFee
 
   const currentPrice = PriceCache.get(stockId)
   const floatingPnL = currentPrice && positionQuantity > 0 ? (currentPrice - avgCost) * positionQuantity : 0
 
-  return {
+  const result = {
     stockId,
     quantity: positionQuantity,
     avgCost: parseFloat(avgCost.toFixed(4)),
@@ -234,6 +278,8 @@ function calculatePosition(stockId) {
     floatingPnL: parseFloat(floatingPnL.toFixed(2)),
     totalPnL: parseFloat((realizedPnL + floatingPnL + dividendIncome).toFixed(2))
   }
+  _positionCache[stockId] = result
+  return result
 }
 
 function getPositionSummary(market = null) {
@@ -246,7 +292,26 @@ function getPositionSummary(market = null) {
     }
   }).filter(p => p.quantity > 0)
   
-  positions.sort((a, b) => (b.floatingPnL / (b.avgCost * b.quantity) || 0) - (a.floatingPnL / (a.avgCost * a.quantity) || 0))
+  positions.sort((a, b) => {
+    const aRatio = a.avgCost > 0 && a.quantity > 0 ? a.floatingPnL / (a.avgCost * a.quantity) : 0
+    const bRatio = b.avgCost > 0 && b.quantity > 0 ? b.floatingPnL / (b.avgCost * b.quantity) : 0
+    return bRatio - aRatio
+  })
+  
+  return positions
+}
+
+function getAllPositionsWithRealizedPnL(market = null) {
+  const stocks = market ? Stock.getByMarket(market) : Stock.getAll()
+  const positions = stocks.map(stock => {
+    const pos = calculatePosition(stock.id)
+    return {
+      ...stock,
+      ...pos
+    }
+  }).filter(p => Math.abs(p.realizedPnL) > 0.01 || Math.abs(p.dividendIncome) > 0.01)
+  
+  positions.sort((a, b) => b.realizedPnL + b.dividendIncome - (a.realizedPnL + a.dividendIncome))
   
   return positions
 }
@@ -301,11 +366,12 @@ function getStatsByPeriod(period) {
       startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate())
       endDate = new Date(startDate.getTime() + 24 * 60 * 60 * 1000 - 1)
       break
-    case 'WEEK':
+    case 'WEEK': {
       const dayOfWeek = now.getDay() || 7
       startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek + 1)
       endDate = new Date(startDate.getTime() + 7 * 24 * 60 * 60 * 1000 - 1)
       break
+    }
     case 'MONTH':
       startDate = new Date(now.getFullYear(), now.getMonth(), 1)
       endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999)
@@ -357,6 +423,45 @@ function getStatsByPeriod(period) {
   }
 }
 
+function calcStatsForRange(transactions, dividends, startDate, endDate, label) {
+  const periodTrans = transactions.filter(t => {
+    const d = new Date(t.date)
+    return d >= startDate && d <= endDate
+  })
+  const periodDivs = dividends.filter(d => {
+    const dd = new Date(d.date)
+    return dd >= startDate && dd <= endDate
+  })
+
+  if (periodTrans.length === 0 && periodDivs.length === 0) return null
+
+  let buyAmount = 0, sellAmount = 0, buyFee = 0, sellFee = 0
+  periodTrans.forEach(t => {
+    const amount = t.price * t.quantity
+    if (t.type === TRANSACTION_TYPE.BUY) {
+      buyAmount += amount
+      buyFee += t.fee
+    } else {
+      sellAmount += amount
+      sellFee += t.fee
+    }
+  })
+  const dividendIncome = periodDivs.reduce((sum, d) => sum + d.totalAmount, 0)
+  const pnL = sellAmount - sellFee - buyAmount - buyFee + dividendIncome
+
+  return {
+    label,
+    startDate: startDate.toISOString(),
+    endDate: endDate.toISOString(),
+    buyAmount: parseFloat(buyAmount.toFixed(2)),
+    sellAmount: parseFloat(sellAmount.toFixed(2)),
+    buyFee: parseFloat(buyFee.toFixed(2)),
+    sellFee: parseFloat(sellFee.toFixed(2)),
+    dividendIncome: parseFloat(dividendIncome.toFixed(2)),
+    pnL: parseFloat(pnL.toFixed(2))
+  }
+}
+
 function getPeriodStatsList(periodType, count = 12) {
   const transactions = Transaction.getAll()
   const dividends = Dividend.getAll()
@@ -377,7 +482,7 @@ function getPeriodStatsList(periodType, count = 12) {
   let currentStart, currentEnd, label
   
   switch (periodType) {
-    case 'WEEK':
+    case 'WEEK': {
       let weekCount = 0
       let weekStart = new Date(firstDate)
       const dayOfWeek = weekStart.getDay() || 7
@@ -387,218 +492,61 @@ function getPeriodStatsList(periodType, count = 12) {
         const weekEnd = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000 - 1)
         const weekLabel = `${weekStart.getFullYear()}W${Math.ceil((weekStart.getDate() + 6) / 7)}`
         
-        const weekTrans = transactions.filter(t => {
-          const d = new Date(t.date)
-          return d >= weekStart && d <= weekEnd
-        })
-        const weekDivs = dividends.filter(d => {
-          const dd = new Date(d.date)
-          return dd >= weekStart && dd <= weekEnd
-        })
-        
-        if (weekTrans.length > 0 || weekDivs.length > 0) {
-          let buyAmount = 0, sellAmount = 0, buyFee = 0, sellFee = 0
-          weekTrans.forEach(t => {
-            const amount = t.price * t.quantity
-            if (t.type === TRANSACTION_TYPE.BUY) {
-              buyAmount += amount
-              buyFee += t.fee
-            } else {
-              sellAmount += amount
-              sellFee += t.fee
-            }
-          })
-          const dividendIncome = weekDivs.reduce((sum, d) => sum + d.totalAmount, 0)
-          const pnL = sellAmount - sellFee - buyAmount - buyFee + dividendIncome
-          
-          result.push({
-            label: weekLabel,
-            startDate: weekStart.toISOString(),
-            endDate: weekEnd.toISOString(),
-            buyAmount: parseFloat(buyAmount.toFixed(2)),
-            sellAmount: parseFloat(sellAmount.toFixed(2)),
-            buyFee: parseFloat(buyFee.toFixed(2)),
-            sellFee: parseFloat(sellFee.toFixed(2)),
-            dividendIncome: parseFloat(dividendIncome.toFixed(2)),
-            pnL: parseFloat(pnL.toFixed(2))
-          })
-        }
+        const item = calcStatsForRange(transactions, dividends, weekStart, weekEnd, weekLabel)
+        if (item) result.push(item)
         
         weekStart = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000)
       }
       break
+    }
       
-    case 'MONTH':
+    case 'MONTH': {
       let monthStart = new Date(firstDate.getFullYear(), firstDate.getMonth(), 1)
       
       while (monthStart <= now) {
         const monthEnd = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0, 23, 59, 59, 999)
         const monthLabel = `${monthStart.getFullYear()}-${String(monthStart.getMonth() + 1).padStart(2, '0')}`
         
-        const monthTrans = transactions.filter(t => {
-          const d = new Date(t.date)
-          return d >= monthStart && d <= monthEnd
-        })
-        const monthDivs = dividends.filter(d => {
-          const dd = new Date(d.date)
-          return dd >= monthStart && dd <= monthEnd
-        })
-        
-        if (monthTrans.length > 0 || monthDivs.length > 0) {
-          let buyAmount = 0, sellAmount = 0, buyFee = 0, sellFee = 0
-          monthTrans.forEach(t => {
-            const amount = t.price * t.quantity
-            if (t.type === TRANSACTION_TYPE.BUY) {
-              buyAmount += amount
-              buyFee += t.fee
-            } else {
-              sellAmount += amount
-              sellFee += t.fee
-            }
-          })
-          const dividendIncome = monthDivs.reduce((sum, d) => sum + d.totalAmount, 0)
-          const pnL = sellAmount - sellFee - buyAmount - buyFee + dividendIncome
-          
-          result.push({
-            label: monthLabel,
-            startDate: monthStart.toISOString(),
-            endDate: monthEnd.toISOString(),
-            buyAmount: parseFloat(buyAmount.toFixed(2)),
-            sellAmount: parseFloat(sellAmount.toFixed(2)),
-            buyFee: parseFloat(buyFee.toFixed(2)),
-            sellFee: parseFloat(sellFee.toFixed(2)),
-            dividendIncome: parseFloat(dividendIncome.toFixed(2)),
-            pnL: parseFloat(pnL.toFixed(2))
-          })
-        }
+        const item = calcStatsForRange(transactions, dividends, monthStart, monthEnd, monthLabel)
+        if (item) result.push(item)
         
         monthStart = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 1)
       }
       break
+    }
       
-    case 'YEAR':
+    case 'YEAR': {
       let yearStart = new Date(firstDate.getFullYear(), 0, 1)
       
       while (yearStart <= now) {
         const yearEnd = new Date(yearStart.getFullYear(), 11, 31, 23, 59, 59, 999)
         const yearLabel = `${yearStart.getFullYear()}`
         
-        const yearTrans = transactions.filter(t => {
-          const d = new Date(t.date)
-          return d >= yearStart && d <= yearEnd
-        })
-        const yearDivs = dividends.filter(d => {
-          const dd = new Date(d.date)
-          return dd >= yearStart && dd <= yearEnd
-        })
-        
-        if (yearTrans.length > 0 || yearDivs.length > 0) {
-          let buyAmount = 0, sellAmount = 0, buyFee = 0, sellFee = 0
-          yearTrans.forEach(t => {
-            const amount = t.price * t.quantity
-            if (t.type === TRANSACTION_TYPE.BUY) {
-              buyAmount += amount
-              buyFee += t.fee
-            } else {
-              sellAmount += amount
-              sellFee += t.fee
-            }
-          })
-          const dividendIncome = yearDivs.reduce((sum, d) => sum + d.totalAmount, 0)
-          const pnL = sellAmount - sellFee - buyAmount - buyFee + dividendIncome
-          
-          result.push({
-            label: yearLabel,
-            startDate: yearStart.toISOString(),
-            endDate: yearEnd.toISOString(),
-            buyAmount: parseFloat(buyAmount.toFixed(2)),
-            sellAmount: parseFloat(sellAmount.toFixed(2)),
-            buyFee: parseFloat(buyFee.toFixed(2)),
-            sellFee: parseFloat(sellFee.toFixed(2)),
-            dividendIncome: parseFloat(dividendIncome.toFixed(2)),
-            pnL: parseFloat(pnL.toFixed(2))
-          })
-        }
+        const item = calcStatsForRange(transactions, dividends, yearStart, yearEnd, yearLabel)
+        if (item) result.push(item)
         
         yearStart = new Date(yearStart.getFullYear() + 1, 0, 1)
       }
       break
+    }
       
-    default:
+    default: {
       let dayStart = new Date(firstDate.getFullYear(), firstDate.getMonth(), firstDate.getDate())
       
       while (dayStart <= now) {
         const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000 - 1)
         const dayLabel = `${dayStart.getMonth() + 1}/${dayStart.getDate()}`
         
-        const dayTrans = transactions.filter(t => {
-          const d = new Date(t.date)
-          return d >= dayStart && d <= dayEnd
-        })
-        const dayDivs = dividends.filter(d => {
-          const dd = new Date(d.date)
-          return dd >= dayStart && dd <= dayEnd
-        })
-        
-        if (dayTrans.length > 0 || dayDivs.length > 0) {
-          let buyAmount = 0, sellAmount = 0, buyFee = 0, sellFee = 0
-          dayTrans.forEach(t => {
-            const amount = t.price * t.quantity
-            if (t.type === TRANSACTION_TYPE.BUY) {
-              buyAmount += amount
-              buyFee += t.fee
-            } else {
-              sellAmount += amount
-              sellFee += t.fee
-            }
-          })
-          const dividendIncome = dayDivs.reduce((sum, d) => sum + d.totalAmount, 0)
-          const pnL = sellAmount - sellFee - buyAmount - buyFee + dividendIncome
-          
-          result.push({
-            label: dayLabel,
-            startDate: dayStart.toISOString(),
-            endDate: dayEnd.toISOString(),
-            buyAmount: parseFloat(buyAmount.toFixed(2)),
-            sellAmount: parseFloat(sellAmount.toFixed(2)),
-            buyFee: parseFloat(buyFee.toFixed(2)),
-            sellFee: parseFloat(sellFee.toFixed(2)),
-            dividendIncome: parseFloat(dividendIncome.toFixed(2)),
-            pnL: parseFloat(pnL.toFixed(2))
-          })
-        }
+        const item = calcStatsForRange(transactions, dividends, dayStart, dayEnd, dayLabel)
+        if (item) result.push(item)
         
         dayStart = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000)
       }
+    }
   }
   
   return result
 }
-
-function validateStockCode(code, market) {
-  switch (market) {
-    case MARKETS.A_SHARE:
-      return /^\d{6}$/.test(code)
-    case MARKETS.HK_SHARE:
-      return /^\d{5}$/.test(code)
-    case MARKETS.US_SHARE:
-      return /^[A-Za-z]{1,5}$/.test(code)
-    default:
-      return false
-  }
-}
-
-function formatStockCode(code, market) {
-  switch (market) {
-    case MARKETS.HK_SHARE:
-      return code.padStart(5, '0')
-    case MARKETS.US_SHARE:
-      return code.toUpperCase()
-    default:
-      return code
-  }
-}
-
 function getHeatmapData(year, month) {
   const transactions = Transaction.getAll()
   const dividends = Dividend.getAll()
@@ -661,10 +609,9 @@ module.exports = {
   PriceCache,
   calculatePosition,
   getPositionSummary,
+  getAllPositionsWithRealizedPnL,
   getTotalStats,
   getStatsByPeriod,
   getPeriodStatsList,
-  getHeatmapData,
-  validateStockCode,
-  formatStockCode
+  getHeatmapData
 }

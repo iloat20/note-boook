@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" fill="none">
+  <!-- 持仓图标：简洁折线图 + 数据点，Liquid Glass 线条风格 -->
+  <path d="M8 36L18 20L28 26L40 10" stroke="#86868B" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="18" cy="20" r="3" fill="#86868B"/>
+  <circle cx="28" cy="26" r="3" fill="#86868B"/>
+  <circle cx="40" cy="10" r="3" fill="#86868B"/>
+</svg>

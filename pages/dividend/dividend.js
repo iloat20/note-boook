@@ -1,4 +1,5 @@
-const { Stock, Dividend } = require('../../utils/storage.js')
+﻿const { Stock, Dividend } = require('../../utils/storage.js')
+const { fmt } = require('../../utils/format.js')
 
 Page({
   data: {
@@ -12,7 +13,7 @@ Page({
     const n = new Date()
     this.setData({ date: `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}` })
     this._loadStocks()
-    if (o && o.id) { this.data.isEdit = true; this.data.editId = parseInt(o.id); this._loadEdit(o.id) }
+    if (o && o.id) { this._isEdit = true; this._editId = parseInt(o.id); this._loadEdit(o.id) }
     this._preview()
   },
 
@@ -51,7 +52,7 @@ Page({
     const ps = parseFloat(this.data.perShare) || 0
     const q = parseInt(this.data.qty) || 0
     const total = ps * q
-    this.setData({ perShareText: this.f(ps), totalText: this.f(total) })
+    this.setData({ perShareText: fmt(ps), totalText: fmt(total) })
   },
 
   goBack() { wx.navigateBack() },
@@ -60,17 +61,15 @@ Page({
     const op = this.data.stockOptions[this.data.stockIdx]
     const s = op?.stock
     if (!s) { wx.showToast({ title: '请选择股票', icon: 'none' }); return }
-    const { perShare:ps, qty:q, date:d, note:nt, isEdit } = this.data
+    const { perShare:ps, qty:q, date:d, note:nt } = this.data
     if (!ps || parseFloat(ps) <= 0) { wx.showToast({ title: '请输入有效分红金额', icon: 'none' }); return }
     if (!q || parseInt(q) <= 0) { wx.showToast({ title: '请输入有效数量', icon: 'none' }); return }
     if (!d) { wx.showToast({ title: '请选择日期', icon: 'none' }); return }
 
     const dv = Dividend.create(s.id, ps, q, new Date(`${d}T00:00:00`).toISOString(), nt)
-    if (isEdit) dv.id = this.data.editId
+    if (this._isEdit) dv.id = this._editId
     Dividend.save(dv)
-    wx.showToast({ title: isEdit ? '已修改' : '已添加', icon: 'success' })
+    wx.showToast({ title: this._isEdit ? '已修改' : '已添加', icon: 'success' })
     setTimeout(() => wx.navigateBack(), 800)
   },
-
-  f(num) { if (isNaN(num)) return '0.00'; return parseFloat(num).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',') }
 })

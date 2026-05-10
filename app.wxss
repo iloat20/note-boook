@@ -45,6 +45,15 @@ page {
 
   --transition-page: opacity 200ms ease-out, transform 200ms ease-out;
 
+  /* === Liquid Glass Design Tokens === */
+  --glass-bg: rgba(255, 255, 255, 0.72);
+  --glass-bg-hover: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(255, 255, 255, 0.3);
+  --glass-shadow-out: 0 8px 32px rgba(0, 0, 0, 0.08);
+  --glass-shadow-in: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  --glass-blur: blur(20px);
+  --glass-radius: 16px;
+
   background-color: var(--color-bg);
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
   font-size: var(--font-body);
@@ -188,6 +197,8 @@ page {
   padding: var(--space-page);
   padding-bottom: calc(80px + env(safe-area-inset-bottom));
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
 }
 
 /* === Section Spacing === */
@@ -304,8 +315,11 @@ page {
 }
 
 /* === Scroll Container === */
+/* 用在 scroll-view 上：继承父容器高度，配合 page-container 的 flex 布局 */
 .scroll-container {
-  height: calc(100vh - 120px - env(safe-area-inset-bottom));
+  flex: 1;
+  height: 0;           /* flex 子项必须设 height:0 才能正确收缩 */
+  min-height: 0;        /* 防止内容溢出 */
 }
 
 /* === Liquid Dissolve Animation (液态消融删除) === */

@@ -1,4 +1,7 @@
 const { MARKETS, getPositionSummary, getTotalStats, PriceCache } = require('../../utils/storage.js')
+const { fmt } = require('../../utils/format.js')
+const { getMarketLabel, getMarketColor } = require('../../utils/market.js')
+const { fetchStockPrice } = require('../../utils/stockPrice.js')
 
 Page({
   data: {
@@ -29,8 +32,18 @@ Page({
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({ selected: 0 })
     }
-    this.loadData()
-    this.calculateSliderPosition()
+    const app = getApp()
+    if (app.globalData.dataDirty) {
+      this.loadData()
+      this.calculateSliderPosition()
+      app.globalData.dataDirty = false
+    }
+
+    // 自动获取缺失现价的股票行情
+    const positions = this.data.positions
+    if (positions.length > 0 && positions.some(p => !p.currentPrice)) {
+      this.fetchPrices()
+    }
   },
 
   updateDate() {
@@ -63,11 +76,12 @@ Page({
         : '0.00'
       return {
         ...p,
-        avgCostText: this.fmt(p.avgCost),
-        floatingPnLText: this.fmt(p.floatingPnL),
+        avgCostText: fmt(p.avgCost),
+        currentPriceText: p.currentPrice ? fmt(p.currentPrice) : '--',
+        floatingPnLText: fmt(p.floatingPnL),
         pnlPercentText: pnlPercent,
-        marketLabel: this.getMarketLabel(p.market),
-        marketColor: this.getMarketColor(p.market),
+        marketLabel: getMarketLabel(p.market),
+        marketColor: getMarketColor(p.market),
         parallaxStyle: 'translateZ(0rpx)'
       }
     })
@@ -75,9 +89,9 @@ Page({
     this.setData({
       positions: formattedPositions,
       totalMarketValue: parseFloat(totalMarketValue.toFixed(2)),
-      totalMarketValueText: this.fmt(totalMarketValue),
+      totalMarketValueText: fmt(totalMarketValue),
       totalPnL: parseFloat(totalPnL.toFixed(2)),
-      totalPnLText: this.fmt(totalPnL),
+      totalPnLText: fmt(totalPnL),
       totalPnLPercent: totalInvestment > 0 ? parseFloat((totalPnL / totalInvestment * 100).toFixed(2)) : 0
     })
     
@@ -103,7 +117,7 @@ Page({
   },
 
   calculateSliderPosition() {
-    const systemInfo = wx.getSystemInfoSync()
+    const systemInfo = getApp().globalData.systemInfo || wx.getSystemInfoSync()
     const screenWidth = systemInfo.windowWidth
     const tabs = this.data.marketTabs
     const tabCount = tabs.length
@@ -120,8 +134,13 @@ Page({
   },
 
   onScroll(e) {
+    if (this._parallaxRaf) return
     const scrollTop = e.detail.scrollTop
-    this.updateParallax(scrollTop)
+    this._parallaxRaf = true
+    requestAnimationFrame(() => {
+      this.updateParallax(scrollTop)
+      this._parallaxRaf = false
+    })
   },
 
   updateParallax(scrollTop) {
@@ -178,26 +197,141 @@ Page({
     })
   },
 
-  getMarketLabel(market) {
-    const labels = {
-      [MARKETS.A_SHARE]: 'A股',
-      [MARKETS.HK_SHARE]: '港股',
-      [MARKETS.US_SHARE]: '美股'
-    }
-    return labels[market] || ''
+  fetchPrices() {
+    const positions = this.data.positions
+    if (!positions || positions.length === 0) return
+
+    wx.showLoading({ title: '获取行情中...' })
+
+    const promises = positions.map(pos => {
+      return fetchStockPrice(pos.market, pos.code)
+        .then(priceData => {
+          if (priceData && priceData.currentPrice > 0) {
+            PriceCache.set(pos.id, priceData.currentPrice)
+          }
+        })
+        .catch(() => {
+          // 获取失败，使用缓存的价格
+        })
+    })
+
+    Promise.all(promises).then(() => {
+      wx.hideLoading()
+      this.loadData()
+      wx.showToast({ title: '行情已更新', icon: 'success' })
+    }).catch(() => {
+      wx.hideLoading()
+      this.loadData()
+    })
   },
 
-  getMarketColor(market) {
-    const colors = {
-      [MARKETS.A_SHARE]: '#3B82F6',
-      [MARKETS.HK_SHARE]: '#F97316',
-      [MARKETS.US_SHARE]: '#A855F7'
-    }
-    return colors[market] || '#64748B'
+  onRefreshPrice(e) {
+    const stockId = e.currentTarget.dataset.stockId
+    const position = this.data.positions.find(p => p.id === stockId)
+    if (!position) return
+
+    wx.showLoading({ title: '获取行情中...' })
+
+    fetchStockPrice(position.market, position.code)
+      .then(priceData => {
+        if (priceData && priceData.currentPrice > 0) {
+          PriceCache.set(stockId, priceData.currentPrice)
+          this.loadData()
+          wx.hideLoading()
+          wx.showToast({ title: '行情已更新', icon: 'success' })
+        } else {
+          wx.hideLoading()
+          wx.showToast({ title: '获取失败', icon: 'none' })
+        }
+      })
+      .catch(() => {
+        wx.hideLoading()
+        wx.showToast({ title: '获取失败', icon: 'none' })
+      })
   },
 
-  fmt(num) {
-    if (isNaN(num)) return '0.00'
-    return parseFloat(num).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+  // ========== 左滑菜单触摸事件 ==========
+  onTouchStart(e) {
+    var t = e.touches[0]
+    this._touchStartX = t.clientX
+    this._touchStartY = t.clientY
+    this._swiping = null
+  },
+
+  onTouchMove(e) {
+    if (this._swiping === false) return
+    var t = e.touches[0]
+    var dx = t.clientX - this._touchStartX
+    var dy = t.clientY - this._touchStartY
+    // 判断是否为横向滑动
+    if (this._swiping === null) {
+      if (Math.abs(dx) < 5 && Math.abs(dy) < 5) return
+      this._swiping = Math.abs(dx) > Math.abs(dy)
+      if (!this._swiping) return
+    }
+    // 只允许左滑
+    if (dx > 0) return
+    var index = e.currentTarget.dataset.index
+    var positions = this.data.positions
+    if (!positions[index]) return
+    var offset = Math.max(-180, dx)
+    this.setData({
+      ['positions[' + index + '].swipeOffset']: offset
+    })
+  },
+
+  onTouchEnd(e) {
+    if (this._swiping !== true) return
+    var index = e.currentTarget.dataset.index
+    var positions = this.data.positions
+    if (!positions[index]) return
+    var offset = positions[index].swipeOffset || 0
+    // 滑过一半则展开菜单，否则收回
+    var newOffset = offset < -40 ? -180 : 0
+    this.setData({
+      ['positions[' + index + '].swipeOffset']: newOffset
+    })
+    // 关闭其他已打开的菜单
+    positions.forEach(function (p, i) {
+      if (i !== index && p.swipeOffset && p.swipeOffset !== 0) {
+        positions[i].swipeOffset = 0
+      }
+    })
+    this.setData({ positions: positions })
+  },
+
+  onSwipeEdit(e) {
+    var stockId = e.currentTarget.dataset.stockId
+    // 找到该股票的第一笔交易记录进行编辑
+    var transactions = Transaction.getAll().filter(function (t) { return t.stockId === stockId })
+    if (transactions.length > 0) {
+      wx.navigateTo({ url: '/pages/record/record?id=' + transactions[0].id })
+    }
+  },
+
+  onSwipeSell(e) {
+    var item = e.currentTarget.dataset.item
+    wx.navigateTo({ url: '/pages/record/record?stockId=' + item.id + '&type=SELL' })
+  },
+
+  onSwipeDelete(e) {
+    var stockId = e.currentTarget.dataset.stockId
+    var that = this
+    wx.showModal({
+      title: '确认删除',
+      content: '将删除该股票的所有交易记录和分红记录，是否确认？',
+      success: function (res) {
+        if (res.confirm) {
+          var transactions = Transaction.getAll().filter(function (t) { return t.stockId === stockId })
+          transactions.forEach(function (t) { Transaction.delete(t.id) })
+          var dividends = Dividend.getAll().filter(function (d) { return d.stockId === stockId })
+          dividends.forEach(function (d) { Dividend.delete(d.id) })
+          wx.showToast({ title: '删除成功', icon: 'success' })
+          that.loadData()
+        }
+      }
+    })
   }
 })
+
+

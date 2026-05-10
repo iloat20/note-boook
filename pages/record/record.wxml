@@ -10,23 +10,31 @@
     <text class="title" style="display: block; margin-bottom: 12px;">基本信息</text>
     <view class="card section">
       <view class="tab-bar-line">
-        <view wx:for="{{markets}}" wx:key="key" class="tab-line-item {{indexMarket === item.key ? 'tab-line-active' : ''}}" bindtap="selMarket" data-market="{{item.key}}">{{item.label}}</view>
+        <view wx:for="{{markets}}" wx:key="key" class="tab-line-item {{market === item.key ? 'tab-line-active' : ''}}" bindtap="selectMarket" data-market="{{item.key}}">{{item.label}}</view>
       </view>
 
       <view style="margin-bottom: 12px;">
         <text class="caption" style="display: block; margin-bottom: 4px;">股票代码</text>
-        <input class="input" style="width: 100%;" placeholder="请输入股票代码" value="{{indexCode}}" bindinput="onCode"/>
+        <input class="input" style="width: 100%;" placeholder="请输入股票代码" value="{{code}}" bindinput="onCodeInput" bindblur="hideSuggestions"/>
         <text wx:if="{{codeError}}" class="caption" style="color: var(--color-profit); margin-top: 4px;">{{codeError}}</text>
+        <view wx:if="{{showSuggestions}}" class="card" style="margin-top: 4px; max-height: 200px; overflow-y: auto; position: relative; z-index: 100;">
+          <view wx:for="{{suggestions}}" wx:key="code"
+                bindtap="onSelectSuggestion" data-item="{{item}}"
+                style="padding: 10px 12px; border-bottom: 1px solid var(--color-separator); display: flex; justify-content: space-between; align-items: center;">
+            <text class="body" style="color: var(--color-title);">{{item.code}}</text>
+            <text class="caption" style="color: var(--color-body);">{{item.name}}</text>
+          </view>
+        </view>
       </view>
 
       <view style="margin-bottom: 12px;">
         <text class="caption" style="display: block; margin-bottom: 4px;">股票名称</text>
-        <input class="input" style="width: 100%;" placeholder="请输入股票名称" value="{{indexName}}" bindinput="onName"/>
+        <input class="input" style="width: 100%;" placeholder="请输入股票名称" value="{{name}}" bindinput="onNameInput"/>
       </view>
 
       <view class="tab-bar-line">
-        <view class="tab-line-item {{indexType === 'BUY' ? 'tab-line-active' : ''}}" bindtap="selType" data-type="BUY">买入</view>
-        <view class="tab-line-item {{indexType === 'SELL' ? 'tab-line-active' : ''}}" bindtap="selType" data-type="SELL">卖出</view>
+        <view class="tab-line-item {{type === 'BUY' ? 'tab-line-active' : ''}}" bindtap="selectType" data-type="BUY">买入</view>
+        <view class="tab-line-item {{type === 'SELL' ? 'tab-line-active' : ''}}" bindtap="selectType" data-type="SELL">卖出</view>
       </view>
     </view>
 
@@ -34,15 +42,15 @@
     <view class="card section">
       <view style="margin-bottom: 12px;">
         <text class="caption" style="display: block; margin-bottom: 4px;">成交价格</text>
-        <input class="input" style="width: 100%;" type="digit" placeholder="0.00" value="{{indexPrice}}" bindinput="onPrice"/>
+        <input class="input" style="width: 100%;" type="digit" placeholder="0.00" value="{{price}}" bindinput="onPriceInput"/>
       </view>
       <view style="margin-bottom: 12px;">
         <text class="caption" style="display: block; margin-bottom: 4px;">成交数量（股）</text>
-        <input class="input" style="width: 100%;" type="digit" placeholder="0" value="{{indexQty}}" bindinput="onQty"/>
+        <input class="input" style="width: 100%;" type="digit" placeholder="0" value="{{quantity}}" bindinput="onQuantityInput"/>
       </view>
       <view style="margin-bottom: 12px;">
         <text class="caption" style="display: block; margin-bottom: 4px;">手续费</text>
-        <input class="input" style="width: 100%;" type="digit" placeholder="0.00" value="{{indexFee}}" bindinput="onFee"/>
+        <input class="input" style="width: 100%;" type="digit" placeholder="0.00" value="{{fee}}" bindinput="onFeeInput"/>
         <view wx:if="{{feePreview.length}}" style="margin-top: 8px;">
           <view wx:for="{{feePreview}}" wx:key="name" style="display: flex; justify-content: space-between; padding: 4px 0;">
             <text class="caption">{{item.name}}</text>
@@ -52,25 +60,25 @@
       </view>
       <view style="margin-bottom: 12px;">
         <text class="caption" style="display: block; margin-bottom: 4px;">交易日期</text>
-        <picker mode="date" value="{{indexDate}}" bindchange="onDate">
+        <picker mode="date" value="{{date}}" bindchange="onDateChange">
           <view class="input" style="display: flex; align-items: center; justify-content: space-between;">
-            <text>{{indexDate || '选择日期'}}</text>
+            <text>{{date || '选择日期'}}</text>
             <text class="caption">›</text>
           </view>
         </picker>
       </view>
       <view style="margin-bottom: 12px;">
         <text class="caption" style="display: block; margin-bottom: 4px;">交易时间</text>
-        <picker mode="time" value="{{indexTime}}" bindchange="onTime">
+        <picker mode="time" value="{{time}}" bindchange="onTimeChange">
           <view class="input" style="display: flex; align-items: center; justify-content: space-between;">
-            <text>{{indexTime || '选择时间'}}</text>
+            <text>{{time || '选择时间'}}</text>
             <text class="caption">›</text>
           </view>
         </picker>
       </view>
       <view>
         <text class="caption" style="display: block; margin-bottom: 4px;">备注（选填）</text>
-        <textarea class="input" style="width: 100%; height: 80px; padding: 12px;" placeholder="添加备注..." value="{{indexNote}}" bindinput="onNote"/>
+        <textarea class="input" style="width: 100%; height: 80px; padding: 12px;" placeholder="添加备注..." value="{{note}}" bindinput="onNoteInput"/>
       </view>
     </view>
 
@@ -82,7 +90,7 @@
           <text class="body" style="color: var(--color-title);">{{amountText}}</text>
         </view>
         <view style="display: flex; justify-content: space-between; padding: 8px 0; border-top: 1px solid var(--color-separator);">
-          <text class="body" style="font-weight: var(--weight-title); color: var(--color-title);">实际{{indexType === 'BUY' ? '支出' : '收入'}}</text>
+          <text class="body" style="font-weight: var(--weight-title); color: var(--color-title);">实际{{type === 'BUY' ? '支出' : '收入'}}</text>
           <text class="body" style="font-weight: var(--weight-title); color: var(--color-title);">{{actualText}}</text>
         </view>
       </view>

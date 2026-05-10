@@ -33,6 +33,7 @@ App({
   globalData: {
     userInfo: null,
     systemInfo: null,
-    fontScale: 1
+    fontScale: 1,
+    dataDirty: true
   }
 })

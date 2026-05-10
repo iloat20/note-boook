@@ -4,6 +4,7 @@ const { Stock, Transaction, PriceCache } = require("../../utils/storage")
 const { calculateFee, getFeeBreakdown } = require("../../utils/feeCalculator")
 const { fmt } = require("../../utils/format")
 const { getMarketLabel, validateStockCode, formatStockCode } = require("../../utils/market")
+const { searchStocks } = require("../../utils/stockDatabase")
 
 Page({
   data: {
@@ -15,7 +16,10 @@ Page({
       { key: MARKETS.A_SHARE, label: "A股" },
       { key: MARKETS.HK_SHARE, label: "港股" },
       { key: MARKETS.US_SHARE, label: "美股" }
-    ]
+    ],
+    showSuggestions: false,
+    suggestions: [],
+    highlightIndex: -1
   },
 
   onLoad(options) {
@@ -27,7 +31,7 @@ Page({
     if (options && options.id) {
       this._isEdit = true
       this._editId = parseInt(options.id)
-      this._loadEdit(options.id)
+      this._loadEdit(this._editId)
     }
     this._updatePreview()
   },
@@ -62,7 +66,18 @@ Page({
     this._calcFee()
   },
 
-  onCodeInput(e) { this.setData({ code: e.detail.value, codeError: "" }); this._checkCode() },
+  onCodeInput(e) {
+    var value = (e.detail.value || "").trim()
+    this.setData({ code: value, codeError: "" })
+    this._checkCode()
+    // 触发联想搜索
+    if (value.length >= 1) {
+      var results = searchStocks(value, this.data.market, 8)
+      this.setData({ suggestions: results, showSuggestions: results.length > 0, highlightIndex: -1 })
+    } else {
+      this.setData({ suggestions: [], showSuggestions: false })
+    }
+  },
   onNameInput(e) { this.setData({ name: e.detail.value }) },
   onPriceInput(e) { this.setData({ price: e.detail.value }); this._calcFee() },
   onQuantityInput(e) { this.setData({ quantity: e.detail.value }); this._calcFee() },
@@ -70,6 +85,22 @@ Page({
   onDateChange(e) { this.setData({ date: e.detail.value }) },
   onTimeChange(e) { this.setData({ time: e.detail.value }) },
   onNoteInput(e) { this.setData({ note: e.detail.value }) },
+
+  onSelectSuggestion(e) {
+    var item = e.currentTarget.dataset.item
+    this.setData({
+      code: item.code,
+      name: item.name,
+      suggestions: [],
+      showSuggestions: false,
+      codeError: ""
+    })
+    this._calcFee()
+  },
+
+  hideSuggestions() {
+    this.setData({ suggestions: [], showSuggestions: false })
+  },
 
   _checkCode() {
     var data = this.data

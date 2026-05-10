@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" fill="none">
+  <!-- 流水图标选中态：深色 -->
+  <circle cx="14" cy="12" r="3" fill="#1D1D1F"/>
+  <line x1="20" y1="12" x2="40" y2="12" stroke="#1D1D1F" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="14" cy="24" r="3" fill="#1D1D1F"/>
+  <line x1="20" y1="24" x2="36" y2="24" stroke="#1D1D1F" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="14" cy="36" r="3" fill="#1D1D1F"/>
+  <line x1="20" y1="36" x2="32" y2="36" stroke="#1D1D1F" stroke-width="3" stroke-linecap="round"/>
+</svg>

@@ -6,7 +6,7 @@
     <text class="display">{{isEdit ? '编辑交易' : '添加交易'}}</text>
   </view>
 
-  <scroll-view class="scroll-container" scroll-y>
+  <scroll-view class="scroll-container" scroll-y="true">
     <text class="title" style="display: block; margin-bottom: 12px;">基本信息</text>
     <view class="card section">
       <view class="tab-bar-line">

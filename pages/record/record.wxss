@@ -29,10 +29,10 @@
 }
 
 .tab-line-active {
-  color: #FFF;
-  background: var(--color-accent);
+  color: var(--color-accent);
+  background: var(--glass-bg);
   font-weight: 600;
-  box-shadow: 0 2px 8px rgba(0, 122, 255, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 /* === Form Input Focus === */

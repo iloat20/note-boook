@@ -3,6 +3,7 @@ const { validateStockCode, formatStockCode } = require('./market.js')
 
 // 持仓计算结果缓存，数据变更时由 markDataDirty 清空
 let _positionCache = {}
+let _heatmapCache = {}
 
 function markDataDirty() {
   try {
@@ -13,8 +14,8 @@ function markDataDirty() {
   } catch (e) {
     console.warn('[markDataDirty]', e)
   }
-  // 数据变更，清空持仓缓存
   _positionCache = {}
+  _heatmapCache = {}
 }
 
 const STOCK_KEY = 'stock_trade_stocks'
@@ -545,9 +546,13 @@ function getPeriodStatsList(periodType, count = 12) {
     }
   }
   
-  return result
+  return result.slice(-count)
 }
+
 function getHeatmapData(year, month) {
+  const cacheKey = year + '-' + month
+  if (_heatmapCache[cacheKey]) return _heatmapCache[cacheKey]
+
   const transactions = Transaction.getAll()
   const dividends = Dividend.getAll()
 
@@ -597,7 +602,169 @@ function getHeatmapData(year, month) {
     })
   }
 
+  _heatmapCache[cacheKey] = result
   return result
+}
+
+function getPositionDistribution() {
+  const positions = getPositionSummary()
+  const result = []
+  positions.forEach(function (p) {
+    const mv = p.quantity * (p.currentPrice || p.avgCost || 0)
+    if (mv > 0) {
+      result.push({ name: p.name, value: parseFloat(mv.toFixed(2)) })
+    }
+  })
+  return result
+}
+
+function getPieChartData(period) {
+  const stats = getStatsByPeriod(period)
+  const items = [
+    { name: '买入金额', value: stats.buyAmount },
+    { name: '卖出金额', value: stats.sellAmount },
+    { name: '买入手续费', value: stats.buyFee },
+    { name: '卖出手续费', value: stats.sellFee },
+    { name: '分红收益', value: stats.dividendIncome }
+  ]
+  return items.filter(function (it) { return it.value > 0 })
+}
+
+function getScatterData() {
+  const stocks = Stock.getAll()
+  const result = []
+  stocks.forEach(function (s) {
+    const pos = calculatePosition(s.id)
+    if (pos.quantity > 0 || Math.abs(pos.realizedPnL) > 0.01) {
+      const cost = pos.avgCost || 1
+      const price = pos.currentPrice || cost
+      const ret = cost > 0 ? (price - cost) / cost * 100 : 0
+      result.push({
+        name: s.name,
+        value: [cost, price, pos.floatingPnL || 0],
+        returnRate: parseFloat(ret.toFixed(2))
+      })
+    }
+  })
+  return result
+}
+
+function getMixedChartData(periodType, count) {
+  count = count || 12
+  const list = getPeriodStatsList(periodType, count)
+  const barData = []
+  const lineData = []
+  const labels = []
+  var cumulative = 0
+
+  list.forEach(function (item) {
+    barData.push(item.pnL || 0)
+    cumulative += (item.pnL || 0)
+    lineData.push(parseFloat(cumulative.toFixed(2)))
+    labels.push(item.label)
+  })
+
+  return { labels: labels, barData: barData, lineData: lineData }
+}
+
+/**
+ * 市场分布（A股/港股/美股）- 用于饼图
+ */
+function getMarketDistribution() {
+  const positions = getPositionSummary()
+  var marketMap = {}
+  positions.forEach(function (p) {
+    var market = p.market || 'UNKNOWN'
+    var mv = p.quantity * (p.currentPrice || p.avgCost || 0)
+    if (mv > 0) {
+      marketMap[market] = (marketMap[market] || 0) + mv
+    }
+  })
+  var result = []
+  for (var m in marketMap) {
+    var label = m === 'SH' || m === 'SZ' ? 'A股' : m === 'HK' ? '港股' : m === 'US' ? '美股' : m
+    result.push({ name: label, value: parseFloat(marketMap[m].toFixed(2)) })
+  }
+  return result
+}
+
+/**
+ * 胜率分析 - 返回胜率、平均盈利、平均亏损、盈亏比
+ */
+function getWinRateAnalysis() {
+  var positions = getAllPositionsWithRealizedPnL()
+  var winCount = 0, lossCount = 0, totalWin = 0, totalLoss = 0
+  positions.forEach(function (p) {
+    var ret = p.realizedPnL + (p.dividendIncome || 0)
+    if (ret > 0) { winCount++; totalWin += ret }
+    else if (ret < 0) { lossCount++; totalLoss += Math.abs(ret) }
+  })
+  var total = winCount + lossCount
+  return {
+    winCount: winCount,
+    lossCount: lossCount,
+    winRate: total > 0 ? parseFloat((winCount / total * 100).toFixed(2)) : 0,
+    avgWin: winCount > 0 ? parseFloat((totalWin / winCount).toFixed(2)) : 0,
+    avgLoss: lossCount > 0 ? parseFloat((totalLoss / lossCount).toFixed(2)) : 0,
+    profitLossRatio: lossCount > 0 ? parseFloat((totalWin / lossCount).toFixed(2)) : 0
+  }
+}
+
+/**
+ * 月度交易量 - 最近 count 个月的买入/卖出金额，用于柱状图
+ */
+function getMonthlyTradingVolume(count) {
+  count = count || 12
+  var now = new Date()
+  var labels = [], buyData = [], sellData = []
+  for (var i = count - 1; i >= 0; i--) {
+    var d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    var start = new Date(d.getFullYear(), d.getMonth(), 1)
+    var end = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999)
+    var txs = Transaction.getByDateRange(start, end)
+    var buy = 0, sell = 0
+    txs.forEach(function (t) {
+      if (t.type === TRANSACTION_TYPE.BUY) buy += t.price * t.quantity
+      else sell += t.price * t.quantity
+    })
+    labels.push(d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'))
+    buyData.push(parseFloat(buy.toFixed(2)))
+    sellData.push(parseFloat(sell.toFixed(2)))
+  }
+  return { labels: labels, buyData: buyData, sellData: sellData }
+}
+
+/**
+ * 持仓集中度 - Herfindahl 指数 + Top5 持仓占比
+ */
+function getPositionConcentration() {
+  var positions = getPositionSummary()
+  var totalMV = 0
+  var items = positions.map(function (p) {
+    var mv = p.quantity * (p.currentPrice || p.avgCost || 0)
+    totalMV += mv
+    return { name: p.name, mv: mv }
+  }).filter(function (it) { return it.mv > 0 })
+
+  if (totalMV === 0) return { herfindahl: 0, top5Ratio: 0, items: [] }
+
+  // Herfindahl 指数：Σ(占比^2)，越接近1越集中
+  var h = 0
+  items.forEach(function (it) { h += Math.pow(it.mv / totalMV, 2) })
+
+  // Top5 占比
+  items.sort(function (a, b) { return b.mv - a.mv })
+  var top5MV = 0
+  var top5 = items.slice(0, 5)
+  top5.forEach(function (it) { top5MV += it.mv })
+
+  return {
+    herfindahl: parseFloat(h.toFixed(4)),
+    top5Ratio: parseFloat((top5MV / totalMV * 100).toFixed(2)),
+    items: items.map(function (it) {
+      return { name: it.name, ratio: parseFloat((it.mv / totalMV * 100).toFixed(2)) }
+    })
+  }
 }
 
 module.exports = {
@@ -613,5 +780,13 @@ module.exports = {
   getTotalStats,
   getStatsByPeriod,
   getPeriodStatsList,
-  getHeatmapData
+  getHeatmapData,
+  getPositionDistribution,
+  getPieChartData,
+  getScatterData,
+  getMixedChartData,
+  getMarketDistribution,
+  getWinRateAnalysis,
+  getMonthlyTradingVolume,
+  getPositionConcentration
 }

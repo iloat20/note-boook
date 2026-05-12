@@ -154,7 +154,7 @@ Page({
   },
 
   calculateSliderPosition() {
-    const systemInfo = getApp().globalData.systemInfo || wx.getSystemInfoSync()
+    const systemInfo = getApp().globalData.systemInfo || wx.getWindowInfo() || {}
     const screenWidth = systemInfo.windowWidth
     const tabs = this.data.filterTabs
     const tabWidth = screenWidth / tabs.length

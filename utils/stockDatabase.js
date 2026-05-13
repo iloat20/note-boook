@@ -141,24 +141,33 @@ const US_SHARE = [
   { code: 'LI', name: '理想汽车' }
 ]
 
-/**
- * 搜索股票（代码或名称模糊匹配）
- * @param {string} keyword - 搜索关键词
- * @param {string} market - 市场过滤（可选）
- * @param {number} limit - 最大返回数量
- * @returns {Array} 匹配的股票列表
- */
+// 预构建带 market 标签的完整池，避免每次搜索都创建新对象
+var _poolA = A_SHARE.map(function (s) { return { code: s.code, name: s.name, market: 'A_SHARE' } })
+var _poolHK = HK_SHARE.map(function (s) { return { code: s.code, name: s.name, market: 'HK_SHARE' } })
+var _poolUS = US_SHARE.map(function (s) { return { code: s.code, name: s.name, market: 'US_SHARE' } })
+var _poolAll = _poolA.concat(_poolHK, _poolUS)
+
 function searchStocks(keyword, market, limit) {
   limit = limit || 10
   keyword = (keyword || '').toLowerCase().trim()
   if (!keyword) return []
 
-  var pool = []
-  if (!market || market === 'A_SHARE') pool = pool.concat(A_SHARE.map(function (s) { return Object.assign({}, s, { market: 'A_SHARE' }) }))
-  if (!market || market === 'HK_SHARE') pool = pool.concat(HK_SHARE.map(function (s) { return Object.assign({}, s, { market: 'HK_SHARE' }) }))
-  if (!market || market === 'US_SHARE') pool = pool.concat(US_SHARE.map(function (s) { return Object.assign({}, s, { market: 'US_SHARE' }) }))
+  var hkPrefix = false
+  if (/^(hk)(\d+)$/i.test(keyword)) {
+    keyword = keyword.replace(/^(hk)/i, '')
+    hkPrefix = true
+  }
+
+  var pool
+  if (!market) pool = _poolAll
+  else if (market === 'A_SHARE') pool = _poolA
+  else if (market === 'HK_SHARE') pool = _poolHK
+  else if (market === 'US_SHARE') pool = _poolUS
+  else pool = _poolAll
 
   var results = pool.filter(function (s) {
+    // 如果输入了 hk 前缀，只匹配港股
+    if (hkPrefix && s.market !== 'HK_SHARE') return false
     return s.code.toLowerCase().indexOf(keyword) !== -1 ||
            s.name.toLowerCase().indexOf(keyword) !== -1
   })
@@ -181,8 +190,5 @@ function searchStocks(keyword, market, limit) {
 }
 
 module.exports = {
-  A_SHARE: A_SHARE,
-  HK_SHARE: HK_SHARE,
-  US_SHARE: US_SHARE,
   searchStocks: searchStocks
 }

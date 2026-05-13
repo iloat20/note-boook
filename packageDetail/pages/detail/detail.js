@@ -1,10 +1,12 @@
 ﻿﻿// pages/detail/detail.js
-const { Stock, Transaction, Dividend, calculatePosition, PriceCache } = require("../../utils/storage")
-const { fmt, fmtShortDate, fmtDate, fmtTime } = require("../../utils/format")
-const { getMarketLabel, getMarketColor } = require("../../utils/market")
+const { Stock, Transaction, Dividend, calculatePosition, PriceCache } = require("../../../utils/storage")
+const { fmt, fmtShortDate, fmtDate, fmtTime } = require("../../../utils/format")
+const { getMarketLabel, getMarketColor } = require("../../../utils/market")
 
 Page({
   data: {
+    statusBarHeight: 0,
+    navBarHeight: 44,
     stock: null,
     stockId: null,
     stockName: "股票详情",
@@ -36,6 +38,8 @@ Page({
   },
 
   onLoad(options) {
+    this.setData(getApp().getNavBarInfo())
+    
     if (options && options.stockId) {
       this._stockId = parseInt(options.stockId)
       this.loadData()
@@ -151,7 +155,7 @@ Page({
 
   goToDividend() {
     var stockId = this.data.stockId || this._stockId
-    wx.navigateTo({ url: "/pages/dividend/dividend?stockId=" + stockId })
+    wx.navigateTo({ url: "/packageDetail/pages/dividend/dividend?stockId=" + stockId })
   },
 
   showTransactionActions(e) {
@@ -188,7 +192,7 @@ Page({
       itemList: ["编辑", "删除"],
       success: function (res) {
         if (res.tapIndex === 0) {
-          wx.navigateTo({ url: "/pages/dividend/dividend?id=" + id })
+          wx.navigateTo({ url: "/packageDetail/pages/dividend/dividend?id=" + id })
         } else if (res.tapIndex === 1) {
           wx.showModal({
             title: "确认删除",

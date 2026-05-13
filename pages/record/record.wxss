@@ -19,23 +19,12 @@
   border-radius: 8px;
   transition: all 0.2s ease;
   position: relative;
-  background: var(--color-glass);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-}
-
-.tab-line-item:active {
-  opacity: 0.7;
+  background: var(--color-surface);
 }
 
 .tab-line-active {
   color: var(--color-accent);
   background: var(--glass-bg);
   font-weight: 600;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-}
-
-/* === Form Input Focus === */
-.form-input:focus {
-  background: var(--color-bg);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }

@@ -8,6 +8,8 @@ const { searchStocks } = require("../../utils/stockDatabase")
 
 Page({
   data: {
+    statusBarHeight: 0,
+    navBarHeight: 44,
     market: MARKETS.A_SHARE, code: "", name: "", type: "BUY",
     price: "", quantity: "", fee: "", date: "", time: "", note: "",
     codeError: "", feePreview: [], amountText: "0.00", actualText: "0.00",
@@ -23,6 +25,8 @@ Page({
   },
 
   onLoad(options) {
+    this.setData(getApp().getNavBarInfo())
+    
     const now = new Date()
     this.setData({
       date: now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0") + "-" + String(now.getDate()).padStart(2, "0"),
@@ -33,7 +37,6 @@ Page({
       this._editId = parseInt(options.id)
       this._loadEdit(this._editId)
     }
-    this._updatePreview()
   },
 
   _loadEdit(id) {
@@ -52,7 +55,6 @@ Page({
       marketLabel: getMarketLabel(stock.market)
     })
     this._calcFee()
-    this._updatePreview()
   },
 
   selectMarket(e) {
@@ -81,7 +83,14 @@ Page({
   onNameInput(e) { this.setData({ name: e.detail.value }) },
   onPriceInput(e) { this.setData({ price: e.detail.value }); this._calcFee() },
   onQuantityInput(e) { this.setData({ quantity: e.detail.value }); this._calcFee() },
-  onFeeInput(e) { this.setData({ fee: e.detail.value }); this._updatePreview() },
+  onFeeInput(e) {
+    this.setData({ fee: e.detail.value })
+    var data = this.data
+    var tradeAmount = (parseFloat(data.price) || 0) * (parseInt(data.quantity) || 0)
+    var fee = parseFloat(e.detail.value) || 0
+    var actualAmount = data.type === "BUY" ? tradeAmount + fee : tradeAmount - fee
+    this.setData({ amountText: fmt(tradeAmount), actualText: fmt(actualAmount) })
+  },
   onDateChange(e) { this.setData({ date: e.detail.value }) },
   onTimeChange(e) { this.setData({ time: e.detail.value }) },
   onNoteInput(e) { this.setData({ note: e.detail.value }) },
@@ -105,29 +114,25 @@ Page({
   _checkCode() {
     var data = this.data
     if (!data.code) { this.setData({ codeError: "" }); return }
-    var formattedCode = formatStockCode(data.code, data.market)
-    if (!validateStockCode(formattedCode, data.market)) {
+    if (!validateStockCode(data.code, data.market)) {
       this.setData({ codeError: getMarketLabel(data.market) + "代码格式错误" })
     } else {
-      this.setData({ codeError: "", code: formattedCode })
+      this.setData({ codeError: "" })
     }
   },
 
   _calcFee() {
     var data = this.data
     var fee = calculateFee(data.market, data.type, data.price, data.quantity)
-    this.setData({ fee: String(fee) })
     var breakdown = getFeeBreakdown(data.market, data.type, data.price, data.quantity)
-    this.setData({ feePreview: breakdown.items.map(function (item) { return { name: item.name, value: item.value, vt: fmt(item.value), rate: item.rate, min: item.min, note: item.note } }) })
-    this._updatePreview()
-  },
-
-  _updatePreview() {
-    var data = this.data
     var tradeAmount = (parseFloat(data.price) || 0) * (parseInt(data.quantity) || 0)
-    var fee = parseFloat(data.fee) || 0
     var actualAmount = data.type === "BUY" ? tradeAmount + fee : tradeAmount - fee
-    this.setData({ amountText: fmt(tradeAmount), actualText: fmt(actualAmount) })
+    this.setData({
+      fee: String(fee),
+      feePreview: breakdown.items.map(function (item) { return { name: item.name, value: item.value, vt: fmt(item.value), rate: item.rate, min: item.min, note: item.note } }),
+      amountText: fmt(tradeAmount),
+      actualText: fmt(actualAmount)
+    })
   },
 
   goBack() { wx.navigateBack() },
@@ -135,7 +140,7 @@ Page({
   submit() {
     var data = this.data
     var market = data.market
-    var code = data.code
+    var code = formatStockCode(data.code, market)
     var name = data.name
     var type = data.type
     var price = data.price

@@ -1,16 +1,13 @@
-/* ═══════════════════════════════════════════
-   Minimal + Spatial UI Design System
-   参考微信读书设计语言
-   ═══════════════════════════════════════════ */
+/* Minimal + Spatial UI Design System */
 
 /* === Design Tokens === */
 page {
-  --color-bg: #F5F5F7;
+  --color-bg: #F2F2F7;
   --color-surface: #FFFFFF;
-  --color-title: #1D1D1F;
-  --color-body: #6E6E73;
-  --color-caption: #86868B;
-  --color-separator: #E5E5EA;
+  --color-title: #1C1C1E;
+  --color-body: #3C3C43;
+  --color-caption: #8E8E93;
+  --color-separator: rgba(60, 60, 67, 0.12);
   --color-accent: #FF6B35;
   --color-profit: #FF3B30;
   --color-loss: #34C759;
@@ -18,24 +15,29 @@ page {
   --color-market-hk: #FF9500;
   --color-market-us: #AF52DE;
 
-  --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.06);
-  --shadow-lg: 0 8px 30px rgba(0,0,0,0.08);
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 1px 3px rgba(0,0,0,0.06);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.08);
 
-  --radius-card: 16px;
+  --radius-card: 12px;
   --radius-btn: 12px;
   --radius-tag: 6px;
   --radius-input: 10px;
 
-  --space-page: 20px;
-  --space-module: 16px;
-  --space-card-pad: 20px;
+  --space-page: 16px;
+  --space-module: 12px;
+  --space-card-pad: 16px;
   --space-item: 12px;
   --space-inner: 8px;
 
+  --font-large-title: 34px;
   --font-display: 28px;
   --font-title: 20px;
-  --font-body: 15px;
+  --font-headline: 17px;
+  --font-body: 17px;
+  --font-callout: 16px;
+  --font-subhead: 15px;
+  --font-footnote: 13px;
   --font-caption: 12px;
 
   --weight-display: 700;
@@ -46,12 +48,11 @@ page {
   --transition-page: opacity 200ms ease-out, transform 200ms ease-out;
 
   /* === Liquid Glass Design Tokens === */
-  --glass-bg: rgba(255, 255, 255, 0.72);
-  --glass-bg-hover: rgba(255, 255, 255, 0.85);
-  --glass-border: rgba(255, 255, 255, 0.3);
-  --glass-shadow-out: 0 8px 32px rgba(0, 0, 0, 0.08);
-  --glass-shadow-in: inset 0 1px 0 rgba(255, 255, 255, 0.6);
-  --glass-blur: blur(20px);
+  --glass-bg: rgba(255,255,255,0.72);
+  --glass-bg-hover: rgba(255,255,255,0.85);
+  --glass-border: rgba(255,255,255,0.3);
+  --glass-shadow-out: 0 8px 32px rgba(0,0,0,0.08);
+  --glass-shadow-in: inset 0 1px 0 rgba(255,255,255,0.6);
   --glass-radius: 16px;
 
   background-color: var(--color-bg);
@@ -60,7 +61,6 @@ page {
   font-weight: var(--weight-body);
   color: var(--color-body);
   line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
 }
 
 /* === Page Enter/Leave Transition === */
@@ -75,18 +75,30 @@ page {
 }
 
 /* === Typography === */
+.large-title {
+  font-size: var(--font-large-title);
+  font-weight: var(--weight-display);
+  color: var(--color-title);
+  letter-spacing: 0.01em;
+  line-height: 1.15;
+}
 .display {
   font-size: var(--font-display);
   font-weight: var(--weight-display);
   color: var(--color-title);
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
   line-height: 1.2;
 }
 .title {
   font-size: var(--font-title);
   font-weight: var(--weight-title);
   color: var(--color-title);
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
+}
+.headline {
+  font-size: var(--font-headline);
+  font-weight: 600;
+  color: var(--color-title);
 }
 .body {
   font-size: var(--font-body);
@@ -94,30 +106,32 @@ page {
   color: var(--color-body);
   letter-spacing: -0.01em;
 }
+.footnote {
+  font-size: var(--font-footnote);
+  font-weight: var(--weight-body);
+  color: var(--color-caption);
+}
 .caption {
   font-size: var(--font-caption);
   font-weight: var(--weight-caption);
   color: var(--color-caption);
 }
 
-/* === Surface Card === */
+/* === Surface Card (Apple Inset Grouped) === */
 .card {
   background: var(--color-surface);
   border-radius: var(--radius-card);
   padding: var(--space-card-pad);
-  box-shadow: var(--shadow-md);
 }
 .card-sm {
   background: var(--color-surface);
   border-radius: var(--radius-card);
   padding: var(--space-card-pad);
-  box-shadow: var(--shadow-sm);
 }
 .card-lg {
   background: var(--color-surface);
   border-radius: var(--radius-card);
   padding: var(--space-card-pad);
-  box-shadow: var(--shadow-lg);
 }
 
 /* === CTA Button === */
@@ -132,9 +146,6 @@ page {
   text-align: center;
   transition: opacity 100ms;
 }
-.cta-btn:active {
-  opacity: 0.7;
-}
 
 /* === Text Button === */
 .text-btn {
@@ -147,9 +158,6 @@ page {
   align-items: center;
   justify-content: center;
   transition: opacity 100ms;
-}
-.text-btn:active {
-  opacity: 0.7;
 }
 
 /* === Tag Badge === */
@@ -164,6 +172,12 @@ page {
 /* === Profit / Loss Colors === */
 .profit { color: var(--color-profit) !important; }
 .loss { color: var(--color-loss) !important; }
+
+/* === Transaction Type Tags === */
+.type-tag { margin-left: auto; }
+.tag-buy { background: #E8F5E9; color: #2E7D32; }
+.tag-sell { background: #FFEBEE; color: #C62828; }
+.tag-dividend { background: #FFF3E0; color: #E65100; }
 
 /* === Market Colors === */
 .market-a { background-color: var(--color-market-a); color: #FFF; }
@@ -186,9 +200,6 @@ page {
   font-size: var(--font-body);
   color: var(--color-title);
   transition: opacity 100ms;
-}
-.input:focus {
-  background: #ECECEE;
 }
 
 /* === Page Container === */
@@ -219,17 +230,15 @@ page {
   padding: 6px 14px;
   border-radius: 20px;
   background: var(--color-surface);
-  box-shadow: var(--shadow-sm);
   font-size: var(--font-caption);
   color: var(--color-body);
   min-height: 32px;
   transition: opacity 100ms;
 }
 .chip-active {
-  background: var(--color-title);
+  background: var(--color-accent);
   color: #FFFFFF;
 }
-.chip:active { opacity: 0.7; }
 
 /* === Empty State === */
 .empty-state {
@@ -251,34 +260,31 @@ page {
   margin-top: 8px;
 }
 
-/* === FAB === */
-.fab {
-  position: fixed;
-  right: 24px;
-  bottom: calc(100px + env(safe-area-inset-bottom));
-  width: 56px;
-  height: 56px;
-  border-radius: 28px;
-  background: var(--color-accent);
-  color: #FFFFFF;
-  box-shadow: var(--shadow-lg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 28px;
-  z-index: 100;
-  transition: opacity 100ms;
-}
-.fab:active { opacity: 0.7; }
-
-/* === Header Bar (自定义导航栏) === */
+/* === Header Bar (Frosted Glass) === */
 .nav-bar {
   position: sticky;
   top: 0;
   z-index: 50;
-  background: var(--color-bg);
+  background: rgba(242, 242, 247, 0.72);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
   padding-top: 0;
   padding-bottom: 8px;
+  border-bottom: 0.5px solid rgba(0, 0, 0, 0.08);
+}
+.nav-header {
+  display: flex;
+  align-items: flex-end;
+  padding: 0 var(--space-page);
+  height: 100%;
+}
+.nav-header-title {
+  font-size: var(--font-large-title);
+  font-weight: var(--weight-display);
+  color: var(--color-title);
+  letter-spacing: 0.01em;
+  line-height: 1.15;
+  padding-bottom: 4px;
 }
 
 /* === Liquid Slider (液态滑动器) === */
@@ -315,11 +321,10 @@ page {
 }
 
 /* === Scroll Container === */
-/* 用在 scroll-view 上：继承父容器高度，配合 page-container 的 flex 布局 */
 .scroll-container {
   flex: 1;
-  height: 0;           /* flex 子项必须设 height:0 才能正确收缩 */
-  min-height: 0;        /* 防止内容溢出 */
+  height: 0;
+  min-height: 0;
 }
 
 /* === Liquid Dissolve Animation (液态消融删除) === */
@@ -327,12 +332,10 @@ page {
   0% {
     transform: scale(1);
     opacity: 1;
-    filter: blur(0);
   }
   100% {
     transform: scale(0.8);
     opacity: 0;
-    filter: blur(4px);
   }
 }
 .dissolving {
@@ -340,19 +343,85 @@ page {
   pointer-events: none;
 }
 
-/* === Parallax (Z轴视差) === */
+/* === Visual Feedback (视差效果用 scale 替代) === */
 .parallax-container {
-  perspective: 800px;
+  /* 容器，无特殊样式 */
 }
 .parallax-card {
   transition: transform 100ms ease-out, box-shadow 100ms ease-out;
 }
 .parallax-near {
-  transform: translateZ(20px);
+  transform: scale(1.02);
 }
 .parallax-mid {
-  transform: translateZ(0);
+  transform: scale(1);
 }
 .parallax-far {
-  transform: translateZ(-10px) scale(0.96);
+  transform: scale(0.98);
+}
+
+/* === Skeleton Screen (骨架屏) === */
+.skeleton-container {
+  padding: var(--space-page);
+}
+
+.skeleton-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-card);
+  padding: var(--space-card-pad);
+  margin-bottom: var(--space-module);
+}
+
+.skeleton-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.skeleton-tag {
+  width: 48px;
+  height: 24px;
+  border-radius: var(--radius-tag);
+  background: #E5E5EA;
+}
+
+.skeleton-text {
+  height: 20px;
+  border-radius: 4px;
+  background: #E5E5EA;
+}
+
+.skeleton-header .skeleton-text:first-child {
+  width: 80px;
+}
+
+.skeleton-header .skeleton-text:last-child {
+  width: 100px;
+}
+
+.skeleton-body {
+  display: flex;
+  gap: 12px;
+}
+.skeleton-body .skeleton-item {
+  flex: 1;
+}
+
+.skeleton-item {
+  height: 40px;
+  border-radius: 8px;
+  background: #E5E5EA;
+}
+
+/* === Shimmer Animation (微光动画) === */
+.shimmer {
+  background: linear-gradient(90deg, #E5E5EA 25%, #F5F5F7 50%, #E5E5EA 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }

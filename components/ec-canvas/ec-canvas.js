@@ -5,6 +5,7 @@ const WxCanvas = require('./wx-canvas');
 const echarts = require('./echarts');
 
 let ctx;
+let preprocessorRegistered = false;
 
 function compareVersion(v1, v2) {
   v1 = v1.split('.');
@@ -29,20 +30,30 @@ Component({
   },
 
   data: {
-    isUseNewCanvas: false
+    isUseNewCanvas: true
+  },
+
+  detached: function () {
+    if (this.chart) {
+      this.chart.dispose();
+      this.chart = null;
+    }
   },
 
   ready: function () {
-    // 禁用 progressive 渲染（小程序不支持）
-    echarts.registerPreprocessor(function (option) {
-      if (option && option.series) {
-        if (Array.isArray(option.series)) {
-          option.series.forEach(function (series) { series.progressive = 0; });
-        } else if (typeof option.series === 'object') {
-          option.series.progressive = 0;
+    // 禁用 progressive 渲染（小程序不支持），仅注册一次
+    if (!preprocessorRegistered) {
+      preprocessorRegistered = true;
+      echarts.registerPreprocessor(function (option) {
+        if (option && option.series) {
+          if (Array.isArray(option.series)) {
+            option.series.forEach(function (series) { series.progressive = 0; });
+          } else if (typeof option.series === 'object') {
+            option.series.progressive = 0;
+          }
         }
-      }
-    });
+      });
+    }
 
     if (!this.data.ec) {
       console.warn('ec-canvas 组件需绑定 ec 变量，例：<ec-canvas id="mychart" canvas-id="mychart" ec="{{ec}}"></ec-canvas>');

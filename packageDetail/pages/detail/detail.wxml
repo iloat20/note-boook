@@ -1,9 +1,9 @@
-<view class="page-container">
-  <view style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
-    <view bindtap="goBack" style="min-height: 44px; display: flex; align-items: center; padding-right: 8px;">
-      <text class="body" style="color: var(--color-accent); font-size: 17px;">←</text>
+<view class="page-container" style="padding-top: {{statusBarHeight}}px;">
+  <view class="nav-bar" style="height: {{navBarHeight}}px; display: flex; align-items: flex-end; padding: 0 16px;">
+    <view bindtap="goBack" style="min-height: 44px; min-width: 44px; display: flex; align-items: center; justify-content: flex-start;">
+      <text style="font-size: 22px; color: var(--color-accent); font-weight: 300;">‹</text>
     </view>
-    <text class="display">{{stockName}}</text>
+    <text class="nav-header-title" style="flex: 1;">{{stockName}}</text>
   </view>
 
   <scroll-view wx:if="{{stock}}" class="scroll-container" scroll-y>
@@ -15,20 +15,20 @@
 
     <text class="title" style="display: block; margin-bottom: 12px;">持仓信息</text>
     <view class="card section">
-      <view style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px 12px;">
-        <view>
+      <view style="display: flex; flex-wrap: wrap; gap: 12px;">
+        <view style="width: calc(50% - 6px);">
           <text class="caption">持仓数量</text>
           <view class="body" style="color: var(--color-title); margin-top: 2px;">{{position.quantity}}股</view>
         </view>
-        <view>
+        <view style="width: calc(50% - 6px);">
           <text class="caption">成本价</text>
           <view class="body" style="color: var(--color-title); margin-top: 2px;">{{formatAvgCost}}</view>
         </view>
-        <view>
+        <view style="width: calc(50% - 6px);">
           <text class="caption">现价</text>
-          <input class="input" type="digit" placeholder="--" value="{{position.currentPrice || ''}}" bindblur="updatePrice" style="margin-top: 2px;"/>
+          <input type="digit" placeholder="--" value="{{position.currentPrice || ''}}" bindblur="updatePrice" style="margin-top: 2px; height: 24px; font-size: var(--font-body); color: var(--color-title); background: transparent; border: none; padding: 0;"/>
         </view>
-        <view>
+        <view style="width: calc(50% - 6px);">
           <text class="caption">市值</text>
           <view class="body" style="color: var(--color-title); margin-top: 2px;">{{formatMarketValue}}</view>
         </view>
@@ -37,20 +37,20 @@
 
     <text class="title" style="display: block; margin-bottom: 12px;">盈亏统计</text>
     <view class="card section">
-      <view style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px 12px;">
-        <view>
+      <view style="display: flex; flex-wrap: wrap; gap: 12px;">
+        <view style="width: calc(50% - 6px);">
           <text class="caption">浮动盈亏</text>
           <view class="body {{floatingPnLClass}}" style="font-weight: var(--weight-title); margin-top: 2px;">{{floatingPnLText}}</view>
         </view>
-        <view>
+        <view style="width: calc(50% - 6px);">
           <text class="caption">盈亏比例</text>
           <view class="body {{floatingPnLClass}}" style="font-weight: var(--weight-title); margin-top: 2px;">{{floatingPnLPercent}}%</view>
         </view>
-        <view>
+        <view style="width: calc(50% - 6px);">
           <text class="caption">已实现盈亏</text>
           <view class="body {{realizedPnLClass}}" style="font-weight: var(--weight-title); margin-top: 2px;">{{realizedPnLText}}</view>
         </view>
-        <view>
+        <view style="width: calc(50% - 6px);">
           <text class="caption">分红收益</text>
           <view class="body profit" style="font-weight: var(--weight-title); margin-top: 2px;">+{{formatDividendIncome}}</view>
         </view>
@@ -69,7 +69,7 @@
       <view wx:if="{{transactions.length > 0}}">
         <view wx:for="{{transactions}}" wx:key="id" class="card-sm record-item-card {{disTransId === item.id ? 'dissolving' : ''}}" style="margin-bottom: 8px;" bindtap="showTransactionActions" data-id="{{item.id}}" data-type="transaction">
           <view style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
-            <view class="tag" style="background: {{item.type === 'BUY' ? '#E8F5E9' : '#FFEBEE'}}; color: {{item.type === 'BUY' ? '#2E7D32' : '#C62828'}};">{{item.typeText}}</view>
+            <view class="tag type-tag {{item.type === 'BUY' ? 'tag-buy' : 'tag-sell'}}">{{item.typeText}}</view>
             <text class="caption">{{item.dateText}} {{item.timeText}}</text>
           </view>
           <view style="display: flex; gap: 16px;">
@@ -93,7 +93,7 @@
         <view wx:for="{{dividends}}" wx:key="id" class="card-sm record-item-card {{disDivId === item.id ? 'dissolving' : ''}}" style="margin-bottom: 8px;"
 bindtap="showDividendActions" data-id="{{item.id}}" data-type="dividend">
           <view style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
-            <view class="tag" style="background: #FFF3E0; color: #E65100;">分红</view>
+            <view class="tag type-tag tag-dividend">分红</view>
             <text class="caption">{{item.dateText}}</text>
           </view>
           <view style="display: flex; gap: 16px;">

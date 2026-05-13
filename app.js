@@ -14,10 +14,15 @@ App({
         ? windowInfo.screenHeight - windowInfo.safeArea.bottom 
         : 0
 
+      const platform = (appBaseInfo.platform || '').toLowerCase()
+      const navBarHeight = platform === 'android' ? 48 : 44
+
       this.globalData.systemInfo = {
         safeAreaTop: safeTop,
         safeAreaBottom: safeBottom,
         statusBarHeight: windowInfo.statusBarHeight,
+        navBarHeight: navBarHeight,
+        platform: platform,
         screenWidth: windowInfo.screenWidth,
         screenHeight: windowInfo.screenHeight,
         fontSizeSetting: appBaseInfo.fontSizeSetting || 0
@@ -28,6 +33,14 @@ App({
       this.globalData.fontScale = Math.min(scale, 1.3)
     } catch (e) {
       console.warn('[App] System info detection failed:', e)
+    }
+  },
+
+  getNavBarInfo() {
+    const info = this.globalData.systemInfo || {}
+    return {
+      statusBarHeight: info.statusBarHeight || 20,
+      navBarHeight: info.navBarHeight || 44
     }
   },
 

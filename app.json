@@ -3,19 +3,31 @@
     "pages/index/index",
     "pages/history/history",
     "pages/stats/stats",
-    "pages/record/record",
-    "pages/dividend/dividend",
-    "pages/detail/detail"
+    "pages/record/record"
   ],
+  "subpackages": [
+    {
+      "root": "packageDetail",
+      "pages": [
+        "pages/detail/detail",
+        "pages/dividend/dividend"
+      ]
+    }
+  ],
+  "preloadRule": {
+    "pages/index/index": {
+      "packages": ["packageDetail"]
+    },
+    "pages/history/history": {
+      "packages": ["packageDetail"]
+    }
+  },
   "window": {
     "backgroundTextStyle": "light",
-    "navigationBarTextStyle": "black",
-    "navigationBarTitleText": "股票交易记录",
-    "navigationBarBackgroundColor": "#F5F5F7",
     "backgroundColor": "#F5F5F7",
     "enablePullDownRefresh": true,
     "onReachBottomDistance": 50,
-    "navigationStyle": "default"
+    "navigationStyle": "custom"
   },
   "tabBar": {
     "custom": true,
@@ -39,5 +51,6 @@
     ]
   },
   "lazyCodeLoading": "requiredComponents",
-  "componentFramework": "glass-easel"
+  "componentFramework": "glass-easel",
+  "sitemapLocation": "sitemap.json"
 }

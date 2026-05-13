@@ -1,5 +1,5 @@
 {
-  "navigationStyle": "custom",
+  "navigationBarTitleText": "持仓",
   "usingComponents": {},
   "styleIsolation": "apply-shared"
 }

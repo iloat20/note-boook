@@ -1,6 +1,6 @@
 /**
  * 股票行情获取工具
- * 使用新浪财经免费 API
+ * 使用腾讯财经 API（支持 HTTPS）
  */
 
 // A股代码前缀映射
@@ -11,81 +11,40 @@ function getAsharePrefix(code) {
   return 'sh'  // 默认上海
 }
 
-// 构建API URL
+// 构建API URL - 使用腾讯财经API（支持HTTPS）
 function buildUrl(market, code) {
   switch (market) {
     case 'A_SHARE':
-      return `http://hq.sinajs.cn/list=${getAsharePrefix(code)}${code}`
+      const prefix = getAsharePrefix(code)
+      return `https://qt.gtimg.cn/q=${prefix}${code}`
     case 'HK_SHARE':
-      return `http://hq.sinajs.cn/list=hk${code}`
+      const hkCode = code.padStart(5, '0')
+      return `https://qt.gtimg.cn/q=r_hk${hkCode}`
     case 'US_SHARE':
-      return `http://hq.sinajs.cn/list=gb_${code.toLowerCase()}`
+      return `https://qt.gtimg.cn/q=us.${code.toLowerCase()}`
     default:
       return null
   }
 }
 
-// 解析A股行情数据
-function parseAshareData(data) {
-  const match = data.match(/="(.+)";/)
+// 解析腾讯财经API返回的数据
+function parseTencentData(data) {
+  const match = data.match(/="(.+)"/)
   if (!match) return null
-  
-  const fields = match[1].split(',')
-  if (fields.length < 32) return null
-  
+
+  const fields = match[1].split('~')
+  if (fields.length < 35) return null
+
   return {
-    code: fields[0],
+    code: fields[2],
     name: fields[1],
     currentPrice: parseFloat(fields[3]) || 0,
     yesterdayClose: parseFloat(fields[4]) || 0,
     todayOpen: parseFloat(fields[5]) || 0,
-    volume: parseInt(fields[8]) || 0,
-    amount: parseFloat(fields[9]) || 0,
-    bidPrice: parseFloat(fields[11]) || 0,
-    askPrice: parseFloat(fields[21]) || 0,
-    timestamp: fields[30] + ' ' + fields[31]
-  }
-}
-
-// 解析港股行情数据
-function parseHkShareData(data) {
-  const match = data.match(/="(.+)";/)
-  if (!match) return null
-  
-  const fields = match[1].split(',')
-  if (fields.length < 10) return null
-  
-  return {
-    code: fields[0],
-    name: fields[1],
-    currentPrice: parseFloat(fields[6]) || 0,
-    yesterdayClose: parseFloat(fields[3]) || 0,
-    todayOpen: parseFloat(fields[5]) || 0,
-    high: parseFloat(fields[4]) || 0,
-    low: parseFloat(fields[5]) || 0,
-    volume: parseInt(fields[12]) || 0,
-    timestamp: fields[17] + ' ' + fields[18]
-  }
-}
-
-// 解析美股行情数据
-function parseUsShareData(data) {
-  const match = data.match(/="(.+)";/)
-  if (!match) return null
-  
-  const fields = match[1].split(',')
-  if (fields.length < 10) return null
-  
-  return {
-    code: fields[0],
-    name: fields[0],
-    currentPrice: parseFloat(fields[1]) || 0,
-    yesterdayClose: parseFloat(fields[26]) || 0,
-    todayOpen: parseFloat(fields[5]) || 0,
-    high: parseFloat(fields[6]) || 0,
-    low: parseFloat(fields[7]) || 0,
-    volume: parseInt(fields[10]) || 0,
-    timestamp: fields[3] + ' ' + fields[4]
+    volume: parseInt(fields[6]) || 0,
+    high: parseFloat(fields[33]) || 0,
+    low: parseFloat(fields[34]) || 0,
+    amount: parseFloat(fields[37]) || 0
   }
 }
 
@@ -97,32 +56,21 @@ function fetchStockPrice(market, code) {
       reject(new Error('不支持的市场类型'))
       return
     }
-    
+
     wx.request({
       url: url,
       method: 'GET',
+      timeout: 10000,
       success(res) {
         if (res.statusCode !== 200) {
           reject(new Error(`HTTP ${res.statusCode}`))
           return
         }
-        
-        const data = res.data
-        let result = null
-        
-        switch (market) {
-          case 'A_SHARE':
-            result = parseAshareData(data)
-            break
-          case 'HK_SHARE':
-            result = parseHkShareData(data)
-            break
-          case 'US_SHARE':
-            result = parseUsShareData(data)
-            break
-        }
-        
-        if (result) {
+
+        const data = String(res.data || '')
+        const result = parseTencentData(data)
+
+        if (result && result.currentPrice > 0) {
           resolve(result)
         } else {
           reject(new Error('解析行情数据失败'))
@@ -147,6 +95,5 @@ function fetchAllPrices(stocks) {
 }
 
 module.exports = {
-  fetchStockPrice,
-  fetchAllPrices
+  fetchStockPrice
 }

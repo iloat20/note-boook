@@ -1,0 +1,77 @@
+// pages/history/history.wxs - WXS 脚本优化滚动性能
+
+// 节流函数 - 在视图层直接处理，避免逻辑层通信
+var throttleTimer = null
+var lastScrollTop = 0
+
+function onScroll(event, ownerInstance) {
+  // 在视图层直接处理滚动，只传递关键数据到逻辑层
+  var scrollTop = event.detail.scrollTop
+  
+  // 节流：每 100ms 最多触发一次
+  if (throttleTimer) return
+  
+  throttleTimer = true
+  setTimeout(function() {
+    // 可以在这里直接处理一些UI逻辑，避免通信开销
+    throttleTimer = null
+  }, 100)
+}
+
+// 处理触摸开始 - 优化左滑菜单性能
+function onTouchStart(event, ownerInstance) {
+  var touch = event.touches[0]
+  ownerInstance.setStyle({
+    'transition': 'none'
+  })
+  return { 
+    startX: touch.clientX,
+    startY: touch.clientY
+  }
+}
+
+// 处理触摸移动
+function onTouchMove(event, ownerInstance, instanceData) {
+  if (!instanceData.startX) return
+  
+  var touch = event.touches[0]
+  var dx = touch.clientX - instanceData.startX
+  var dy = touch.clientY - instanceData.startY
+  
+  // 判断是否为横向滑动
+  if (Math.abs(dx) < 5 && Math.abs(dy) < 5) return
+  if (Math.abs(dx) < Math.abs(dy)) return
+  
+  // 只允许左滑
+  if (dx > 0) return
+  
+  var offset = Math.max(-180, dx)
+  ownerInstance.setStyle({
+    'transform': 'translateX(' + offset + 'px)'
+  })
+}
+
+// 处理触摸结束
+function onTouchEnd(event, ownerInstance, instanceData) {
+  var offset = instanceData.offset || 0
+  
+  // 滑过一半则展开菜单，否则收回
+  if (offset < -40) {
+    ownerInstance.setStyle({
+      'transform': 'translateX(-180px)',
+      'transition': 'transform 0.3s ease-out'
+    })
+  } else {
+    ownerInstance.setStyle({
+      'transform': 'translateX(0)',
+      'transition': 'transform 0.3s ease-out'
+    })
+  }
+}
+
+module.exports = {
+  onScroll: onScroll,
+  onTouchStart: onTouchStart,
+  onTouchMove: onTouchMove,
+  onTouchEnd: onTouchEnd
+}

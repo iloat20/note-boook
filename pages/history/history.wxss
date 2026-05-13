@@ -13,3 +13,56 @@
   background: #1D1D1F !important;
   color: #E5E5EA !important;
 }
+
+/* === 加载更多按钮 === */
+.load-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  margin: 16px 0;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  transition: opacity 200ms ease;
+}
+
+/* === 加载动画 === */
+.loading-dots {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 107, 53, 0.6);
+  animation: dotPulse 1.4s infinite ease-in-out;
+}
+
+.dot:first-child { animation-delay: 0s; }
+.dot:nth-child(2) { animation-delay: 0.2s; }
+.dot:last-child { animation-delay: 0.4s; }
+
+@keyframes dotPulse {
+  0%, 80%, 100% {
+    transform: scale(0.6);
+    opacity: 0.4;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* === 没有更多数据 === */
+.no-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  opacity: 0.5;
+}
+

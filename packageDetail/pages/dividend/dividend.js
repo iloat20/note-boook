@@ -1,8 +1,10 @@
-﻿const { Stock, Dividend } = require('../../utils/storage.js')
-const { fmt } = require('../../utils/format.js')
+﻿const { Stock, Dividend } = require('../../../utils/storage.js')
+const { fmt } = require('../../../utils/format.js')
 
 Page({
   data: {
+    statusBarHeight: 0,
+    navBarHeight: 44,
     stockOptions: [], stockIdx: 0, stockText: '请选择股票',
     perShare: '', qty: '', date: '', note: '',
     perShareText: '0.00', totalText: '0.00',
@@ -10,6 +12,8 @@ Page({
   },
 
   onLoad(o) {
+    this.setData(getApp().getNavBarInfo())
+    
     const n = new Date()
     this.setData({ date: `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}` })
     this._loadStocks()

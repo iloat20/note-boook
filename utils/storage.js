@@ -5,6 +5,26 @@ const { validateStockCode, formatStockCode } = require('./market.js')
 let _positionCache = {}
 let _heatmapCache = {}
 
+// 缓存配置
+const MAX_POSITION_CACHE = 100
+const MAX_HEATMAP_CACHE = 50
+
+function _clearExpiredCache() {
+  // 清理 _positionCache（LRU 策略 - 简化版）
+  const posKeys = Object.keys(_positionCache)
+  if (posKeys.length > MAX_POSITION_CACHE) {
+    const keysToDelete = posKeys.slice(0, posKeys.length - MAX_POSITION_CACHE)
+    keysToDelete.forEach(key => delete _positionCache[key])
+  }
+  
+  // 清理 _heatmapCache
+  const heatKeys = Object.keys(_heatmapCache)
+  if (heatKeys.length > MAX_HEATMAP_CACHE) {
+    const keysToDelete = heatKeys.slice(0, heatKeys.length - MAX_HEATMAP_CACHE)
+    keysToDelete.forEach(key => delete _heatmapCache[key])
+  }
+}
+
 function markDataDirty() {
   try {
     const app = getApp()
@@ -23,6 +43,8 @@ const TRANSACTION_KEY = 'stock_trade_transactions'
 const DIVIDEND_KEY = 'stock_trade_dividends'
 const PRICE_KEY = 'stock_trade_prices'
 
+// 内存缓存，避免频繁读取本地存储
+let _memCache = {}
 let _lastTimestamp = 0
 let _seq = 0
 
@@ -39,10 +61,32 @@ function getNextId() {
 
 function saveData(key, data) {
   wx.setStorageSync(key, data)
+  _memCache[key] = data
 }
 
 function getData(key) {
-  return wx.getStorageSync(key) || []
+  if (_memCache[key]) {
+    return _memCache[key]
+  }
+  let data = wx.getStorageSync(key)
+  if (!data || (Array.isArray(data) && data.length === 0)) {
+    // 如果是价格缓存，返回对象而不是数组
+    if (key === PRICE_KEY) {
+      data = {}
+    } else {
+      data = []
+    }
+  }
+  _memCache[key] = data
+  return data
+}
+
+// 返回数据的浅拷贝，防止外部修改污染缓存
+function getDataCopy(key) {
+  const data = getData(key)
+  if (Array.isArray(data)) return data.slice()
+  if (typeof data === 'object' && data !== null) return Object.assign({}, data)
+  return data
 }
 
 const Stock = {
@@ -126,26 +170,31 @@ const Transaction = {
   },
   
   getByStockId(stockId) {
-    return this.getAll().filter(t => t.stockId === stockId).sort((a, b) => new Date(b.date) - new Date(a.date))
+    return this.getAll().filter(t => t.stockId === stockId).sort((a, b) => b.date > a.date ? 1 : b.date < a.date ? -1 : 0)
   },
-  
+
   delete(id) {
     const transactions = this.getAll().filter(t => t.id !== id)
     saveData(TRANSACTION_KEY, transactions)
     markDataDirty()
   },
-  
+
+  deleteByStockId(stockId) {
+    const transactions = this.getAll().filter(t => t.stockId !== stockId)
+    saveData(TRANSACTION_KEY, transactions)
+    markDataDirty()
+  },
+
   getByMarket(market) {
     const stocks = Stock.getByMarket(market)
-    const stockIds = stocks.map(s => s.id)
-    return this.getAll().filter(t => stockIds.includes(t.stockId))
+    const stockIdSet = new Set(stocks.map(s => s.id))
+    return this.getAll().filter(t => stockIdSet.has(t.stockId))
   },
-  
+
   getByDateRange(startDate, endDate) {
-    return this.getAll().filter(t => {
-      const date = new Date(t.date)
-      return date >= startDate && date <= endDate
-    })
+    const start = startDate.toISOString()
+    const end = endDate.toISOString()
+    return this.getAll().filter(t => t.date >= start && t.date <= end)
   }
 }
 
@@ -185,19 +234,25 @@ const Dividend = {
   },
   
   getByStockId(stockId) {
-    return this.getAll().filter(d => d.stockId === stockId).sort((a, b) => new Date(b.date) - new Date(a.date))
+    return this.getAll().filter(d => d.stockId === stockId).sort((a, b) => b.date > a.date ? 1 : b.date < a.date ? -1 : 0)
   },
-  
+
   delete(id) {
     const dividends = this.getAll().filter(d => d.id !== id)
     saveData(DIVIDEND_KEY, dividends)
     markDataDirty()
   },
-  
+
+  deleteByStockId(stockId) {
+    const dividends = this.getAll().filter(d => d.stockId !== stockId)
+    saveData(DIVIDEND_KEY, dividends)
+    markDataDirty()
+  },
+
   getByMarket(market) {
     const stocks = Stock.getByMarket(market)
-    const stockIds = stocks.map(s => s.id)
-    return this.getAll().filter(d => stockIds.includes(d.stockId))
+    const stockIdSet = new Set(stocks.map(s => s.id))
+    return this.getAll().filter(d => stockIdSet.has(d.stockId))
   }
 }
 
@@ -211,12 +266,12 @@ const PriceCache = {
       delete _positionCache[stockId]
     }
   },
-  
+
   get(stockId) {
     const prices = this.getAll()
     return prices[stockId] || null
   },
-  
+
   getAll() {
     return getData(PRICE_KEY) || {}
   }
@@ -227,6 +282,11 @@ function calculatePosition(stockId) {
     return _positionCache[stockId]
   }
 
+  // 仅在缓存达到上限时执行清理
+  if (Object.keys(_positionCache).length >= MAX_POSITION_CACHE) {
+    _clearExpiredCache()
+  }
+  
   const transactions = Transaction.getByStockId(stockId)
   let totalBuyQuantity = 0
   let totalBuyAmount = 0
@@ -311,47 +371,61 @@ function getAllPositionsWithRealizedPnL(market = null) {
       ...pos
     }
   }).filter(p => Math.abs(p.realizedPnL) > 0.01 || Math.abs(p.dividendIncome) > 0.01)
-  
+
   positions.sort((a, b) => b.realizedPnL + b.dividendIncome - (a.realizedPnL + a.dividendIncome))
-  
+
   return positions
+}
+
+function getClearedPositions() {
+  const stocks = Stock.getAll()
+  const cleared = stocks.map(stock => {
+    const pos = calculatePosition(stock.id)
+    return {
+      ...stock,
+      ...pos
+    }
+  }).filter(p => p.quantity === 0 && (Math.abs(p.realizedPnL) > 0.01 || Math.abs(p.dividendIncome) > 0.01))
+
+  cleared.sort((a, b) => (b.realizedPnL + b.dividendIncome) - (a.realizedPnL + a.dividendIncome))
+
+  return cleared
 }
 
 function getTotalStats() {
   const transactions = Transaction.getAll()
   const dividends = Dividend.getAll()
-  
+
   let totalInvestment = 0
-  let totalRecover = 0
   let totalBuyFee = 0
   let totalSellFee = 0
-  
+
   transactions.forEach(t => {
     const amount = t.price * t.quantity
     if (t.type === TRANSACTION_TYPE.BUY) {
       totalInvestment += amount + t.fee
       totalBuyFee += t.fee
     } else {
-      totalRecover += amount - t.fee
       totalSellFee += t.fee
     }
   })
-  
+
   const dividendIncome = dividends.reduce((sum, d) => sum + d.totalAmount, 0)
-  
+
+  // 计算每个股票的盈亏，然后求和
   const positions = Stock.getAll().map(s => calculatePosition(s.id))
+  const totalRealizedPnL = positions.reduce((sum, p) => sum + p.realizedPnL, 0)
   const totalFloatingPnL = positions.reduce((sum, p) => sum + p.floatingPnL, 0)
-  const realizedPnL = totalRecover - totalInvestment + totalBuyFee - totalSellFee
-  const totalPnL = realizedPnL + totalFloatingPnL + dividendIncome
+  const totalDividendIncome = positions.reduce((sum, p) => sum + p.dividendIncome, 0)
+  const totalPnL = totalRealizedPnL + totalFloatingPnL + totalDividendIncome
   const totalPnLPercent = totalInvestment > 0 ? (totalPnL / totalInvestment * 100) : 0
-  
+
   return {
     totalInvestment: parseFloat(totalInvestment.toFixed(2)),
-    totalRecover: parseFloat(totalRecover.toFixed(2)),
     totalBuyFee: parseFloat(totalBuyFee.toFixed(2)),
     totalSellFee: parseFloat(totalSellFee.toFixed(2)),
-    dividendIncome: parseFloat(dividendIncome.toFixed(2)),
-    realizedPnL: parseFloat(realizedPnL.toFixed(2)),
+    dividendIncome: parseFloat(totalDividendIncome.toFixed(2)),
+    realizedPnL: parseFloat(totalRealizedPnL.toFixed(2)),
     floatingPnL: parseFloat(totalFloatingPnL.toFixed(2)),
     totalPnL: parseFloat(totalPnL.toFixed(2)),
     totalPnLPercent: parseFloat(totalPnLPercent.toFixed(2))
@@ -667,106 +741,6 @@ function getMixedChartData(periodType, count) {
   return { labels: labels, barData: barData, lineData: lineData }
 }
 
-/**
- * 市场分布（A股/港股/美股）- 用于饼图
- */
-function getMarketDistribution() {
-  const positions = getPositionSummary()
-  var marketMap = {}
-  positions.forEach(function (p) {
-    var market = p.market || 'UNKNOWN'
-    var mv = p.quantity * (p.currentPrice || p.avgCost || 0)
-    if (mv > 0) {
-      marketMap[market] = (marketMap[market] || 0) + mv
-    }
-  })
-  var result = []
-  for (var m in marketMap) {
-    var label = m === 'SH' || m === 'SZ' ? 'A股' : m === 'HK' ? '港股' : m === 'US' ? '美股' : m
-    result.push({ name: label, value: parseFloat(marketMap[m].toFixed(2)) })
-  }
-  return result
-}
-
-/**
- * 胜率分析 - 返回胜率、平均盈利、平均亏损、盈亏比
- */
-function getWinRateAnalysis() {
-  var positions = getAllPositionsWithRealizedPnL()
-  var winCount = 0, lossCount = 0, totalWin = 0, totalLoss = 0
-  positions.forEach(function (p) {
-    var ret = p.realizedPnL + (p.dividendIncome || 0)
-    if (ret > 0) { winCount++; totalWin += ret }
-    else if (ret < 0) { lossCount++; totalLoss += Math.abs(ret) }
-  })
-  var total = winCount + lossCount
-  return {
-    winCount: winCount,
-    lossCount: lossCount,
-    winRate: total > 0 ? parseFloat((winCount / total * 100).toFixed(2)) : 0,
-    avgWin: winCount > 0 ? parseFloat((totalWin / winCount).toFixed(2)) : 0,
-    avgLoss: lossCount > 0 ? parseFloat((totalLoss / lossCount).toFixed(2)) : 0,
-    profitLossRatio: lossCount > 0 ? parseFloat((totalWin / lossCount).toFixed(2)) : 0
-  }
-}
-
-/**
- * 月度交易量 - 最近 count 个月的买入/卖出金额，用于柱状图
- */
-function getMonthlyTradingVolume(count) {
-  count = count || 12
-  var now = new Date()
-  var labels = [], buyData = [], sellData = []
-  for (var i = count - 1; i >= 0; i--) {
-    var d = new Date(now.getFullYear(), now.getMonth() - i, 1)
-    var start = new Date(d.getFullYear(), d.getMonth(), 1)
-    var end = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999)
-    var txs = Transaction.getByDateRange(start, end)
-    var buy = 0, sell = 0
-    txs.forEach(function (t) {
-      if (t.type === TRANSACTION_TYPE.BUY) buy += t.price * t.quantity
-      else sell += t.price * t.quantity
-    })
-    labels.push(d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'))
-    buyData.push(parseFloat(buy.toFixed(2)))
-    sellData.push(parseFloat(sell.toFixed(2)))
-  }
-  return { labels: labels, buyData: buyData, sellData: sellData }
-}
-
-/**
- * 持仓集中度 - Herfindahl 指数 + Top5 持仓占比
- */
-function getPositionConcentration() {
-  var positions = getPositionSummary()
-  var totalMV = 0
-  var items = positions.map(function (p) {
-    var mv = p.quantity * (p.currentPrice || p.avgCost || 0)
-    totalMV += mv
-    return { name: p.name, mv: mv }
-  }).filter(function (it) { return it.mv > 0 })
-
-  if (totalMV === 0) return { herfindahl: 0, top5Ratio: 0, items: [] }
-
-  // Herfindahl 指数：Σ(占比^2)，越接近1越集中
-  var h = 0
-  items.forEach(function (it) { h += Math.pow(it.mv / totalMV, 2) })
-
-  // Top5 占比
-  items.sort(function (a, b) { return b.mv - a.mv })
-  var top5MV = 0
-  var top5 = items.slice(0, 5)
-  top5.forEach(function (it) { top5MV += it.mv })
-
-  return {
-    herfindahl: parseFloat(h.toFixed(4)),
-    top5Ratio: parseFloat((top5MV / totalMV * 100).toFixed(2)),
-    items: items.map(function (it) {
-      return { name: it.name, ratio: parseFloat((it.mv / totalMV * 100).toFixed(2)) }
-    })
-  }
-}
-
 module.exports = {
   MARKETS,
   TRANSACTION_TYPE,
@@ -777,6 +751,7 @@ module.exports = {
   calculatePosition,
   getPositionSummary,
   getAllPositionsWithRealizedPnL,
+  getClearedPositions,
   getTotalStats,
   getStatsByPeriod,
   getPeriodStatsList,
@@ -784,9 +759,5 @@ module.exports = {
   getPositionDistribution,
   getPieChartData,
   getScatterData,
-  getMixedChartData,
-  getMarketDistribution,
-  getWinRateAnalysis,
-  getMonthlyTradingVolume,
-  getPositionConcentration
+  getMixedChartData
 }

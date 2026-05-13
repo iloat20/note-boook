@@ -1,152 +1,173 @@
-<view class="page-container">
-  <view style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
-    <text class="display">统计</text>
-    <view bindtap="onExportCSV" style="padding: 8px 16px; background: var(--color-accent, #007AFF); color: #fff; border-radius: 8px; font-size: 14px;">
-      导出CSV
-    </view>
+<view class="page-container" style="padding-top: {{statusBarHeight}}px;">
+
+  <view class="nav-bar" style="height: {{navBarHeight}}px; display: flex; align-items: flex-end; padding: 0 16px;">
+    <text class="nav-header-title" style="flex: 1;">统计</text>
   </view>
 
-  <view class="tab-bar-line">
-    <view
-      wx:for="{{periodTabs}}"
-      wx:key="key"
-      class="tab-line-item {{currentPeriod === item.key ? 'tab-line-active' : ''}}"
-      bindtap="switchPeriod"
-      data-period="{{item.key}}"
-    >{{item.label}}</view>
-  </view>
+  <scroll-view class="scroll-container" scroll-y>
 
-  <view class="stats-grid">
-    <view class="stat-card">
-      <text class="stat-label">投入</text>
-      <text class="stat-value" style="color: var(--color-title);">{{stats.totalInvestmentText}}</text>
+    <view class="tab-bar-line">
+      <view
+        wx:for="{{periodTabs}}"
+        wx:key="key"
+        class="tab-line-item {{currentPeriod === item.key ? 'tab-line-active' : ''}}"
+        bindtap="switchPeriod"
+        data-period="{{item.key}}"
+      >{{item.label}}</view>
     </view>
-    <view class="stat-card">
-      <text class="stat-label">回收</text>
-      <text class="stat-value" style="color: var(--color-title);">{{stats.totalRecoverText}}</text>
-    </view>
-    <view class="stat-card">
-      <text class="stat-label">盈亏</text>
-      <text class="stat-value {{stats.totalPnL >= 0 ? 'profit' : 'loss'}}">
-        {{stats.totalPnL >= 0 ? '+' : ''}}{{stats.totalPnLText}}
-      </text>
-    </view>
-    <view class="stat-card">
-      <text class="stat-label">累计收益</text>
-      <text class="stat-value {{stats.totalPnL >= 0 ? 'profit' : 'loss'}}">
-        {{stats.totalPnL >= 0 ? '+' : ''}}{{stats.totalPnLText}}
-      </text>
-    </view>
-  </view>
 
-  <!-- 图表类型切换 -->
-  <view class="chart-type-bar">
-    <view
-      wx:for="{{chartTypes}}"
-      wx:key="key"
-      class="chart-type-item {{currentChartType === item.key ? 'chart-type-active' : ''}}"
-      bindtap="switchChartType"
-      data-key="{{item.key}}"
-    >{{item.label}}</view>
-  </view>
-
-  <!-- 图表容器：持仓分布 3D柱状图 -->
-  <view class="section" wx:if="{{currentChartType === 'bar' || currentChartType === 'all'}}">
-    <text class="section-title">持仓分布</text>
-    <view class="card-glass chart-box">
-      <ec-canvas id="positionChart" canvas-id="positionChart" ec="{{ecPosition}}" force-use-new-canvas="{{true}}"></ec-canvas>
-    </view>
-  </view>
-
-  <!-- 图表容器：盈亏趋势 混合图表 -->
-  <view class="section" wx:if="{{currentChartType === 'mixed' || currentChartType === 'all'}}">
-    <text class="section-title">盈亏趋势</text>
-    <view class="card-glass chart-box">
-      <ec-canvas id="trendChart" canvas-id="trendChart" ec="{{ecTrend}}" force-use-new-canvas="{{true}}"></ec-canvas>
-    </view>
-  </view>
-
-  <!-- 图表容器：资金流向 饼图 -->
-  <view class="section" wx:if="{{currentChartType === 'pie' || currentChartType === 'all'}}">
-    <text class="section-title">资金流向</text>
-    <view class="card-glass chart-box">
-      <ec-canvas id="pieChart" canvas-id="pieChart" ec="{{ecPie}}" force-use-new-canvas="{{true}}"></ec-canvas>
-    </view>
-  </view>
-
-  <!-- 图表容器：收益分布 散点图 -->
-  <view class="section" wx:if="{{currentChartType === 'scatter' || currentChartType === 'all'}}">
-    <text class="section-title">收益分布</text>
-    <view class="card-glass chart-box">
-      <ec-canvas id="scatterChart" canvas-id="scatterChart" ec="{{ecScatter}}" force-use-new-canvas="{{true}}"></ec-canvas>
-    </view>
-  </view>
-
-  <view class="section">
-    <text class="section-title">交易热力图</text>
-    <view class="card-glass">
-      <view class="heatmap-header">
-        <view class="heatmap-nav" bindtap="prevMonth">‹</view>
-        <text class="body" style="color: var(--color-title); font-weight: var(--weight-title);">{{heatmapLabel}}</text>
-        <view class="heatmap-nav" bindtap="nextMonth">›</view>
+    <view class="stats-grid">
+      <view class="stat-card">
+        <text class="stat-label">投入</text>
+        <text class="stat-value" style="color: var(--color-title);">{{stats.totalInvestmentText}}</text>
       </view>
-      <view class="heatmap-grid">
-        <view wx:for="{{heatmapData}}" wx:key="day"
-          class="heatmap-cell heatmap-level-{{item.level}}" wx:if="{{item.day > 0}}">
-          <text class="heatmap-day">{{item.day}}</text>
-        </view>
+      <view class="stat-card">
+        <text class="stat-label">回收</text>
+        <text class="stat-value" style="color: var(--color-title);">{{stats.totalRecoverText}}</text>
       </view>
-      <view class="heatmap-legend">
-        <view class="legend-item">
-          <view class="legend-color" style="background: linear-gradient(135deg, rgba(240, 240, 245, 0.7), rgba(240, 240, 245, 0.4));"></view>
-          <text>0笔</text>
-        </view>
-        <view class="legend-item">
-          <view class="legend-color" style="background: linear-gradient(135deg, rgba(255, 224, 208, 0.8), rgba(255, 200, 170, 0.5));"></view>
-          <text>1-2笔</text>
-        </view>
-        <view class="legend-item">
-          <view class="legend-color" style="background: linear-gradient(135deg, rgba(255, 192, 160, 0.85), rgba(255, 170, 130, 0.6));"></view>
-          <text>3-5笔</text>
-        </view>
-        <view class="legend-item">
-          <view class="legend-color" style="background: linear-gradient(135deg, rgba(255, 140, 90, 0.9), rgba(255, 120, 70, 0.7));"></view>
-          <text>6-9笔</text>
-        </view>
-        <view class="legend-item">
-          <view class="legend-color" style="background: linear-gradient(135deg, rgba(255, 107, 53, 0.95), rgba(255, 87, 33, 0.8));"></view>
-          <text>10+笔</text>
-        </view>
-      </view>
-    </view>
-  </view>
-
-  <view class="section">
-    <text class="section-title">完整交易明细</text>
-    <view class="card-glass">
-      <view wx:for="{{completeTrades}}" wx:key="id" class="list-item-glass">
-        <view>
-          <text class="body" style="font-weight: var(--weight-title);">{{item.name}}</text>
-          <text class="caption" style="margin-left: 8px; color: var(--color-text-secondary);">{{item.code}}</text>
-        </view>
-        <text class="body {{item.totalPnL >= 0 ? 'profit' : 'loss'}}" style="font-weight: var(--weight-title);">
-          {{item.totalPnL >= 0 ? '+' : ''}}{{item.totalPnLText}}
+      <view class="stat-card">
+        <text class="stat-label">盈亏</text>
+        <text class="stat-value {{stats.totalPnL >= 0 ? 'profit' : 'loss'}}">
+          {{stats.totalPnL >= 0 ? '+' : ''}}{{stats.totalPnLText}}
         </text>
       </view>
-      <view wx:if="{{completeTrades.length === 0}}" class="empty-state-glass">
-        <text>暂无完整交易记录</text>
+      <view class="stat-card">
+        <text class="stat-label">累计收益</text>
+        <text class="stat-value {{stats.totalPnL >= 0 ? 'profit' : 'loss'}}">
+          {{stats.totalPnL >= 0 ? '+' : ''}}{{stats.totalPnLText}}
+        </text>
       </view>
     </view>
-  </view>
 
-  <view class="section">
-    <text class="section-title">明细</text>
-    <view class="card-glass">
-      <view wx:for="{{detailItems}}" wx:key="label" class="list-item-glass">
-        <text class="body">{{item.label}}</text>
-        <text class="body {{item.colorClass}}" style="font-weight: var(--weight-title);">{{item.prefix}}{{item.value}}</text>
+    <!-- 图表容器：持仓分布 柱状图 -->
+    <view class="section">
+      <text class="section-title">持仓分布</text>
+      <view class="card-glass chart-box">
+        <view wx:if="{{!chartsLoaded.position}}" class="chart-skeleton">
+          <view class="skeleton-bar" wx:for="{{[1,2,3,4,5]}}" wx:key="*this"
+                style="height: {{50 + index * 20}}%; animation-delay: {{index * 0.1}}s;"></view>
+        </view>
+        <ec-canvas id="positionChart" canvas-id="positionChart" ec="{{ecPosition}}" force-use-new-canvas="{{true}}"></ec-canvas>
       </view>
     </view>
-  </view>
-  <view style="height: 100px;"></view>
+
+    <!-- 图表容器：盈亏趋势 混合图表 -->
+    <view class="section">
+      <text class="section-title">盈亏趋势</text>
+      <view class="card-glass chart-box">
+        <view wx:if="{{!chartsLoaded.trend}}" class="chart-skeleton">
+          <view class="skeleton-line" style="top: 30%;"></view>
+          <view class="skeleton-line" style="top: 50%;"></view>
+          <view class="skeleton-line" style="top: 70%;"></view>
+          <view class="skeleton-bar-group">
+            <view class="skeleton-bar-small" wx:for="{{[1,2,3,4,5,6]}}" wx:key="*this"
+                  style="animation-delay: {{index * 0.15}}s;"></view>
+          </view>
+        </view>
+        <ec-canvas id="trendChart" canvas-id="trendChart" ec="{{ecTrend}}" force-use-new-canvas="{{true}}"></ec-canvas>
+      </view>
+    </view>
+
+    <view class="section">
+      <text class="section-title">交易热力图</text>
+      <view class="card-glass">
+        <view class="heatmap-header">
+          <view class="heatmap-nav" bindtap="prevMonth">‹</view>
+          <text class="body" style="color: var(--color-title); font-weight: var(--weight-title);">{{heatmapLabel}}</text>
+          <view class="heatmap-nav" bindtap="nextMonth">›</view>
+        </view>
+        <view class="heatmap-grid">
+          <view wx:for="{{heatmapData}}" wx:key="day"
+            class="heatmap-cell heatmap-level-{{item.level}}" wx:if="{{item.day > 0}}">
+            <text class="heatmap-day">{{item.day}}</text>
+          </view>
+        </view>
+        <view class="heatmap-legend">
+          <view class="legend-item">
+            <view class="legend-color" style="background: linear-gradient(135deg, rgba(240, 240, 245, 0.7), rgba(240, 240, 245, 0.4));"></view>
+            <text>0笔</text>
+          </view>
+          <view class="legend-item">
+            <view class="legend-color" style="background: linear-gradient(135deg, rgba(255, 224, 208, 0.8), rgba(255, 200, 170, 0.5));"></view>
+            <text>1-2笔</text>
+          </view>
+          <view class="legend-item">
+            <view class="legend-color" style="background: linear-gradient(135deg, rgba(255, 192, 160, 0.85), rgba(255, 170, 130, 0.6));"></view>
+            <text>3-5笔</text>
+          </view>
+          <view class="legend-item">
+            <view class="legend-color" style="background: linear-gradient(135deg, rgba(255, 140, 90, 0.9), rgba(255, 120, 70, 0.7));"></view>
+            <text>6-9笔</text>
+          </view>
+          <view class="legend-item">
+            <view class="legend-color" style="background: linear-gradient(135deg, rgba(255, 107, 53, 0.95), rgba(255, 87, 33, 0.8));"></view>
+            <text>10+笔</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="section">
+      <view style="display: flex; align-items: center; justify-content: space-between;">
+        <text class="section-title" style="margin-bottom: 0;">完整交易明细</text>
+        <view bindtap="onExportMD" style="padding: 4px 12px; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 8px; font-size: 12px; color: var(--color-accent); font-weight: 500;">导出 MD</view>
+      </view>
+      <view class="card-glass">
+        <view style="max-height: 400px; overflow-y: auto;">
+          <view wx:for="{{completeTrades}}" wx:key="id" class="list-item-glass" style="flex-direction: column; align-items: flex-start; gap: 4px;">
+            <view style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+              <view style="display: flex; align-items: center; gap: 6px;">
+                <view class="tag type-tag {{item.type === 'BUY' ? 'tag-buy' : item.type === 'SELL' ? 'tag-sell' : 'tag-dividend'}}">{{item.typeText}}</view>
+                <text class="body" style="font-weight: var(--weight-title);">{{item.code}}</text>
+                <text class="caption">{{item.name}}</text>
+              </view>
+              <text class="body" style="font-weight: var(--weight-title); color: var(--color-title);">{{item.amountText}}</text>
+            </view>
+            <text class="caption">{{item.dateText}}</text>
+          </view>
+        </view>
+        <view wx:if="{{completeTrades.length === 0}}" class="empty-state-glass">
+          <text>暂无交易记录</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="section">
+      <text class="section-title">已清仓股票</text>
+      <view class="card-glass">
+        <view wx:if="{{clearedPositions.length > 0}}" style="max-height: 400px; overflow-y: auto;">
+          <view wx:for="{{clearedPositions}}" wx:key="id" class="list-item-glass" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+            <view style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+              <view>
+                <text class="body" style="font-weight: var(--weight-title);">{{item.name}}</text>
+                <text class="caption" style="margin-left: 8px; color: var(--color-text-secondary);">{{item.code}}</text>
+              </view>
+              <text class="body {{item.pnlClass}}" style="font-weight: var(--weight-title);">
+                {{item.totalPnL >= 0 ? '+' : ''}}{{item.totalPnLText}}
+              </text>
+            </view>
+            <view style="display: flex; gap: 16px; width: 100%;">
+              <text class="caption">已实现: {{item.realizedPnLText}}</text>
+              <text class="caption">分红: +{{item.dividendIncomeText}}</text>
+            </view>
+          </view>
+        </view>
+        <view wx:else class="empty-state-glass">
+          <text>暂无已清仓股票</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="section">
+      <text class="section-title">明细</text>
+      <view class="card-glass">
+        <view wx:for="{{detailItems}}" wx:key="label" class="list-item-glass">
+          <text class="body">{{item.label}}</text>
+          <text class="body {{item.colorClass}}" style="font-weight: var(--weight-title);">{{item.prefix}}{{item.value}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view style="height: 100px;"></view>
+  </scroll-view>
 </view>

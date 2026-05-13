@@ -26,7 +26,7 @@ function validateStockCode(code, market) {
     case MARKETS.A_SHARE:
       return /^\d{6}$/.test(code)
     case MARKETS.HK_SHARE:
-      return /^\d{5}$/.test(code)
+      return /^(hk|HK)?\d{1,5}$/.test(code)
     case MARKETS.US_SHARE:
       return /^[A-Za-z]{1,5}$/.test(code)
     default:
@@ -37,7 +37,8 @@ function validateStockCode(code, market) {
 function formatStockCode(code, market) {
   switch (market) {
     case MARKETS.HK_SHARE:
-      return code.padStart(5, '0')
+      var num = code.replace(/^(hk|HK)/, '')
+      return num.padStart(5, '0')
     case MARKETS.US_SHARE:
       return code.toUpperCase()
     default:

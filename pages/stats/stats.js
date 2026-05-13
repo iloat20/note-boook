@@ -1,40 +1,71 @@
-const { getTotalStats, getStatsByPeriod, getPeriodStatsList, getHeatmapData, getAllPositionsWithRealizedPnL, getPositionDistribution, getPieChartData, getScatterData, getMixedChartData } = require('../../utils/storage.js')
-const { fmt } = require('../../utils/format.js')
-const { exportCSV } = require('../../utils/export.js')
+const { getTotalStats, getStatsByPeriod, getPeriodStatsList, getHeatmapData, getClearedPositions, getPositionDistribution, getMixedChartData, Stock, Transaction, Dividend } = require('../../utils/storage.js')
+const { fmt, fmtDate } = require('../../utils/format.js')
+const { exportMD } = require('../../utils/export.js')
 const echarts = require('../../components/ec-canvas/echarts')
+
+// 缓存渐变对象，避免重复创建
+const gradientCache = {
+  barPositive: null,
+  barNegative: null,
+  lineArea: null
+}
+
+function getCachedGradient(type) {
+  if (gradientCache[type]) return gradientCache[type]
+
+  const gradients = {
+    barPositive: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+      { offset: 0, color: 'rgba(255,107,53,0.9)' },
+      { offset: 1, color: 'rgba(255,107,53,0.2)' }
+    ]),
+    barNegative: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+      { offset: 0, color: 'rgba(26,160,79,0.9)' },
+      { offset: 1, color: 'rgba(26,160,79,0.2)' }
+    ]),
+    lineArea: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+      { offset: 0, color: 'rgba(255,107,53,0.25)' },
+      { offset: 1, color: 'rgba(255,107,53,0.02)' }
+    ])
+  }
+
+  gradientCache[type] = gradients[type]
+  return gradients[type]
+}
 
 Page({
   data: {
+    statusBarHeight: 0,
+    navBarHeight: 44,
     currentPeriod: 'MONTH',
     periodTabs: [
       { key: 'WEEK', label: '周' },
       { key: 'MONTH', label: '月' },
       { key: 'YEAR', label: '年' }
     ],
-    chartTypes: [
-      { key: 'all', label: '全部' },
-      { key: 'bar', label: '柱状' },
-      { key: 'mixed', label: '混合' },
-      { key: 'pie', label: '饼图' },
-      { key: 'scatter', label: '散点' }
-    ],
-    currentChartType: 'all',
+    chartsLoaded: { position: false, trend: false },
     ecPosition: { onInit: null },
     ecTrend: { onInit: null },
-    ecPie: { onInit: null },
-    ecScatter: { onInit: null },
     stats: {},
     detailItems: [],
     heatmapData: [],
     heatmapYear: new Date().getFullYear(),
     heatmapMonth: new Date().getMonth() + 1,
     heatmapLabel: '',
-    completeTrades: []
+    completeTrades: [],
+    clearedPositions: []
+  },
+
+  onLoad() {
+    this.setData(getApp().getNavBarInfo())
   },
 
   onShow() {
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({ selected: 2 })
+    }
+    var app = getApp()
+    if (app.globalData.dataDirty) {
+      app.globalData.dataDirty = false
     }
     this.loadStats()
     this.loadHeatmap()
@@ -45,10 +76,22 @@ Page({
     }
   },
 
+  onHide() {
+    // 页面隐藏时不销毁图表（ec-canvas 事件仍会触发），仅标记状态
+    this._chartsHidden = true
+  },
+
+  onUnload() {
+    if (this._charts) {
+      if (this._charts.position) { this._charts.position.dispose(); this._charts.position = null }
+      if (this._charts.trend) { this._charts.trend.dispose(); this._charts.trend = null }
+      this._charts = null
+    }
+  },
+
   initCharts() {
     var that = this
 
-    // === 图表1：持仓分布 3D柱状图 ===
     this.setData({
       ecPosition: {
         onInit: function (canvas, width, height, dpr) {
@@ -59,7 +102,7 @@ Page({
           var option = {
             backgroundColor: 'transparent',
             tooltip: { trigger: 'axis' },
-            grid: { left: 40, right: 20, top: 30, bottom: 40 },
+            grid: { left: 40, right: 15, top: 25, bottom: 30 },
             xAxis: {
               type: 'category',
               data: data.map(function (d) { return d.name }),
@@ -76,10 +119,7 @@ Page({
               data: data.map(function (d) { return d.value }),
               barWidth: '50%',
               itemStyle: {
-                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                  { offset: 0, color: 'rgba(255,107,53,0.9)' },
-                  { offset: 1, color: 'rgba(255,107,53,0.3)' }
-                ]),
+                color: getCachedGradient('barPositive'),
                 shadowBlur: 8,
                 shadowColor: 'rgba(255,107,53,0.4)',
                 shadowOffsetY: 3,
@@ -87,10 +127,7 @@ Page({
               },
               emphasis: {
                 itemStyle: {
-                  color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                    { offset: 0, color: 'rgba(255,140,90,0.95)' },
-                    { offset: 1, color: 'rgba(255,140,90,0.5)' }
-                  ])
+                  color: getCachedGradient('barPositive')
                 }
               },
               animationDuration: 1200,
@@ -98,13 +135,10 @@ Page({
             }]
           }
           chart.setOption(option)
+          that.setData({ 'chartsLoaded.position': true })
           return chart
         }
-      }
-    })
-
-    // === 图表2：盈亏趋势 混合图表 ===
-    this.setData({
+      },
       ecTrend: {
         onInit: function (canvas, width, height, dpr) {
           var chart = echarts.init(canvas, null, { width: width, height: height, dpr: dpr })
@@ -119,7 +153,7 @@ Page({
               top: 0,
               textStyle: { fontSize: 11, color: '#666' }
             },
-            grid: { left: 50, right: 20, top: 40, bottom: 40 },
+            grid: { left: 45, right: 45, top: 40, bottom: 35 },
             xAxis: {
               type: 'category',
               data: mixed.labels,
@@ -144,15 +178,7 @@ Page({
                 data: mixed.barData,
                 itemStyle: {
                   color: function (params) {
-                    return params.value >= 0
-                      ? new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                          { offset: 0, color: 'rgba(255,107,53,0.9)' },
-                          { offset: 1, color: 'rgba(255,107,53,0.2)' }
-                        ])
-                      : new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                          { offset: 0, color: 'rgba(26,160,79,0.9)' },
-                          { offset: 1, color: 'rgba(26,160,79,0.2)' }
-                        ])
+                    return params.value >= 0 ? getCachedGradient('barPositive') : getCachedGradient('barNegative')
                   },
                   borderRadius: [3, 3, 0, 0],
                   shadowBlur: 4,
@@ -168,131 +194,14 @@ Page({
                 smooth: true,
                 lineStyle: { width: 3, shadowBlur: 8, shadowColor: 'rgba(255,107,53,0.3)' },
                 itemStyle: { color: '#FF6B35' },
-                areaStyle: {
-                  color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                    { offset: 0, color: 'rgba(255,107,53,0.25)' },
-                    { offset: 1, color: 'rgba(255,107,53,0.02)' }
-                  ])
-                },
+                areaStyle: { color: getCachedGradient('lineArea') },
                 animationDuration: 1500,
                 animationEasing: 'cubicInOut'
               }
             ]
           }
           chart.setOption(option)
-          return chart
-        }
-      }
-    })
-
-    // === 图表3：资金流向 饼图 ===
-    this.setData({
-      ecPie: {
-        onInit: function (canvas, width, height, dpr) {
-          var chart = echarts.init(canvas, null, { width: width, height: height, dpr: dpr })
-          that._charts = that._charts || {}
-          that._charts.pie = chart
-          var pieData = getPieChartData(that.data.currentPeriod)
-          var option = {
-            backgroundColor: 'transparent',
-            tooltip: { trigger: 'item', formatter: '{b}: ¥{c} ({d}%)' },
-            legend: {
-              orient: 'vertical',
-              right: 10,
-              top: 'center',
-              textStyle: { fontSize: 11, color: '#666' }
-            },
-            series: [{
-              type: 'pie',
-              radius: ['35%', '65%'],
-              center: ['35%', '50%'],
-              roseType: 'area',
-              itemStyle: {
-                shadowBlur: 8,
-                shadowOffsetX: 2,
-                shadowColor: 'rgba(0,0,0,0.1)',
-                borderRadius: 6
-              },
-              label: { show: false },
-              emphasis: {
-                label: { show: true, fontSize: 12, fontWeight: 'bold' },
-                itemStyle: { shadowBlur: 12 }
-              },
-              data: pieData.map(function (d, i) {
-                var colors = ['#FF6B35', '#1AA04F', '#FFB74D', '#4FC3F7', '#BA68C8']
-                return {
-                  name: d.name,
-                  value: d.value,
-                  itemStyle: {
-                    color: colors[i % colors.length],
-                    shadowColor: colors[i % colors.length]
-                  }
-                }
-              }),
-              animationType: 'scale',
-              animationDuration: 1200,
-              animationEasing: 'elasticOut'
-            }]
-          }
-          chart.setOption(option)
-          return chart
-        }
-      }
-    })
-
-    // === 图表4：收益分布 散点图 ===
-    this.setData({
-      ecScatter: {
-        onInit: function (canvas, width, height, dpr) {
-          var chart = echarts.init(canvas, null, { width: width, height: height, dpr: dpr })
-          that._charts = that._charts || {}
-          that._charts.scatter = chart
-          var scatterData = getScatterData()
-          var option = {
-            backgroundColor: 'transparent',
-            tooltip: {
-              trigger: 'item',
-              formatter: function (p) {
-                return p.data.name + '<br/>成本:' + p.data.value[0].toFixed(2) + '<br/>现价:' + p.data.value[1].toFixed(2) + '<br/>盈亏:' + p.data.value[2].toFixed(2)
-              }
-            },
-            grid: { left: 50, right: 20, top: 30, bottom: 40 },
-            xAxis: {
-              type: 'value',
-              name: '成本价',
-              axisLabel: { color: '#999', fontSize: 10 },
-              splitLine: { lineStyle: { color: '#f0f0f0' } }
-            },
-            yAxis: {
-              type: 'value',
-              name: '当前价',
-              axisLabel: { color: '#999', fontSize: 10 },
-              splitLine: { lineStyle: { color: '#f0f0f0' } }
-            },
-            series: [{
-              type: 'scatter',
-              data: scatterData,
-              symbolSize: function (val) {
-                return Math.max(8, Math.min(30, Math.abs(val[2]) / 100 + 8))
-              },
-              itemStyle: {
-                color: function (params) {
-                  return params.data.returnRate >= 0 ? 'rgba(255,107,53,0.8)' : 'rgba(26,160,79,0.8)'
-                },
-                shadowBlur: 10,
-                shadowColor: 'rgba(0,0,0,0.15)'
-              },
-              emphasis: {
-                itemStyle: {
-                  shadowBlur: 16,
-                  shadowColor: 'rgba(0,0,0,0.3)'
-                }
-              },
-              animationDuration: 1200,
-              animationEasing: 'cubicOut'
-            }]
-          }
-          chart.setOption(option)
+          that.setData({ 'chartsLoaded.trend': true })
           return chart
         }
       }
@@ -315,39 +224,17 @@ Page({
         series: [{ data: mixed.barData }, { data: mixed.lineData }]
       })
     }
-    if (this._charts && this._charts.pie) {
-      var pieData = getPieChartData(period)
-      this._charts.pie.setOption({
-        series: [{
-          data: pieData.map(function (d, i) {
-            var colors = ['#FF6B35', '#1AA04F', '#FFB74D', '#4FC3F7', '#BA68C8']
-            return { name: d.name, value: d.value,
-              itemStyle: { color: colors[i % colors.length], shadowColor: colors[i % colors.length] }
-            }
-          })
-        }]
-      })
-    }
-    if (this._charts && this._charts.scatter) {
-      this._charts.scatter.setOption({
-        series: [{ data: getScatterData() }]
-      })
-    }
-  },
-
-  switchChartType: function (e) {
-    this.setData({ currentChartType: e.currentTarget.dataset.key })
   },
 
   switchPeriod: function (e) {
-    this.setData({ currentPeriod: e.currentTarget.dataset.period }, function () {
+    this.setData({ currentPeriod: e.currentTarget.dataset.period }, () => {
       this.loadStats()
       if (this._charts) {
         this.updateCharts()
       } else {
         this.initCharts()
       }
-    }.bind(this))
+    })
   },
 
   loadStats: function () {
@@ -377,10 +264,42 @@ Page({
       { label: '买入手续费', value: fmt(stats.buyFee), prefix: '-', colorClass: '' },
       { label: '卖出手续费', value: fmt(stats.sellFee), prefix: '-', colorClass: '' }
     ]
-    var completeTrades = getAllPositionsWithRealizedPnL().map(function (p) {
-      return Object.assign({}, p, { totalPnLText: fmt(p.totalPnL) })
+    var stocks = Stock.getAll()
+    var stockMap = {}
+    stocks.forEach(function (s) { stockMap[s.id] = s })
+    var allTx = Transaction.getAll().concat(
+      Dividend.getAll().map(function (d) {
+        return { id: d.id, stockId: d.stockId, type: 'DIVIDEND', date: d.date, amount: d.totalAmount, quantity: d.quantity }
+      })
+    )
+    allTx.sort(function (a, b) { return (b.date || '').localeCompare(a.date || '') || (b.id - a.id) })
+    var completeTrades = allTx.map(function (t) {
+      var stock = stockMap[t.stockId]
+      var typeStr = t.type === 'BUY' ? '买入' : t.type === 'SELL' ? '卖出' : '分红'
+      var amount = t.type === 'DIVIDEND' ? (t.amount || 0) : (t.price || 0) * (t.quantity || 0)
+      return {
+        id: t.id,
+        name: stock ? stock.name : '-',
+        code: stock ? stock.code : '-',
+        market: stock ? stock.market : '',
+        type: t.type,
+        typeText: typeStr,
+        dateText: t.date ? fmtDate(new Date(t.date)) : '-',
+        amountText: fmt(amount),
+        totalPnLText: (t.type === 'BUY' ? '-' : '+') + fmt(amount)
+      }
     })
-    this.setData({ detailItems: detailItems, completeTrades: completeTrades })
+    var clearedPositions = getClearedPositions().map(function (p) {
+      var totalPnL = p.realizedPnL + p.dividendIncome
+      return Object.assign({}, p, {
+        totalPnL: totalPnL,
+        totalPnLText: fmt(totalPnL),
+        realizedPnLText: fmt(p.realizedPnL),
+        dividendIncomeText: fmt(p.dividendIncome),
+        pnlClass: totalPnL >= 0 ? 'profit' : 'loss'
+      })
+    })
+    this.setData({ detailItems: detailItems, completeTrades: completeTrades, clearedPositions: clearedPositions })
   },
 
   loadHeatmap: function () {
@@ -410,9 +329,9 @@ Page({
     var heatmapMonth = this.data.heatmapMonth
     heatmapMonth--
     if (heatmapMonth === 0) { heatmapMonth = 12; heatmapYear-- }
-    this.setData({ heatmapYear: heatmapYear, heatmapMonth: heatmapMonth }, function () {
+    this.setData({ heatmapYear: heatmapYear, heatmapMonth: heatmapMonth }, () => {
       this.loadHeatmap()
-    }.bind(this))
+    })
   },
 
   nextMonth: function () {
@@ -420,12 +339,12 @@ Page({
     var heatmapMonth = this.data.heatmapMonth
     heatmapMonth++
     if (heatmapMonth === 13) { heatmapMonth = 1; heatmapYear++ }
-    this.setData({ heatmapYear: heatmapYear, heatmapMonth: heatmapMonth }, function () {
+    this.setData({ heatmapYear: heatmapYear, heatmapMonth: heatmapMonth }, () => {
       this.loadHeatmap()
-    }.bind(this))
+    })
   },
 
-  onExportCSV: function () {
-    exportCSV(this)
+  onExportMD: function () {
+    exportMD()
   }
 })

@@ -1,13 +1,19 @@
-<view class="page-container">
-  <view style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
-    <text class="display" style="flex: 1;">流水</text>
-    <view bindtap="toggleSearch" style="min-height: 44px; display: flex; align-items: center;">
-      <text class="caption" style="font-size: 20px;">🔍</text>
+<view class="page-container" style="padding-top: {{statusBarHeight}}px;">
+  <view class="nav-bar" style="height: {{navBarHeight}}px; display: flex; align-items: flex-end; padding: 0 16px;">
+    <text class="nav-header-title" style="flex: 1;">流水</text>
+    <view bindtap="toggleSearch" style="min-height: 44px; min-width: 44px; display: flex; align-items: center; justify-content: flex-end;">
+      <text style="font-size: 20px; opacity: 0.5;">&#x1F50D;</text>
     </view>
   </view>
 
   <view wx:if="{{showSearchInput}}" style="margin-bottom: 12px;">
-    <input class="input" placeholder="搜索代码/名称..." value="{{searchKeyword}}" bindinput="onSearchInput" style="width: 100%;"/>
+    <view style="display: flex; align-items: center; gap: 8px; background: var(--color-bg); border-radius: var(--radius-input); padding: 0 12px; height: 44px;">
+      <text style="font-size: 16px; opacity: 0.4;">🔍</text>
+      <input class="input" placeholder="搜索代码/名称..." value="{{searchKeyword}}" bindinput="onSearchInput" style="flex: 1; background: transparent; height: 44px; padding: 0;" />
+      <view wx:if="{{searchKeyword}}" bindtap="clearSearch" style="padding: 8px; margin: -8px;">
+        <text style="font-size: 16px; opacity: 0.4;">✕</text>
+      </view>
+    </view>
   </view>
 
   <view class="liquid-slider" style="margin-bottom: 16px; position: relative;">
@@ -27,16 +33,22 @@
     </view>
   </scroll-view>
 
-  <scroll-view wx:if="{{groupedHistory.length > 0}}" class="scroll-container" scroll-y>
+  <scroll-view wx:if="{{groupedHistory.length > 0}}" class="scroll-container" scroll-y bindscrolltolower="loadMore">
     <view wx:for="{{groupedHistory}}" wx:key="date" class="section">
       <text class="caption" style="display: block; margin-bottom: 12px;">{{item.date}}</text>
 
-      <view wx:for="{{item.items}}" wx:key="id" wx:for-item="record" wx:for-index="index" class="card-sm {{dissolvingId === record.id ? 'dissolving' : ''}}" style="margin-bottom: 8px;" data-record="{{record}}" data-index="{{index}}" bindlongpress="showActions">
+      <view wx:for="{{item.items}}" wx:key="id" wx:for-item="record" wx:for-index="index"
+        class="card-sm {{dissolvingId === record.id ? 'dissolving' : ''}}"
+        style="margin-bottom: 8px;"
+        data-record="{{record}}"
+        data-index="{{index}}"
+        bindlongpress="showActions"
+      >
         <view style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
           <view class="tag market-{{record.market === 'A_SHARE' ? 'a' : record.market === 'HK_SHARE' ? 'hk' : 'us'}}">{{record.marketLabel}}</view>
           <text class="body" style="color: var(--color-title); font-weight: var(--weight-title);">{{record.code}}</text>
           <text class="caption">{{record.name}}</text>
-          <view class="tag" style="margin-left: auto; background: {{record.type === 'BUY' ? '#E8F5E9' : record.type === 'SELL' ? '#FFEBEE' : '#FFF3E0'}}; color: {{record.type === 'BUY' ? '#2E7D32' : record.type === 'SELL' ? '#C62828' : '#E65100'}};">
+          <view class="tag type-tag {{record.type === 'BUY' ? 'tag-buy' : record.type === 'SELL' ? 'tag-sell' : 'tag-dividend'}}">
             {{record.typeText}}
           </view>
         </view>
@@ -49,11 +61,33 @@
         </view>
       </view>
     </view>
+    
+    <!-- 加载更多 -->
+    <view wx:if="{{hasMore}}" class="load-more" bindtap="loadMore">
+      <text wx:if="{{!loadingMore}}" class="caption">加载更多</text>
+      <view wx:else class="loading-dots">
+        <view class="dot"></view>
+        <view class="dot"></view>
+        <view class="dot"></view>
+      </view>
+    </view>
+    <view wx:else class="no-more">
+      <text class="caption" style="color: var(--color-caption);">— 已经到底了 —</text>
+    </view>
     <view style="height: 100px;"></view>
   </scroll-view>
 
   <view wx:else class="empty-state">
+    <view style="font-size: 64px; margin-bottom: 16px; opacity: 0.6;">📝</view>
     <text class="empty-title">暂无记录</text>
     <text class="empty-desc">开始记录您的每一笔交易</text>
+    <view style="margin-top: 24px; display: flex; gap: 12px;">
+      <view class="text-btn" bindtap="goToRecord" style="padding: 8px 20px; background: var(--color-surface); border-radius: 8px; box-shadow: var(--shadow-sm);">
+        <text>✏️ 添加交易</text>
+      </view>
+      <view class="text-btn" bindtap="goToDividend" style="padding: 8px 20px; background: var(--color-surface); border-radius: 8px; box-shadow: var(--shadow-sm);">
+        <text>💰 添加分红</text>
+      </view>
+    </view>
   </view>
 </view>

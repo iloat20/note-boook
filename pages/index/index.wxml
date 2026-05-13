@@ -1,74 +1,120 @@
-<view class="page-container">
-  <view class="display" style="margin-bottom: 20px;">持仓</view>
-
-  <view class="liquid-slider" style="margin-bottom: 16px; position: relative;">
-    <view class="liquid-slider-bg" style="left: {{sliderLeft}}px; width: {{sliderWidth}}px;"></view>
-    <view wx:for="{{marketTabs}}" wx:key="key" class="liquid-slider-item {{currentMarket === item.key ? 'active' : ''}}" bindtap="switchMarket" data-market="{{item.key}}">{{item.label}}</view>
+<view class="page-container" style="padding-top: {{statusBarHeight}}px;">
+  <view class="nav-bar" style="height: {{navBarHeight}}px;">
+    <view class="nav-header">
+      <text class="nav-header-title">持仓</text>
+    </view>
   </view>
 
-  <scroll-view wx:if="{{positions.length > 0}}" class="scroll-container parallax-container" scroll-y bindscroll="onScroll">
-    <view wx:for="{{positions}}" wx:key="id" class="swipe-container">
-      <view class="swipe-actions">
-        <view class="swipe-action-btn swipe-action-edit" data-stock-id="{{item.id}}" bindtap="onSwipeEdit">编辑</view>
-        <view class="swipe-action-btn swipe-action-sell" data-stock-id="{{item.id}}" data-item="{{item}}" bindtap="onSwipeSell">卖出</view>
-        <view class="swipe-action-btn swipe-action-delete" data-stock-id="{{item.id}}" bindtap="onSwipeDelete">删除</view>
+  <!-- 骨架屏 -->
+  <view wx:if="{{loading}}" class="skeleton-container">
+    <view class="skeleton-card" wx:for="{{[1,2,3]}}" wx:key="*this">
+      <view class="skeleton-header">
+        <view class="skeleton-tag shimmer"></view>
+        <view class="skeleton-text shimmer"></view>
+        <view class="skeleton-text shimmer"></view>
       </view>
-      <view class="card section swipe-card {{item.swipeOpen ? 'swipe-card-open' : ''}}"
-        style="transform: perspective(800px) {{item.parallaxStyle}};"
-        bindtouchstart="onTouchStart"
-        bindtouchmove="onTouchMove"
-        bindtouchend="onTouchEnd"
-        bindtap="goToDetail"
-        data-stock-id="{{item.id}}"
-        data-index="{{index}}">
-        <view style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-        <view class="tag market-{{item.market === 'A_SHARE' ? 'a' : item.market === 'HK_SHARE' ? 'hk' : 'us'}}">{{item.marketLabel}}</view>
-        <text class="body" style="color: var(--color-title); font-weight: var(--weight-title);">{{item.code}}</text>
-        <text class="body">{{item.name}}</text>
+      <view class="skeleton-body">
+        <view class="skeleton-item shimmer"></view>
+        <view class="skeleton-item shimmer"></view>
+        <view class="skeleton-item shimmer"></view>
       </view>
+    </view>
+  </view>
 
-      <view style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px;">
-        <view>
-          <text class="caption">持仓</text>
-          <view class="body" style="color: var(--color-title);">{{item.quantity}}股</view>
+  <!-- 非加载状态 -->
+  <block wx:else>
+    <!-- 汇总卡片 -->
+    <view class="summary-card card" style="margin-bottom: 16px;">
+      <view style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <text class="caption">总市值</text>
+        <text class="caption">总盈亏</text>
+      </view>
+      <view style="display: flex; justify-content: space-between; align-items: baseline;">
+        <text class="title" style="color: var(--color-title);">¥{{displayValues.totalMarketValue}}</text>
+        <view style="text-align: right;">
+          <text class="title {{totalPnL >= 0 ? 'profit' : 'loss'}}">{{totalPnL >= 0 ? '+' : ''}}{{displayValues.totalPnL}}</text>
+          <text class="caption {{totalPnL >= 0 ? 'profit' : 'loss'}}" style="margin-left: 8px;">{{displayValues.totalPnLPercent}}%</text>
         </view>
-        <view>
-          <text class="caption">成本</text>
-          <view class="body" style="color: var(--color-title);">{{item.avgCostText}}</view>
+      </view>
+    </view>
+
+    <!-- 市场筛选 -->
+    <view class="liquid-slider" style="margin-bottom: 16px; position: relative;">
+      <view class="liquid-slider-bg" style="left: {{sliderLeft}}px; width: {{sliderWidth}}px;"></view>
+      <view wx:for="{{marketTabs}}" wx:key="key" class="liquid-slider-item {{currentMarket === item.key ? 'active' : ''}}" bindtap="switchMarket" data-market="{{item.key}}">{{item.label}}</view>
+    </view>
+
+    <!-- 持仓列表 -->
+    <scroll-view wx:if="{{positions.length > 0}}" class="scroll-container" scroll-y>
+      <view wx:for="{{positions}}" wx:key="id" class="swipe-container">
+        <view class="swipe-actions">
+          <view class="swipe-action-btn swipe-action-edit" data-stock-id="{{item.id}}" bindtap="onSwipeEdit">编辑</view>
+          <view class="swipe-action-btn swipe-action-sell" data-stock-id="{{item.id}}" data-item="{{item}}" bindtap="onSwipeSell">卖出</view>
+          <view class="swipe-action-btn swipe-action-delete" data-stock-id="{{item.id}}" bindtap="onSwipeDelete">删除</view>
         </view>
-      <view>
-        <text class="caption">现价</text>
-        <view style="display: flex; align-items: center; gap: 8px;">
-          <text wx:if="{{item.currentPrice > 0}}" class="body" style="color: var(--color-title); font-weight: var(--weight-title);">{{item.currentPriceText}}</text>
-          <text wx:else class="caption">--</text>
-          <view 
-            style="min-height: 30px; min-width: 30px; display: flex; align-items: center; justify-content: center;" 
-            data-stock-id="{{item.id}}"
-            bindtap="onRefreshPrice"
-          >
-            <text class="caption">↻</text>
+        <view class="card section swipe-card {{item.swipeOpen ? 'swipe-card-open' : ''}}"
+          bindtouchstart="onTouchStart"
+          bindtouchmove="onTouchMove"
+          bindtouchend="onTouchEnd"
+          bindtap="goToDetail"
+          data-stock-id="{{item.id}}"
+          data-index="{{index}}">
+          <view style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+            <view class="tag market-{{item.market === 'A_SHARE' ? 'a' : item.market === 'HK_SHARE' ? 'hk' : 'us'}}">{{item.marketLabel}}</view>
+            <text class="body" style="color: var(--color-title); font-weight: var(--weight-title);">{{item.code}}</text>
+            <text class="body">{{item.name}}</text>
+          </view>
+
+          <view style="display: flex; gap: 12px; margin-bottom: 12px; align-items: flex-start;">
+            <view style="flex: 1;">
+              <text class="caption">持仓</text>
+              <view class="body" style="color: var(--color-title);">{{item.quantityText}}股</view>
+            </view>
+            <view style="flex: 1;">
+              <text class="caption">成本</text>
+              <view class="body" style="color: var(--color-title);">{{item.avgCostText}}</view>
+            </view>
+            <view style="flex: 1;">
+              <text class="caption">现价</text>
+              <view style="display: flex; align-items: center; gap: 4px;">
+                <text wx:if="{{item.currentPrice > 0}}" class="body" style="color: var(--color-title);">{{item.currentPriceText}}</text>
+                <text wx:else class="caption">--</text>
+                <view
+                  style="min-height: 24px; min-width: 24px; display: flex; align-items: center; justify-content: center;"
+                  data-stock-id="{{item.id}}"
+                  bindtap="onRefreshPrice"
+                >
+                  <text class="caption" style="font-size: 14px;">↻</text>
+                </view>
+              </view>
+            </view>
+          </view>
+
+          <view style="display: flex; justify-content: space-between; align-items: center; padding-top: 12px; border-top: 1px solid var(--color-separator);">
+            <text class="body {{item.floatingPnL >= 0 ? 'profit' : 'loss'}}">
+              {{item.floatingPnL >= 0 ? '+' : ''}}{{item.floatingPnLText}}
+            </text>
+            <text class="caption {{item.floatingPnL >= 0 ? 'profit' : 'loss'}}">
+              {{item.pnlPercentText}}%
+            </text>
           </view>
         </view>
       </view>
-      </view>
+      <view style="height: 100px;"></view>
+    </scroll-view>
 
-      <view style="display: flex; justify-content: space-between; align-items: center; padding-top: 12px; border-top: 1px solid var(--color-separator);">
-        <text class="body {{item.floatingPnL >= 0 ? 'profit' : 'loss'}}">
-          {{item.floatingPnL >= 0 ? '+' : ''}}{{item.floatingPnLText}}
-        </text>
-        <text class="caption {{item.floatingPnL >= 0 ? 'profit' : 'loss'}}">
-          {{item.pnlPercentText}}%
-        </text>
-      </view>
+    <!-- 空状态 -->
+    <view wx:if="{{positions.length === 0}}" class="empty-state">
+      <view style="font-size: 64px; margin-bottom: 16px; opacity: 0.6;">📊</view>
+      <text class="empty-title">暂无持仓</text>
+      <text class="empty-desc">点击右下角 + 按钮添加第一笔交易</text>
+      <view style="margin-top: 24px; padding: 16px 24px; background: var(--color-surface); border-radius: 12px; box-shadow: var(--shadow-sm);">
+        <text class="caption" style="color: var(--color-caption);">💡 小贴士</text>
+        <text class="caption" style="display: block; margin-top: 8px; line-height: 1.6;">添加买入记录后，系统会自动计算持仓成本和浮动盈亏</text>
       </view>
     </view>
-    <view style="height: 100px;"></view>
-  </scroll-view>
 
-  <view wx:else class="empty-state">
-    <text class="empty-title">暂无持仓</text>
-    <text class="empty-desc">点击右下角按钮添加第一笔交易</text>
-  </view>
-
-  <view class="fab" bindtap="goToAddTransaction">+</view>
+    <!-- 添加按钮 -->
+    <view class="fab" bindtap="goToAddTransaction">+</view>
+  </block>
 </view>

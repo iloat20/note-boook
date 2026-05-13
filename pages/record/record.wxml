@@ -1,9 +1,9 @@
-<view class="page-container">
-  <view style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
-    <view bindtap="goBack" style="min-height: 44px; display: flex; align-items: center; padding-right: 8px;">
-      <text class="body" style="color: var(--color-accent); font-size: 17px;">←</text>
+<view class="page-container" style="padding-top: {{statusBarHeight}}px;">
+  <view class="nav-bar" style="height: {{navBarHeight}}px; display: flex; align-items: flex-end; padding: 0 16px;">
+    <view bindtap="goBack" style="min-height: 44px; min-width: 44px; display: flex; align-items: center; justify-content: flex-start;">
+      <text style="font-size: 22px; color: var(--color-accent); font-weight: 300;">‹</text>
     </view>
-    <text class="display">{{isEdit ? '编辑交易' : '添加交易'}}</text>
+    <text class="nav-header-title" style="flex: 1;">{{isEdit ? '编辑交易' : '添加交易'}}</text>
   </view>
 
   <scroll-view class="scroll-container" scroll-y="true">

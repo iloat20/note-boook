@@ -23,6 +23,7 @@ Page({
     },
     transactions: [],
     dividends: [],
+    strategySummary: [],
     formatAvgCost: "0.00",
     formatMarketValue: "0.00",
     formatDividendIncome: "0.00",
@@ -62,8 +63,10 @@ Page({
     }
 
     var position = calculatePosition(stock.id)
-    var transactions = Transaction.getByStockId(stock.id).map(this._formatTransaction.bind(this))
+    var rawTransactions = Transaction.getByStockId(stock.id)
+    var transactions = rawTransactions.map(this._formatTransaction.bind(this))
     var dividends = Dividend.getByStockId(stock.id).map(this._formatDividend.bind(this))
+    var strategySummary = this._buildStrategySummary(rawTransactions)
 
     var marketValue = position.currentPrice && position.quantity > 0
       ? position.currentPrice * position.quantity
@@ -79,6 +82,7 @@ Page({
       position: position,
       transactions: transactions,
       dividends: dividends,
+      strategySummary: strategySummary,
       formatAvgCost: fmt(position.avgCost),
       formatMarketValue: fmt(marketValue),
       formatDividendIncome: fmt(position.dividendIncome),
@@ -94,6 +98,8 @@ Page({
 
   _formatTransaction(transaction) {
     var typeClass = transaction.type === "BUY" ? "buy" : "sell"
+    var strategies = transaction.strategies || []
+    var reason = transaction.reason || ''
     return {
       id: transaction.id,
       stockId: transaction.stockId,
@@ -105,12 +111,38 @@ Page({
       fee: transaction.fee,
       date: transaction.date,
       note: transaction.note,
+      reason: reason,
+      strategies: strategies,
+      hasJournal: !!(reason || strategies.length),
       dateText: fmtShortDate(transaction.date),
       timeText: fmtTime(transaction.date),
       priceText: fmt(transaction.price),
       feeText: fmt(transaction.fee),
       amountText: (transaction.type === "BUY" ? "-" : "+") + fmt(transaction.price * transaction.quantity)
     }
+  },
+
+  _buildStrategySummary(transactions) {
+    var map = {}
+    transactions.forEach(function (t) {
+      if (!t.strategies || !t.strategies.length) return
+      t.strategies.forEach(function (tag) {
+        if (!map[tag]) map[tag] = { tag: tag, count: 0, buyAmount: 0, sellAmount: 0 }
+        map[tag].count++
+        if (t.type === 'BUY') {
+          map[tag].buyAmount += t.price * t.quantity
+        } else {
+          map[tag].sellAmount += t.price * t.quantity
+        }
+      })
+    })
+    return Object.keys(map).map(function (tag) {
+      var s = map[tag]
+      s.netPnL = parseFloat((s.sellAmount - s.buyAmount).toFixed(2))
+      s.buyAmount = parseFloat(s.buyAmount.toFixed(2))
+      s.sellAmount = parseFloat(s.sellAmount.toFixed(2))
+      return s
+    }).sort(function (a, b) { return b.count - a.count })
   },
 
   _formatDividend(dividend) {

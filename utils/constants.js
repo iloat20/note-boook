@@ -37,4 +37,8 @@ const FEE_CONFIG = {
   }
 }
 
-module.exports = { MARKETS, TRANSACTION_TYPE, FEE_CONFIG }
+const DEFAULT_STRATEGIES = [
+  '追涨', '抄底', '止损', '止盈', '定投', '打新', '调仓', '消息面', '技术面', '基本面'
+]
+
+module.exports = { MARKETS, TRANSACTION_TYPE, FEE_CONFIG, DEFAULT_STRATEGIES }

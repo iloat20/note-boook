@@ -1,3 +1,4 @@
+/* iOS 26.5 Frosted Glass Tab Bar */
 .tab-bar {
   display: flex;
   flex-direction: row;
@@ -6,10 +7,10 @@
   left: 0;
   right: 0;
   height: 49px;
-  background: rgba(249, 249, 249, 0.78);
-  backdrop-filter: saturate(180%) blur(20px);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
-  border-top: 0.5px solid rgba(0, 0, 0, 0.12);
+  background: rgba(242, 242, 247, 0.6);
+  backdrop-filter: saturate(180%) blur(40px);
+  -webkit-backdrop-filter: saturate(180%) blur(40px);
+  border-top: 0.5px solid rgba(255, 255, 255, 0.5);
   padding-bottom: env(safe-area-inset-bottom);
   z-index: 999;
 }

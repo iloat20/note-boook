@@ -77,6 +77,12 @@
             <text class="caption">数量: {{item.quantity}}股</text>
             <text class="caption">手续费: {{item.feeText}}</text>
           </view>
+          <view wx:if="{{item.hasJournal}}" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--color-separator);">
+            <view wx:if="{{item.strategies.length > 0}}" style="display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 4px;">
+              <view wx:for="{{item.strategies}}" wx:for-item="tag" class="strategy-tag">{{tag}}</view>
+            </view>
+            <text wx:if="{{item.reason}}" class="caption" style="color: var(--color-body); line-height: 1.4;">{{item.reason}}</text>
+          </view>
         </view>
       </view>
       <view wx:else class="card-sm" style="text-align: center;">
@@ -105,6 +111,21 @@ bindtap="showDividendActions" data-id="{{item.id}}" data-type="dividend">
       </view>
       <view wx:else class="card-sm" style="text-align: center;">
         <text class="caption">暂无分红记录</text>
+      </view>
+    </view>
+
+    <view wx:if="{{strategySummary.length > 0}}" class="section">
+      <text class="title" style="display: block; margin-bottom: 12px;">策略复盘</text>
+      <view class="card section">
+        <view wx:for="{{strategySummary}}" wx:key="tag" style="padding: 8px 0; {{index > 0 ? 'border-top: 1px solid var(--color-separator);' : ''}}">
+          <view style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <view style="display: flex; align-items: center; gap: 8px;">
+              <view class="strategy-tag">{{item.tag}}</view>
+              <text class="caption">{{item.count}}笔</text>
+            </view>
+            <text class="caption" style="color: {{item.netPnL >= 0 ? 'var(--color-profit)' : 'var(--color-loss)'}};">{{item.netPnL >= 0 ? '+' : ''}}{{item.netPnL}}</text>
+          </view>
+        </view>
       </view>
     </view>
     <view style="height: 100px;"></view>

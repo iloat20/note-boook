@@ -82,6 +82,58 @@
       </view>
     </view>
 
+    <view class="card section" style="margin-bottom: 16px;">
+      <view class="journal-toggle" bindtap="toggleJournal">
+        <text class="body" style="color: var(--color-title);">交易笔记</text>
+        <text class="caption" style="margin-left: 4px;">（选填）</text>
+        <view style="flex: 1;"></view>
+        <view wx:if="{{strategies.length > 0 || reason}}" style="display: flex; align-items: center; gap: 4px; margin-right: 8px;">
+          <view wx:if="{{strategies.length > 0}}" class="strategy-count-tag">{{strategies.length}}个标签</view>
+          <view wx:if="{{reason}}" class="strategy-count-tag">已填理由</view>
+        </view>
+        <text class="journal-toggle-icon {{showJournal ? 'journal-toggle-icon-open' : ''}}">›</text>
+      </view>
+      <view wx:if="{{showJournal}}" class="journal-body">
+        <view style="margin-bottom: 12px;">
+          <text class="caption" style="display: block; margin-bottom: 8px;">策略标签</text>
+          <view style="display: flex; flex-wrap: wrap; gap: 8px;">
+            <view wx:for="{{strategies}}" wx:key="*this" class="strategy-chip-selected" bindtap="removeStrategy" data-tag="{{item}}">
+              <text>{{item}}</text>
+              <text style="margin-left: 4px; font-size: 10px; opacity: 0.7;">×</text>
+            </view>
+            <view class="strategy-chip-add" bindtap="openStrategyPicker">+ 添加标签</view>
+          </view>
+        </view>
+        <view>
+          <text class="caption" style="display: block; margin-bottom: 4px;">{{type === 'BUY' ? '买入' : '卖出'}}理由</text>
+          <textarea class="input" style="width: 100%; height: 80px; padding: 12px;" placeholder="{{type === 'BUY' ? '为什么买入这只股票？' : '为什么卖出？'}}" value="{{reason}}" bindinput="onReasonInput"/>
+        </view>
+      </view>
+    </view>
+
+    <!-- 策略选择器弹窗 -->
+    <view wx:if="{{showStrategyPicker}}" class="strategy-picker-overlay" bindtap="closeStrategyPicker">
+      <view class="strategy-picker-card" catchtap="">
+        <view style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <text class="title">选择策略标签</text>
+          <view bindtap="confirmStrategyPicker" style="padding: 4px 12px;">
+            <text style="color: var(--color-accent); font-weight: 600;">完成</text>
+          </view>
+        </view>
+        <view style="display: flex; gap: 8px; margin-bottom: 16px;">
+          <input class="input" style="flex: 1; padding: 8px 12px;" placeholder="输入自定义标签..." value="{{customStrategyInput}}" bindinput="onCustomStrategyInput"/>
+          <view class="strategy-chip-add" style="flex-shrink: 0;" bindtap="addCustomStrategy">添加</view>
+        </view>
+        <view style="display: flex; flex-wrap: wrap; gap: 8px;">
+          <view wx:for="{{allStrategies}}" wx:key="*this"
+                class="strategy-chip {{strategies.indexOf(item) >= 0 ? 'strategy-chip-selected' : ''}}"
+                bindtap="toggleStrategy" data-tag="{{item}}">
+            {{item}}
+          </view>
+        </view>
+      </view>
+    </view>
+
     <view class="section">
       <text class="title" style="display: block; margin-bottom: 12px;">预览</text>
       <view class="card-sm">

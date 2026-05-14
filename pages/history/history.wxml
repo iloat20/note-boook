@@ -1,14 +1,7 @@
 <view class="page-container" style="padding-top: {{statusBarHeight}}px;">
-  <view class="nav-bar" style="height: {{navBarHeight}}px; display: flex; align-items: flex-end; padding: 0 16px;">
-    <text class="nav-header-title" style="flex: 1;">流水</text>
-    <view bindtap="toggleSearch" style="min-height: 44px; min-width: 44px; display: flex; align-items: center; justify-content: flex-end;">
-      <text style="font-size: 20px; opacity: 0.5;">&#x1F50D;</text>
-    </view>
-  </view>
-
-  <view wx:if="{{showSearchInput}}" style="margin-bottom: 12px;">
+  <view style="margin-bottom: 12px;">
     <view style="display: flex; align-items: center; gap: 8px; background: var(--color-bg); border-radius: var(--radius-input); padding: 0 12px; height: 44px;">
-      <text style="font-size: 16px; opacity: 0.4;">🔍</text>
+      <image src="/images/search.svg" mode="aspectFit" style="width: 16px; height: 16px; opacity: 0.4;"/>
       <input class="input" placeholder="搜索代码/名称..." value="{{searchKeyword}}" bindinput="onSearchInput" style="flex: 1; background: transparent; height: 44px; padding: 0;" />
       <view wx:if="{{searchKeyword}}" bindtap="clearSearch" style="padding: 8px; margin: -8px;">
         <text style="font-size: 16px; opacity: 0.4;">✕</text>
@@ -23,13 +16,24 @@
 
   <scroll-view scroll-x class="market-chips">
     <view style="display: flex; gap: 8px; padding-bottom: 12px; white-space: nowrap;">
-      <view 
-        wx:for="{{marketTabs}}" 
+      <view
+        wx:for="{{marketTabs}}"
         wx:key="key"
         class="chip {{currentMarket === item.key ? 'chip-active' : ''}}"
         bindtap="switchMarket"
         data-market="{{item.key}}"
       >{{item.label}}</view>
+    </view>
+  </scroll-view>
+
+  <scroll-view wx:if="{{activeStrategies.length > 0}}" scroll-x class="market-chips">
+    <view style="display: flex; gap: 8px; padding-bottom: 12px; white-space: nowrap;">
+      <view class="chip {{currentStrategy === null ? 'chip-active' : ''}}" bindtap="switchStrategy" data-strategy="">全部策略</view>
+      <view wx:for="{{activeStrategies}}" wx:key="tag"
+            class="chip {{currentStrategy === item.tag ? 'chip-active' : ''}}"
+            bindtap="switchStrategy" data-strategy="{{item.tag}}">
+        {{item.tag}} ({{item.count}})
+      </view>
     </view>
   </scroll-view>
 
@@ -58,6 +62,9 @@
           <text class="body {{record.type === 'BUY' ? 'loss' : 'profit'}}" style="font-weight: var(--weight-title);">
             {{record.type === 'BUY' ? '-' : '+'}}{{record.amountText}}
           </text>
+        </view>
+        <view wx:if="{{record.strategies.length > 0}}" style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px;">
+          <view wx:for="{{record.strategies}}" wx:for-item="tag" class="strategy-tag-mini">{{tag}}</view>
         </view>
       </view>
     </view>

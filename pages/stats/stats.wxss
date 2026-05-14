@@ -3,20 +3,48 @@
 /* === Glass Card === */
 .card-glass {
   background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   border-radius: var(--glass-radius);
-  border: 1px solid var(--glass-border);
+  border: 0.5px solid var(--glass-border);
   box-shadow: var(--glass-shadow-out), var(--glass-shadow-in);
   padding: var(--space-card-pad);
   transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+.card-glass::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.9), transparent);
+  pointer-events: none;
 }
 
 .card-glass-sm {
   background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   border-radius: var(--glass-radius);
-  border: 1px solid var(--glass-border);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  border: 0.5px solid var(--glass-border);
+  box-shadow: var(--glass-shadow-out), var(--glass-shadow-in);
   padding: var(--space-card-pad);
   transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+.card-glass-sm::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.9), transparent);
+  pointer-events: none;
 }
 
 /* === Heatmap Liquid Glass === */
@@ -35,9 +63,11 @@
   justify-content: center;
   color: var(--color-caption);
   font-size: 24px;
-  background: rgba(255, 255, 255, 0.5);
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 0.5px solid var(--glass-border);
   transition: all 200ms ease;
   position: relative;
   z-index: 1;
@@ -57,9 +87,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 0.5px solid var(--glass-border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), inset 0 0.5px 0 rgba(255, 255, 255, 0.7);
   transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
@@ -72,7 +104,7 @@
   left: 0;
   right: 0;
   height: 50%;
-  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.4), transparent);
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.5), transparent);
   border-radius: 10px 10px 0 0;
   pointer-events: none;
 }
@@ -85,44 +117,43 @@
   z-index: 1;
 }
 
-/* Heatmap Levels with Beautiful Gradients */
+/* Heatmap Levels with iOS Glass */
 .heatmap-level-0 {
-  background: linear-gradient(135deg, rgba(240, 240, 245, 0.7), rgba(240, 240, 245, 0.4));
+  background: rgba(0, 0, 0, 0.03);
 }
 
 .heatmap-level-1 {
-  background: linear-gradient(135deg, rgba(255, 224, 208, 0.8), rgba(255, 200, 170, 0.5));
-  border-color: rgba(255, 140, 90, 0.3);
-  box-shadow: 0 2px 8px rgba(255, 140, 90, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  background: rgba(255, 59, 48, 0.08);
+  border-color: rgba(255, 59, 48, 0.15);
+  box-shadow: 0 2px 8px rgba(255, 59, 48, 0.06), inset 0 0.5px 0 rgba(255, 255, 255, 0.6);
 }
 
 .heatmap-level-2 {
-  background: linear-gradient(135deg, rgba(255, 192, 160, 0.85), rgba(255, 170, 130, 0.6));
-  border-color: rgba(255, 140, 90, 0.4);
-  box-shadow: 0 3px 10px rgba(255, 140, 90, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  background: rgba(255, 59, 48, 0.15);
+  border-color: rgba(255, 59, 48, 0.22);
+  box-shadow: 0 3px 10px rgba(255, 59, 48, 0.1), inset 0 0.5px 0 rgba(255, 255, 255, 0.6);
 }
 
 .heatmap-level-3 {
-  background: linear-gradient(135deg, rgba(255, 140, 90, 0.9), rgba(255, 120, 70, 0.7));
-  border-color: rgba(255, 140, 90, 0.5);
-  box-shadow: 0 4px 12px rgba(255, 140, 90, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  background: rgba(255, 59, 48, 0.25);
+  border-color: rgba(255, 59, 48, 0.35);
+  box-shadow: 0 4px 12px rgba(255, 59, 48, 0.15), inset 0 0.5px 0 rgba(255, 255, 255, 0.5);
 }
 
 .heatmap-level-3 .heatmap-day {
-  color: #FFF;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  color: #FF3B30;
+  font-weight: 600;
 }
 
 .heatmap-level-4 {
-  background: linear-gradient(135deg, rgba(255, 107, 53, 0.95), rgba(255, 87, 33, 0.8));
-  border-color: rgba(255, 107, 53, 0.6);
-  box-shadow: 0 4px 16px rgba(255, 107, 53, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  background: rgba(255, 59, 48, 0.4);
+  border-color: rgba(255, 59, 48, 0.5);
+  box-shadow: 0 4px 16px rgba(255, 59, 48, 0.25), inset 0 0.5px 0 rgba(255, 255, 255, 0.4);
 }
 
 .heatmap-level-4 .heatmap-day {
-  color: #FFF;
+  color: #FF3B30;
   font-weight: 700;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 /* === Heatmap Legend === */
@@ -148,17 +179,19 @@
   width: 12px;
   height: 12px;
   border-radius: 3px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 0.5px solid rgba(255, 255, 255, 0.4);
 }
 
-/* === Tab Bar Liquid Glass === */
+/* === Tab Bar Frosted Glass === */
 .tab-bar-line {
   display: flex;
   justify-content: center;
   gap: 8px;
   padding: 12px 16px;
-  background: rgba(255, 255, 255, 0.6);
-  border-bottom: 0.5px solid rgba(255, 255, 255, 0.3);
+  background: rgba(242, 242, 247, 0.6);
+  backdrop-filter: saturate(180%) blur(40px);
+  -webkit-backdrop-filter: saturate(180%) blur(40px);
+  border-bottom: 0.5px solid rgba(255, 255, 255, 0.5);
   position: sticky;
   top: 0;
   z-index: 10;
@@ -184,19 +217,10 @@
   color: var(--color-accent);
   font-weight: 600;
   background: var(--glass-bg);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-}
-
-.tab-line-active::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 50%;
-  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.3), transparent);
-  border-radius: 10px 10px 0 0;
-  pointer-events: none;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 0.5px solid var(--glass-border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06), inset 0 0.5px 0 rgba(255, 255, 255, 0.7);
 }
 
 /* === Stats Card Grid === */
@@ -210,8 +234,10 @@
 
 .stat-card {
   background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   border-radius: var(--glass-radius);
-  border: 1px solid var(--glass-border);
+  border: 0.5px solid var(--glass-border);
   box-shadow: var(--glass-shadow-out), var(--glass-shadow-in);
   padding: 16px;
   transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
@@ -227,9 +253,8 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 50%;
-  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.4), transparent);
-  border-radius: var(--glass-radius) var(--glass-radius) 0 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.9), transparent);
   pointer-events: none;
 }
 
@@ -268,7 +293,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 12px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+  border-bottom: 0.5px solid rgba(60, 60, 67, 0.08);
   transition: all 200ms ease;
 }
 
@@ -312,13 +337,15 @@
   justify-content: space-around;
   padding: 40px 20px 40px 40px;
   z-index: 10;
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
 .skeleton-bar {
   flex: 1;
   margin: 0 4px;
-  background: linear-gradient(135deg, rgba(255, 107, 53, 0.2), rgba(255, 107, 53, 0.08));
+  background: linear-gradient(135deg, rgba(255, 59, 48, 0.15), rgba(255, 59, 48, 0.06));
   border-radius: 4px 4px 0 0;
   animation: chart-shimmer 1.5s infinite;
   position: relative;
@@ -342,7 +369,7 @@
   left: 50px;
   right: 20px;
   height: 2px;
-  background: linear-gradient(90deg, rgba(255, 107, 53, 0.3), rgba(255, 107, 53, 0.1));
+  background: linear-gradient(90deg, rgba(255, 59, 48, 0.2), rgba(255, 59, 48, 0.08));
   border-radius: 1px;
   animation: chart-shimmer 1.5s infinite;
 }
@@ -361,7 +388,7 @@
 .skeleton-bar-small {
   width: 20px;
   height: 40%;
-  background: linear-gradient(135deg, rgba(255, 107, 53, 0.25), rgba(255, 107, 53, 0.1));
+  background: linear-gradient(135deg, rgba(255, 59, 48, 0.2), rgba(255, 59, 48, 0.08));
   border-radius: 3px 3px 0 0;
   animation: chart-shimmer 1.5s infinite;
   animation-delay: inherit;
@@ -378,9 +405,20 @@
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 107, 53, 0.3), rgba(255, 107, 53, 0.1));
+  background: radial-gradient(circle, rgba(255, 59, 48, 0.2), rgba(255, 59, 48, 0.08));
   animation: chart-shimmer 1.5s infinite;
   animation-delay: inherit;
+}
+
+/* === Annual Report Button (Frosted Glass) === */
+.annual-report-btn {
+  padding: 6px 14px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 0.5px solid var(--glass-border);
+  border-radius: 8px;
+  margin-bottom: 16px;
 }
 
 /* === Chart Shimmer Animation === */

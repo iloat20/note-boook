@@ -1,9 +1,5 @@
 <view class="page-container" style="padding-top: {{statusBarHeight}}px;">
 
-  <view class="nav-bar" style="height: {{navBarHeight}}px; display: flex; align-items: flex-end; padding: 0 16px;">
-    <text class="nav-header-title" style="flex: 1;">统计</text>
-  </view>
-
   <scroll-view class="scroll-container" scroll-y>
 
     <view class="tab-bar-line">
@@ -36,18 +32,6 @@
         <text class="stat-value {{stats.totalPnL >= 0 ? 'profit' : 'loss'}}">
           {{stats.totalPnL >= 0 ? '+' : ''}}{{stats.totalPnLText}}
         </text>
-      </view>
-    </view>
-
-    <!-- 图表容器：持仓分布 柱状图 -->
-    <view class="section">
-      <text class="section-title">持仓分布</text>
-      <view class="card-glass chart-box">
-        <view wx:if="{{!chartsLoaded.position}}" class="chart-skeleton">
-          <view class="skeleton-bar" wx:for="{{[1,2,3,4,5]}}" wx:key="*this"
-                style="height: {{50 + index * 20}}%; animation-delay: {{index * 0.1}}s;"></view>
-        </view>
-        <ec-canvas id="positionChart" canvas-id="positionChart" ec="{{ecPosition}}" force-use-new-canvas="{{true}}"></ec-canvas>
       </view>
     </view>
 
@@ -133,7 +117,12 @@
     </view>
 
     <view class="section">
-      <text class="section-title">已清仓股票</text>
+      <view style="display: flex; align-items: center; justify-content: space-between;">
+        <text class="section-title" style="margin-bottom: 0;">已清仓股票</text>
+        <view class="annual-report-btn" bindtap="onOpenAnnualReport">
+          <text style="font-size: 12px; color: var(--color-accent); font-weight: 500;">年度报告</text>
+        </view>
+      </view>
       <view class="card-glass">
         <view wx:if="{{clearedPositions.length > 0}}" style="max-height: 400px; overflow-y: auto;">
           <view wx:for="{{clearedPositions}}" wx:key="id" class="list-item-glass" style="flex-direction: column; align-items: flex-start; gap: 8px;">
@@ -170,4 +159,6 @@
 
     <view style="height: 100px;"></view>
   </scroll-view>
+
+  <annual-report wx:if="{{showAnnualReport}}" data="{{annualReportData}}" bind:close="onCloseAnnualReport" />
 </view>

@@ -27,8 +27,8 @@ function buildMarkdown() {
   lines.push('## 交易记录（' + transactions.length + ' 笔）')
   lines.push('')
   if (transactions.length > 0) {
-    lines.push('| 日期 | 类型 | 代码 | 名称 | 市场 | 价格 | 数量 | 手续费 | 金额 | 备注 |')
-    lines.push('| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |')
+    lines.push('| 日期 | 类型 | 代码 | 名称 | 市场 | 价格 | 数量 | 手续费 | 金额 | 策略 | 理由 | 备注 |')
+    lines.push('| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |')
     transactions.forEach(function (t) {
       var stock = stockMap[t.stockId]
       var code = stock ? stock.code : '-'
@@ -37,8 +37,10 @@ function buildMarkdown() {
       var typeStr = t.type === 'BUY' ? '买入' : '卖出'
       var amount = (t.price || 0) * (t.quantity || 0)
       var dateStr = t.date ? fmtDate(new Date(t.date)) : '-'
-      var note = (t.note || '').replace(/\|/g, '\\|')
-      lines.push('| ' + dateStr + ' | ' + typeStr + ' | ' + code + ' | ' + name + ' | ' + market + ' | ' + fmt(t.price || 0) + ' | ' + (t.quantity || 0) + ' | ' + fmt(t.fee || 0) + ' | ' + fmt(amount) + ' | ' + note + ' |')
+      var strategies = (t.strategies && t.strategies.length) ? t.strategies.join(', ') : '-'
+      var reason = (t.reason || '').replace(/\|/g, '\\|') || '-'
+      var note = (t.note || '').replace(/\|/g, '\\|') || '-'
+      lines.push('| ' + dateStr + ' | ' + typeStr + ' | ' + code + ' | ' + name + ' | ' + market + ' | ' + fmt(t.price || 0) + ' | ' + (t.quantity || 0) + ' | ' + fmt(t.fee || 0) + ' | ' + fmt(amount) + ' | ' + strategies + ' | ' + reason + ' | ' + note + ' |')
     })
   } else {
     lines.push('暂无交易记录')

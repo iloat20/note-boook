@@ -1,7 +1,10 @@
-const { MARKETS, getPositionSummary, getTotalStats, PriceCache, Transaction, Dividend } = require('../../utils/storage.js')
+const { MARKETS, Stock, getPositionSummary, getTotalStats, PriceCache, Transaction, Dividend } = require('../../utils/storage.js')
 const { fmt } = require('../../utils/format.js')
-const { getMarketLabel, getMarketColor } = require('../../utils/market.js')
+const { getMarketLabel, getMarketColor, validateStockCode, formatStockCode } = require('../../utils/market.js')
 const { fetchStockPrice } = require('../../utils/stockPrice.js')
+const { calculateFee } = require('../../utils/feeCalculator.js')
+const { searchStocks } = require('../../utils/stockDatabase.js')
+const { renderPortfolioCard } = require('../../utils/canvasRenderer.js')
 
 Page({
   data: {
@@ -29,7 +32,20 @@ Page({
     totalMarketValueText: '0.00',
     totalPnL: 0,
     totalPnLText: '0.00',
-    totalPnLPercent: 0
+    totalPnLPercent: 0,
+    showQuickRecord: false,
+    qrType: 'BUY',
+    qrCode: '',
+    qrName: '',
+    qrMarket: 'A_SHARE',
+    qrMarketLabel: '',
+    qrPrice: '',
+    qrQuantity: '',
+    qrFee: 0,
+    qrFeeText: '0.00',
+    qrActualText: '0.00',
+    qrSuggestions: [],
+    showQrSuggestions: false
   },
 
   onLoad() {
@@ -222,9 +238,136 @@ Page({
   },
 
   goToAddTransaction() {
+    if (this._longPressFired) { this._longPressFired = false; return }
     wx.navigateTo({
       url: '/pages/record/record'
     })
+  },
+
+  // ========== 快捷记录 ==========
+  onQuickRecord() {
+    this._longPressFired = true
+    try { wx.vibrateShort({ type: 'medium' }) } catch (e) {}
+    this.setData({ showQuickRecord: true, qrQuantity: '100' })
+  },
+
+  closeQuickRecord() {
+    this.setData({
+      showQuickRecord: false,
+      qrType: 'BUY', qrCode: '', qrName: '', qrMarket: 'A_SHARE', qrMarketLabel: '',
+      qrPrice: '', qrQuantity: '', qrFee: 0, qrFeeText: '0.00', qrActualText: '0.00',
+      qrSuggestions: [], showQrSuggestions: false
+    })
+  },
+
+  onSheetTap() {},
+
+  _detectMarket(code) {
+    if (/^\d{6}$/.test(code)) return MARKETS.A_SHARE
+    if (/^\d{1,5}$/.test(code)) return MARKETS.HK_SHARE
+    if (/^[A-Za-z]{1,5}$/.test(code)) return MARKETS.US_SHARE
+    return this.data.currentMarket || MARKETS.A_SHARE
+  },
+
+  onQrTypeSelect(e) {
+    this.setData({ qrType: e.currentTarget.dataset.type })
+    this._calcQrFee()
+  },
+
+  onQrCodeInput(e) {
+    var value = (e.detail.value || '').trim()
+    var market = this._detectMarket(value)
+    this.setData({
+      qrCode: value,
+      qrMarket: market,
+      qrMarketLabel: getMarketLabel(market),
+      qrName: ''
+    })
+    if (value.length >= 1) {
+      var results = searchStocks(value, market, 8)
+      this.setData({ qrSuggestions: results, showQrSuggestions: results.length > 0 })
+    } else {
+      this.setData({ qrSuggestions: [], showQrSuggestions: false })
+    }
+    this._calcQrFee()
+  },
+
+  onQrSelectSuggestion(e) {
+    var item = e.currentTarget.dataset.item
+    var that = this
+    this.setData({
+      qrCode: item.code,
+      qrName: item.name,
+      qrMarket: item.market,
+      qrMarketLabel: getMarketLabel(item.market),
+      qrSuggestions: [],
+      showQrSuggestions: false
+    })
+    fetchStockPrice(item.market, item.code).then(function (priceData) {
+      if (priceData && priceData.currentPrice > 0) {
+        that.setData({ qrPrice: String(priceData.currentPrice) })
+        that._calcQrFee()
+      }
+    }).catch(function () {})
+    this._calcQrFee()
+  },
+
+  hideQrSuggestions() {
+    var that = this
+    setTimeout(function () { that.setData({ showQrSuggestions: false }) }, 200)
+  },
+
+  onQrPriceInput(e) {
+    this.setData({ qrPrice: e.detail.value })
+    this._calcQrFee()
+  },
+
+  onQrQuantityInput(e) {
+    this.setData({ qrQuantity: e.detail.value })
+    this._calcQrFee()
+  },
+
+  onQrQtyMinus() {
+    var qty = Math.max(0, (parseInt(this.data.qrQuantity) || 0) - 100)
+    this.setData({ qrQuantity: qty > 0 ? String(qty) : '' })
+    this._calcQrFee()
+  },
+
+  onQrQtyPlus() {
+    var qty = (parseInt(this.data.qrQuantity) || 0) + 100
+    this.setData({ qrQuantity: String(qty) })
+    this._calcQrFee()
+  },
+
+  _calcQrFee() {
+    var d = this.data
+    var fee = calculateFee(d.qrMarket, d.qrType, d.qrPrice, d.qrQuantity)
+    var tradeAmount = (parseFloat(d.qrPrice) || 0) * (parseInt(d.qrQuantity) || 0)
+    var actualAmount = d.qrType === 'BUY' ? tradeAmount + fee : tradeAmount - fee
+    this.setData({
+      qrFee: fee,
+      qrFeeText: fmt(fee),
+      qrActualText: fmt(actualAmount)
+    })
+  },
+
+  submitQuickRecord() {
+    var d = this.data
+    var code = formatStockCode(d.qrCode, d.qrMarket)
+    var name = d.qrName
+    if (!code) { wx.showToast({ title: '请输入股票代码', icon: 'none' }); return }
+    if (!name) { wx.showToast({ title: '请从列表中选择股票', icon: 'none' }); return }
+    if (!d.qrPrice || parseFloat(d.qrPrice) <= 0) { wx.showToast({ title: '请输入有效价格', icon: 'none' }); return }
+    if (!d.qrQuantity || parseInt(d.qrQuantity) <= 0) { wx.showToast({ title: '请输入有效数量', icon: 'none' }); return }
+
+    var stock = Stock.getByCode(code, d.qrMarket)
+    if (!stock) { stock = Stock.create(code, name, d.qrMarket); Stock.save(stock) }
+
+    var tx = Transaction.create(stock.id, d.qrType, d.qrPrice, d.qrQuantity, d.qrFee, new Date().toISOString())
+    Transaction.save(tx)
+    wx.showToast({ title: '添加成功', icon: 'success' })
+    this.closeQuickRecord()
+    this.loadData()
   },
 
   fetchPrices() {
@@ -354,6 +497,127 @@ Page({
           Dividend.deleteByStockId(stockId)
           wx.showToast({ title: '删除成功', icon: 'success' })
           that.loadData()
+        }
+      }
+    })
+  },
+
+  // ========== 持仓截图分享 ==========
+  onSharePortfolio() {
+    var that = this
+    var positions = this.data.positions
+    if (!positions || positions.length === 0) {
+      wx.showToast({ title: '暂无持仓数据', icon: 'none' })
+      return
+    }
+
+    wx.showLoading({ title: '生成截图中...' })
+
+    var query = wx.createSelectorQuery()
+    query.select('#shareCanvas').fields({ node: true, size: true }).exec(function (res) {
+      if (!res || !res[0] || !res[0].node) {
+        wx.hideLoading()
+        wx.showToast({ title: '生成失败', icon: 'none' })
+        return
+      }
+
+      var canvas = res[0].node
+      var ctx = canvas.getContext('2d')
+      var dpr = 2
+      canvas.width = 375 * dpr
+      canvas.height = 667 * dpr
+      ctx.scale(dpr, dpr)
+
+      var now = new Date()
+      var dateStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0')
+
+      var cardData = {
+        dpr: dpr,
+        date: dateStr,
+        totalMarketValue: that.data.totalMarketValue,
+        totalPnL: that.data.totalPnL,
+        totalPnLPercent: that.data.totalPnLPercent,
+        positionCount: positions.length,
+        positions: positions.slice(0, 5).map(function (p) {
+          return {
+            market: p.market,
+            name: p.name,
+            code: p.code,
+            floatingPnL: p.floatingPnL
+          }
+        })
+      }
+
+      renderPortfolioCard(ctx, canvas, cardData, 375, 667)
+
+      setTimeout(function () {
+        wx.canvasToTempFilePath({
+          canvas: canvas,
+          x: 0,
+          y: 0,
+          width: 375 * dpr,
+          height: 667 * dpr,
+          destWidth: 375 * dpr,
+          destHeight: 667 * dpr,
+          success: function (fileRes) {
+            wx.hideLoading()
+            that._showShareOptions(fileRes.tempFilePath)
+          },
+          fail: function () {
+            wx.hideLoading()
+            wx.showToast({ title: '生成失败', icon: 'none' })
+          }
+        })
+      }, 100)
+    })
+  },
+
+  _showShareOptions(imagePath) {
+    wx.showActionSheet({
+      itemList: ['保存到相册', '转发给朋友'],
+      success: function (res) {
+        if (res.tapIndex === 0) {
+          wx.authorize({
+            scope: 'scope.writePhotosAlbum',
+            success: function () {
+              wx.saveImageToPhotosAlbum({
+                filePath: imagePath,
+                success: function () {
+                  wx.showToast({ title: '已保存到相册', icon: 'success' })
+                },
+                fail: function () {
+                  wx.showToast({ title: '保存失败', icon: 'none' })
+                }
+              })
+            },
+            fail: function () {
+              wx.showModal({
+                title: '需要权限',
+                content: '请在设置中允许保存到相册',
+                confirmText: '去设置',
+                success: function (modalRes) {
+                  if (modalRes.confirm) {
+                    wx.openSetting()
+                  }
+                }
+              })
+            }
+          })
+        } else if (res.tapIndex === 1) {
+          wx.shareImageMessage && wx.shareImageMessage({
+            imageUrl: imagePath,
+            success: function () {
+              wx.showToast({ title: '分享成功', icon: 'success' })
+            },
+            fail: function () {
+              wx.saveImageToPhotosAlbum({
+                filePath: imagePath,
+                success: function () {
+                  wx.showToast({ title: '已保存到相册，请手动分享', icon: 'none' })
+                }
+              })
+            }
+          })
         }
       }
     })

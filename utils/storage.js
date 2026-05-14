@@ -1,4 +1,4 @@
-const { MARKETS, TRANSACTION_TYPE } = require('./constants')
+const { MARKETS, TRANSACTION_TYPE, DEFAULT_STRATEGIES } = require('./constants')
 const { validateStockCode, formatStockCode } = require('./market.js')
 
 // 持仓计算结果缓存，数据变更时由 markDataDirty 清空
@@ -25,6 +25,11 @@ function _clearExpiredCache() {
   }
 }
 
+// 清除内存缓存，释放内存
+function clearMemCache() {
+  _memCache.clear()
+}
+
 function markDataDirty() {
   try {
     const app = getApp()
@@ -42,9 +47,12 @@ const STOCK_KEY = 'stock_trade_stocks'
 const TRANSACTION_KEY = 'stock_trade_transactions'
 const DIVIDEND_KEY = 'stock_trade_dividends'
 const PRICE_KEY = 'stock_trade_prices'
+const STRATEGY_KEY = 'stock_trade_strategies'
 
 // 内存缓存，避免频繁读取本地存储
-let _memCache = {}
+// 使用 LRU 策略，防止缓存无限增长
+const MAX_MEM_CACHE = 50
+let _memCache = new Map()
 let _lastTimestamp = 0
 let _seq = 0
 
@@ -61,12 +69,19 @@ function getNextId() {
 
 function saveData(key, data) {
   wx.setStorageSync(key, data)
-  _memCache[key] = data
+  // LRU: 删除后重新插入，保证最近使用的在末尾
+  _memCache.delete(key)
+  _memCache.set(key, data)
+  _evictIfNeeded()
 }
 
 function getData(key) {
-  if (_memCache[key]) {
-    return _memCache[key]
+  if (_memCache.has(key)) {
+    // LRU: 移到末尾
+    const val = _memCache.get(key)
+    _memCache.delete(key)
+    _memCache.set(key, val)
+    return val
   }
   let data = wx.getStorageSync(key)
   if (!data || (Array.isArray(data) && data.length === 0)) {
@@ -77,8 +92,17 @@ function getData(key) {
       data = []
     }
   }
-  _memCache[key] = data
+  _memCache.set(key, data)
+  _evictIfNeeded()
   return data
+}
+
+// LRU 淘汰：超过上限时删除最久未使用的条目
+function _evictIfNeeded() {
+  while (_memCache.size > MAX_MEM_CACHE) {
+    const oldestKey = _memCache.keys().next().value
+    _memCache.delete(oldestKey)
+  }
 }
 
 // 返回数据的浅拷贝，防止外部修改污染缓存
@@ -139,7 +163,7 @@ const Stock = {
 }
 
 const Transaction = {
-  create(stockId, type, price, quantity, fee, date, note = '') {
+  create(stockId, type, price, quantity, fee, date, note = '', reason = '', strategies = []) {
     return {
       id: getNextId(),
       stockId,
@@ -148,7 +172,9 @@ const Transaction = {
       quantity: parseInt(quantity),
       fee: parseFloat(fee),
       date: date instanceof Date ? date.toISOString() : date,
-      note
+      note,
+      reason,
+      strategies: Array.isArray(strategies) ? strategies : []
     }
   },
   
@@ -189,6 +215,10 @@ const Transaction = {
     const stocks = Stock.getByMarket(market)
     const stockIdSet = new Set(stocks.map(s => s.id))
     return this.getAll().filter(t => stockIdSet.has(t.stockId))
+  },
+
+  getByStrategy(tag) {
+    return this.getAll().filter(t => t.strategies && t.strategies.includes(tag))
   },
 
   getByDateRange(startDate, endDate) {
@@ -275,6 +305,81 @@ const PriceCache = {
   getAll() {
     return getData(PRICE_KEY) || {}
   }
+}
+
+const Strategy = {
+  getAll() {
+    const customs = getData(STRATEGY_KEY) || []
+    const merged = DEFAULT_STRATEGIES.slice()
+    customs.forEach(function (tag) {
+      if (merged.indexOf(tag) === -1) merged.push(tag)
+    })
+    return merged
+  },
+
+  save(list) {
+    saveData(STRATEGY_KEY, list)
+  },
+
+  add(tag) {
+    if (!tag || typeof tag !== 'string') return
+    tag = tag.trim()
+    if (!tag) return
+    const customs = getData(STRATEGY_KEY) || []
+    if (customs.indexOf(tag) === -1 && DEFAULT_STRATEGIES.indexOf(tag) === -1) {
+      customs.push(tag)
+      saveData(STRATEGY_KEY, customs)
+    }
+  },
+
+  remove(tag) {
+    const customs = getData(STRATEGY_KEY) || []
+    const idx = customs.indexOf(tag)
+    if (idx >= 0) {
+      customs.splice(idx, 1)
+      saveData(STRATEGY_KEY, customs)
+    }
+  },
+
+  getUsedStrategies() {
+    const transactions = Transaction.getAll()
+    const countMap = {}
+    transactions.forEach(function (t) {
+      if (t.strategies && t.strategies.length) {
+        t.strategies.forEach(function (tag) {
+          countMap[tag] = (countMap[tag] || 0) + 1
+        })
+      }
+    })
+    const result = Object.keys(countMap).map(function (tag) {
+      return { tag: tag, count: countMap[tag] }
+    })
+    result.sort(function (a, b) { return b.count - a.count })
+    return result
+  }
+}
+
+function getStrategyStats() {
+  const transactions = Transaction.getAll()
+  const stats = {}
+  transactions.forEach(function (t) {
+    if (!t.strategies || !t.strategies.length) return
+    t.strategies.forEach(function (tag) {
+      if (!stats[tag]) stats[tag] = { tag: tag, count: 0, buyAmount: 0, sellAmount: 0 }
+      stats[tag].count++
+      if (t.type === 'BUY') {
+        stats[tag].buyAmount += t.price * t.quantity
+      } else {
+        stats[tag].sellAmount += t.price * t.quantity
+      }
+    })
+  })
+  return Object.values(stats).map(function (s) {
+    s.netPnL = parseFloat((s.sellAmount - s.buyAmount).toFixed(2))
+    s.buyAmount = parseFloat(s.buyAmount.toFixed(2))
+    s.sellAmount = parseFloat(s.sellAmount.toFixed(2))
+    return s
+  }).sort(function (a, b) { return b.count - a.count })
 }
 
 function calculatePosition(stockId) {
@@ -748,6 +853,13 @@ module.exports = {
   Transaction,
   Dividend,
   PriceCache,
+  Strategy,
+  DEFAULT_STRATEGIES,
+  getStrategyStats,
+  getData,
+  saveData,
+  getDataCopy,
+  clearMemCache,
   calculatePosition,
   getPositionSummary,
   getAllPositionsWithRealizedPnL,

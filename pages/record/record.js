@@ -1,6 +1,6 @@
 ﻿﻿// pages/record/record.js
 const { MARKETS } = require("../../utils/constants")
-const { Stock, Transaction, PriceCache } = require("../../utils/storage")
+const { Stock, Transaction, PriceCache, Strategy } = require("../../utils/storage")
 const { calculateFee, getFeeBreakdown } = require("../../utils/feeCalculator")
 const { fmt } = require("../../utils/format")
 const { getMarketLabel, validateStockCode, formatStockCode } = require("../../utils/market")
@@ -21,16 +21,23 @@ Page({
     ],
     showSuggestions: false,
     suggestions: [],
-    highlightIndex: -1
+    highlightIndex: -1,
+    showJournal: false,
+    reason: '',
+    strategies: [],
+    allStrategies: [],
+    showStrategyPicker: false,
+    customStrategyInput: ''
   },
 
   onLoad(options) {
     this.setData(getApp().getNavBarInfo())
-    
+
     const now = new Date()
     this.setData({
       date: now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0") + "-" + String(now.getDate()).padStart(2, "0"),
-      time: String(now.getHours()).padStart(2, "0") + ":" + String(now.getMinutes()).padStart(2, "0")
+      time: String(now.getHours()).padStart(2, "0") + ":" + String(now.getMinutes()).padStart(2, "0"),
+      allStrategies: Strategy.getAll()
     })
     if (options && options.id) {
       this._isEdit = true
@@ -45,6 +52,7 @@ Page({
     if (!transaction) return
     const stock = Stock.getById(transaction.stockId)
     const date = new Date(transaction.date)
+    var hasJournal = !!(transaction.reason || (transaction.strategies && transaction.strategies.length))
     this.setData({
       market: stock.market, code: stock.code, name: stock.name,
       type: transaction.type, price: String(transaction.price), quantity: String(transaction.quantity),
@@ -52,6 +60,9 @@ Page({
       date: date.getFullYear() + "-" + String(date.getMonth() + 1).padStart(2, "0") + "-" + String(date.getDate()).padStart(2, "0"),
       time: String(date.getHours()).padStart(2, "0") + ":" + String(date.getMinutes()).padStart(2, "0"),
       note: transaction.note || "",
+      reason: transaction.reason || "",
+      strategies: transaction.strategies || [],
+      showJournal: hasJournal,
       marketLabel: getMarketLabel(stock.market)
     })
     this._calcFee()
@@ -135,6 +146,61 @@ Page({
     })
   },
 
+  toggleJournal() {
+    this.setData({ showJournal: !this.data.showJournal })
+  },
+
+  onReasonInput(e) {
+    this.setData({ reason: e.detail.value })
+  },
+
+  openStrategyPicker() {
+    this.setData({ showStrategyPicker: true, customStrategyInput: '' })
+  },
+
+  closeStrategyPicker() {
+    this.setData({ showStrategyPicker: false })
+  },
+
+  toggleStrategy(e) {
+    var tag = e.currentTarget.dataset.tag
+    var strategies = this.data.strategies.slice()
+    var idx = strategies.indexOf(tag)
+    if (idx >= 0) {
+      strategies.splice(idx, 1)
+    } else {
+      strategies.push(tag)
+    }
+    this.setData({ strategies: strategies })
+  },
+
+  removeStrategy(e) {
+    var tag = e.currentTarget.dataset.tag
+    var strategies = this.data.strategies.filter(function (s) { return s !== tag })
+    this.setData({ strategies: strategies })
+  },
+
+  onCustomStrategyInput(e) {
+    this.setData({ customStrategyInput: e.detail.value })
+  },
+
+  addCustomStrategy() {
+    var tag = (this.data.customStrategyInput || '').trim()
+    if (!tag) return
+    Strategy.add(tag)
+    var strategies = this.data.strategies.slice()
+    if (strategies.indexOf(tag) === -1) strategies.push(tag)
+    this.setData({
+      strategies: strategies,
+      allStrategies: Strategy.getAll(),
+      customStrategyInput: ''
+    })
+  },
+
+  confirmStrategyPicker() {
+    this.setData({ showStrategyPicker: false })
+  },
+
   goBack() { wx.navigateBack() },
 
   submit() {
@@ -159,7 +225,7 @@ Page({
     var stock = Stock.getByCode(code, market)
     if (!stock) { stock = Stock.create(code, name, market); Stock.save(stock) }
 
-    var transaction = Transaction.create(stock.id, type, price, quantity, fee, new Date(date + "T" + time + ":00").toISOString(), note)
+    var transaction = Transaction.create(stock.id, type, price, quantity, fee, new Date(date + "T" + time + ":00").toISOString(), note, data.reason, data.strategies)
     if (this._isEdit) transaction.id = this._editId
     Transaction.save(transaction)
     wx.showToast({ title: this._isEdit ? "已修改" : "已添加", icon: "success" })

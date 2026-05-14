@@ -1,4 +1,4 @@
-const { getTotalStats, getStatsByPeriod, getPeriodStatsList, getHeatmapData, getClearedPositions, getPositionDistribution, getMixedChartData, Stock, Transaction, Dividend } = require('../../utils/storage.js')
+const { getTotalStats, getStatsByPeriod, getPeriodStatsList, getHeatmapData, getClearedPositions, getMixedChartData, getPositionSummary, getStrategyStats, Stock, Transaction, Dividend } = require('../../utils/storage.js')
 const { fmt, fmtDate } = require('../../utils/format.js')
 const { exportMD } = require('../../utils/export.js')
 const echarts = require('../../components/ec-canvas/echarts')
@@ -42,8 +42,7 @@ Page({
       { key: 'MONTH', label: '月' },
       { key: 'YEAR', label: '年' }
     ],
-    chartsLoaded: { position: false, trend: false },
-    ecPosition: { onInit: null },
+    chartsLoaded: { trend: false },
     ecTrend: { onInit: null },
     stats: {},
     detailItems: [],
@@ -52,7 +51,9 @@ Page({
     heatmapMonth: new Date().getMonth() + 1,
     heatmapLabel: '',
     completeTrades: [],
-    clearedPositions: []
+    clearedPositions: [],
+    showAnnualReport: false,
+    annualReportData: null
   },
 
   onLoad() {
@@ -83,7 +84,6 @@ Page({
 
   onUnload() {
     if (this._charts) {
-      if (this._charts.position) { this._charts.position.dispose(); this._charts.position = null }
       if (this._charts.trend) { this._charts.trend.dispose(); this._charts.trend = null }
       this._charts = null
     }
@@ -93,52 +93,6 @@ Page({
     var that = this
 
     this.setData({
-      ecPosition: {
-        onInit: function (canvas, width, height, dpr) {
-          var chart = echarts.init(canvas, null, { width: width, height: height, dpr: dpr })
-          that._charts = that._charts || {}
-          that._charts.position = chart
-          var data = getPositionDistribution()
-          var option = {
-            backgroundColor: 'transparent',
-            tooltip: { trigger: 'axis' },
-            grid: { left: 40, right: 15, top: 25, bottom: 30 },
-            xAxis: {
-              type: 'category',
-              data: data.map(function (d) { return d.name }),
-              axisLabel: { color: '#999', fontSize: 10 },
-              axisLine: { lineStyle: { color: '#eee' } }
-            },
-            yAxis: {
-              type: 'value',
-              axisLabel: { color: '#999', fontSize: 10 },
-              splitLine: { lineStyle: { color: '#f0f0f0' } }
-            },
-            series: [{
-              type: 'bar',
-              data: data.map(function (d) { return d.value }),
-              barWidth: '50%',
-              itemStyle: {
-                color: getCachedGradient('barPositive'),
-                shadowBlur: 8,
-                shadowColor: 'rgba(255,107,53,0.4)',
-                shadowOffsetY: 3,
-                borderRadius: [4, 4, 0, 0]
-              },
-              emphasis: {
-                itemStyle: {
-                  color: getCachedGradient('barPositive')
-                }
-              },
-              animationDuration: 1200,
-              animationEasing: 'cubicOut'
-            }]
-          }
-          chart.setOption(option)
-          that.setData({ 'chartsLoaded.position': true })
-          return chart
-        }
-      },
       ecTrend: {
         onInit: function (canvas, width, height, dpr) {
           var chart = echarts.init(canvas, null, { width: width, height: height, dpr: dpr })
@@ -210,13 +164,6 @@ Page({
 
   updateCharts: function () {
     var period = this.data.currentPeriod
-    if (this._charts && this._charts.position) {
-      var data = getPositionDistribution()
-      this._charts.position.setOption({
-        xAxis: { data: data.map(function (d) { return d.name }) },
-        series: [{ data: data.map(function (d) { return d.value }) }]
-      })
-    }
     if (this._charts && this._charts.trend) {
       var mixed = getMixedChartData(period, 12)
       this._charts.trend.setOption({
@@ -346,5 +293,124 @@ Page({
 
   onExportMD: function () {
     exportMD()
+  },
+
+  onOpenAnnualReport: function () {
+    var year = new Date().getFullYear()
+    var transactions = Transaction.getAll()
+    var dividends = Dividend.getAll()
+    var stocks = Stock.getAll()
+    var stockMap = {}
+    stocks.forEach(function (s) { stockMap[s.id] = s })
+
+    // 筛选本年交易
+    var yearStart = new Date(year, 0, 1)
+    var yearEnd = new Date(year, 11, 31, 23, 59, 59, 999)
+    var yearTx = transactions.filter(function (t) {
+      var d = new Date(t.date)
+      return d >= yearStart && d <= yearEnd
+    })
+    var yearDivs = dividends.filter(function (d) {
+      var dd = new Date(d.date)
+      return dd >= yearStart && dd <= yearEnd
+    })
+
+    // 交易统计
+    var buyCount = 0, sellCount = 0, buyAmount = 0, sellAmount = 0
+    yearTx.forEach(function (t) {
+      if (t.type === 'BUY') { buyCount++; buyAmount += t.price * t.quantity }
+      else { sellCount++; sellAmount += t.price * t.quantity }
+    })
+    var tradeCount = yearTx.length
+
+    // 月度盈亏
+    var monthlyPnL = []
+    for (var m = 0; m < 12; m++) {
+      var mStart = new Date(year, m, 1)
+      var mEnd = new Date(year, m + 1, 0, 23, 59, 59, 999)
+      var mTx = transactions.filter(function (t) {
+        var d = new Date(t.date)
+        return d >= mStart && d <= mEnd
+      })
+      var mDivs = dividends.filter(function (d) {
+        var dd = new Date(d.date)
+        return dd >= mStart && dd <= mEnd
+      })
+      var mBuy = 0, mSell = 0, mBuyFee = 0, mSellFee = 0
+      mTx.forEach(function (t) {
+        if (t.type === 'BUY') { mBuy += t.price * t.quantity; mBuyFee += t.fee }
+        else { mSell += t.price * t.quantity; mSellFee += t.fee }
+      })
+      var mDiv = mDivs.reduce(function (s, d) { return s + d.totalAmount }, 0)
+      var mPnL = mSell - mSellFee - mBuy - mBuyFee + mDiv
+      monthlyPnL.push({ month: m + 1, pnL: parseFloat(mPnL.toFixed(2)) })
+    }
+
+    // 胜率：本年已清仓且 totalPnL > 0
+    var cleared = getClearedPositions()
+    var yearCleared = cleared.filter(function (p) {
+      return p.quantity === 0
+    })
+    var winCount = yearCleared.filter(function (p) {
+      return (p.realizedPnL + p.dividendIncome) > 0
+    }).length
+    var winRate = yearCleared.length > 0 ? Math.round(winCount / yearCleared.length * 100) : 0
+
+    // Top/Bottom 股票
+    var allPositions = getPositionSummary().concat(cleared.map(function (p) {
+      return Object.assign({}, p, { floatingPnL: 0 })
+    }))
+    var stockPnL = {}
+    allPositions.forEach(function (p) {
+      var key = p.code
+      if (!stockPnL[key]) {
+        stockPnL[key] = { code: p.code, name: p.name, market: p.market, totalPnL: 0 }
+      }
+      stockPnL[key].totalPnL += (p.realizedPnL || 0) + (p.floatingPnL || 0) + (p.dividendIncome || 0)
+    })
+    var stockList = Object.values(stockPnL).map(function (s) {
+      s.totalPnL = parseFloat(s.totalPnL.toFixed(2))
+      s.totalPnLText = fmt(Math.abs(s.totalPnL))
+      return s
+    }).sort(function (a, b) { return b.totalPnL - a.totalPnL })
+    var topStocks = stockList.slice(0, 5)
+    var bottomStocks = stockList.slice(-5).reverse()
+
+    // 策略分布
+    var strategyStats = getStrategyStats()
+    var maxStrategyCount = strategyStats.length > 0 ? strategyStats[0].count : 1
+    strategyStats = strategyStats.slice(0, 8).map(function (s) {
+      s.percent = Math.round(s.count / maxStrategyCount * 100)
+      return s
+    })
+
+    // 总计
+    var totalStats = getTotalStats()
+    var dividendIncome = yearDivs.reduce(function (s, d) { return s + d.totalAmount }, 0)
+
+    this.setData({
+      showAnnualReport: true,
+      annualReportData: {
+        year: year,
+        tradeCount: tradeCount,
+        buyCount: buyCount,
+        sellCount: sellCount,
+        winRate: winRate,
+        totalPnL: totalStats.totalPnL,
+        totalPnLText: fmt(Math.abs(totalStats.totalPnL)),
+        totalPnLPercent: totalStats.totalPnLPercent,
+        totalInvestmentText: fmt(totalStats.totalInvestment),
+        totalRecoveryText: fmt(totalStats.totalInvestment + totalStats.totalPnL),
+        dividendIncomeText: fmt(dividendIncome),
+        monthlyPnL: monthlyPnL,
+        topStocks: topStocks,
+        bottomStocks: bottomStocks,
+        strategyStats: strategyStats
+      }
+    })
+  },
+
+  onCloseAnnualReport: function () {
+    this.setData({ showAnnualReport: false, annualReportData: null })
   }
 })

@@ -1,4 +1,4 @@
-const { MARKETS, Stock, Transaction, Dividend } = require('../../utils/storage.js')
+const { MARKETS, Stock, Transaction, Dividend, Strategy } = require('../../utils/storage.js')
 const { fmt, fmtDate, fmtTime } = require('../../utils/format.js')
 const { getMarketLabel, getMarketColor } = require('../../utils/market.js')
 
@@ -8,6 +8,8 @@ Page({
     navBarHeight: 44,
     currentFilter: 'ALL',
     currentMarket: null,
+    currentStrategy: null,
+    activeStrategies: [],
     filterTabs: [
       { key: 'ALL', label: '全部' },
       { key: 'BUY', label: '买入' },
@@ -28,7 +30,6 @@ Page({
     sliderLeft: 0,
     sliderWidth: 0,
     dissolvingId: null,
-    showSearchInput: false,
     searchKeyword: '',
     // 缓存相关
     cacheTimestamp: 0,
@@ -86,7 +87,10 @@ Page({
           amountText: fmt(Math.abs(amount)),
           date: fmtDate(date),
           time: fmtTime(date),
-          _sortKey: date.getTime()
+          _sortKey: date.getTime(),
+          strategies: t.strategies || [],
+          reason: t.reason || '',
+          hasJournal: !!(t.reason || (t.strategies && t.strategies.length))
         })
       }
     })
@@ -135,6 +139,10 @@ Page({
       filtered = filtered.filter(r => r.market === this.data.currentMarket)
     }
 
+    if (this.data.currentStrategy) {
+      filtered = filtered.filter(r => r.strategies && r.strategies.indexOf(this.data.currentStrategy) >= 0)
+    }
+
     if (this.data.searchKeyword) {
       const kw = this.data.searchKeyword.toLowerCase()
       filtered = filtered.filter(r =>
@@ -174,6 +182,7 @@ Page({
 
   loadHistory() {
     this._buildAllRecords()
+    this.setData({ activeStrategies: Strategy.getUsedStrategies() })
     this._applyFilters()
   },
 
@@ -190,6 +199,12 @@ Page({
     this._applyFilters()
   },
 
+  switchStrategy(e) {
+    const strategy = e.currentTarget.dataset.strategy
+    this.setData({ currentStrategy: strategy || null })
+    this._applyFilters()
+  },
+
   calculateSliderPosition() {
     const systemInfo = getApp().globalData.systemInfo || wx.getWindowInfo() || {}
     const screenWidth = systemInfo.windowWidth
@@ -202,18 +217,8 @@ Page({
     })
   },
 
-  showSearch() {
-    wx.showToast({ title: '搜索功能开发中', icon: 'none' })
-  },
-
-  toggleSearch() {
-    const show = !this.data.showSearchInput
-    this.setData({ showSearchInput: show, searchKeyword: show ? this.data.searchKeyword : '' })
-    if (!show) this._applyFilters()
-  },
-
   clearSearch() {
-    this.setData({ searchKeyword: '', showSearchInput: false })
+    this.setData({ searchKeyword: '' })
     this._applyFilters()
   },
 

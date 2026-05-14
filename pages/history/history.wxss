@@ -1,29 +1,36 @@
-/* 流水页按钮样式覆盖 - 方案B 深底浅字 */
+/* 流水页 iOS 26.5 Frosted Glass */
 
 /* 第一排：买入/卖出/分红 */
 .liquid-slider-bg {
-  background: rgba(29, 29, 31, 0.85) !important;
+  background: var(--glass-bg) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 0.5px solid var(--glass-border) !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06), inset 0 0.5px 0 rgba(255, 255, 255, 0.7) !important;
 }
 .liquid-slider-item.active {
-  color: #E5E5EA !important;
+  color: var(--color-accent) !important;
 }
 
 /* 第二排：全部/A股/港股/美股 */
 .chip-active {
-  background: #1D1D1F !important;
-  color: #E5E5EA !important;
+  background: rgba(255, 59, 48, 0.15) !important;
+  color: #FF3B30 !important;
+  border-color: rgba(255, 59, 48, 0.25) !important;
 }
 
-/* === 加载更多按钮 === */
+/* === 加载更多按钮 (Frosted Glass) === */
 .load-more {
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 16px;
   margin: 16px 0;
-  background: rgba(255, 255, 255, 0.5);
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 0.5px solid var(--glass-border);
   transition: opacity 200ms ease;
 }
 
@@ -38,7 +45,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: rgba(255, 107, 53, 0.6);
+  background: rgba(255, 59, 48, 0.5);
   animation: dotPulse 1.4s infinite ease-in-out;
 }
 
@@ -66,3 +73,12 @@
   opacity: 0.5;
 }
 
+/* === Strategy tags (Frosted Glass) === */
+.strategy-tag-mini {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  background: rgba(255, 59, 48, 0.08);
+  color: var(--color-accent);
+}

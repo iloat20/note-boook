@@ -14,3 +14,12 @@
   padding-bottom: 0;
   overflow: hidden;
 }
+
+.strategy-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  background: rgba(255, 59, 48, 0.08);
+  color: var(--color-accent);
+}

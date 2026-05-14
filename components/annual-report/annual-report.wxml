@@ -1,0 +1,120 @@
+<view wx:if="{{data}}" class="ar-overlay" catchtouchmove="true">
+  <!-- 关闭按钮 -->
+  <view class="ar-close" bindtap="onClose">✕</view>
+
+  <scroll-view scroll-y class="ar-scroll">
+    <!-- Hero -->
+    <view class="ar-hero">
+      <text class="ar-year">{{data.year}}</text>
+      <text class="ar-title">年度投资报告</text>
+      <view class="ar-hero-pnl">
+        <text class="ar-hero-sign">{{data.totalPnL >= 0 ? '+' : ''}}</text>
+        <text class="ar-hero-value">{{data.totalPnLText}}</text>
+      </view>
+      <text class="ar-hero-pct">{{data.totalPnL >= 0 ? '+' : ''}}{{data.totalPnLPercent}}%</text>
+    </view>
+
+    <!-- 交易概览 -->
+    <view class="ar-section">
+      <text class="ar-section-title">交易概览</text>
+      <view class="ar-grid">
+        <view class="ar-grid-item">
+          <text class="ar-grid-value">{{data.tradeCount}}</text>
+          <text class="ar-grid-label">交易笔数</text>
+        </view>
+        <view class="ar-grid-item">
+          <text class="ar-grid-value" style="color: {{data.winRate >= 50 ? '#FF6B6B' : '#51CF66'}};">{{data.winRate}}%</text>
+          <text class="ar-grid-label">胜率</text>
+        </view>
+        <view class="ar-grid-item">
+          <text class="ar-grid-value">{{data.buyCount}}</text>
+          <text class="ar-grid-label">买入次数</text>
+        </view>
+        <view class="ar-grid-item">
+          <text class="ar-grid-value">{{data.sellCount}}</text>
+          <text class="ar-grid-label">卖出次数</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 资金流向 -->
+    <view class="ar-section">
+      <text class="ar-section-title">资金流向</text>
+      <view class="ar-flow">
+        <view class="ar-flow-item">
+          <text class="ar-flow-label">总投入</text>
+          <text class="ar-flow-value">¥{{data.totalInvestmentText}}</text>
+        </view>
+        <view class="ar-flow-divider"></view>
+        <view class="ar-flow-item">
+          <text class="ar-flow-label">总回收</text>
+          <text class="ar-flow-value">¥{{data.totalRecoveryText}}</text>
+        </view>
+        <view class="ar-flow-divider"></view>
+        <view class="ar-flow-item">
+          <text class="ar-flow-label">分红收入</text>
+          <text class="ar-flow-value" style="color: #FF6B6B;">¥{{data.dividendIncomeText}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 月度盈亏 -->
+    <view class="ar-section">
+      <text class="ar-section-title">月度盈亏</text>
+      <view class="ar-chart-box">
+        <canvas type="2d" id="monthlyCanvas" class="ar-monthly-canvas"></canvas>
+      </view>
+    </view>
+
+    <!-- 收益最高 Top5 -->
+    <view class="ar-section" wx:if="{{data.topStocks.length > 0}}">
+      <text class="ar-section-title">收益最高</text>
+      <view wx:for="{{data.topStocks}}" wx:key="code" class="ar-rank-item">
+        <view class="ar-rank-badge ar-rank-{{index < 3 ? index : 'other'}}">{{index + 1}}</view>
+        <view class="ar-rank-info">
+          <text class="ar-rank-name">{{item.name}}</text>
+          <text class="ar-rank-code">{{item.code}}</text>
+        </view>
+        <text class="ar-rank-pnl {{item.totalPnL >= 0 ? 'ar-profit' : 'ar-loss'}}">
+          {{item.totalPnL >= 0 ? '+' : ''}}{{item.totalPnLText}}
+        </text>
+      </view>
+    </view>
+
+    <!-- 需要关注 Bottom5 -->
+    <view class="ar-section" wx:if="{{data.bottomStocks.length > 0}}">
+      <text class="ar-section-title">需要关注</text>
+      <view wx:for="{{data.bottomStocks}}" wx:key="code" class="ar-rank-item">
+        <view class="ar-rank-badge ar-rank-other">{{index + 1}}</view>
+        <view class="ar-rank-info">
+          <text class="ar-rank-name">{{item.name}}</text>
+          <text class="ar-rank-code">{{item.code}}</text>
+        </view>
+        <text class="ar-rank-pnl {{item.totalPnL >= 0 ? 'ar-profit' : 'ar-loss'}}">
+          {{item.totalPnL >= 0 ? '+' : ''}}{{item.totalPnLText}}
+        </text>
+      </view>
+    </view>
+
+    <!-- 策略分布 -->
+    <view class="ar-section" wx:if="{{data.strategyStats.length > 0}}">
+      <text class="ar-section-title">策略分布</text>
+      <view wx:for="{{data.strategyStats}}" wx:key="tag" class="ar-strategy-item">
+        <view class="ar-strategy-header">
+          <text class="ar-strategy-tag">{{item.tag}}</text>
+          <text class="ar-strategy-count">{{item.count}}次</text>
+        </view>
+        <view class="ar-strategy-bar-bg">
+          <view class="ar-strategy-bar" style="width: {{item.percent}}%;"></view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 底部 -->
+    <view class="ar-footer">
+      <text class="ar-footer-text">股票记账 · {{data.year}}年度报告</text>
+    </view>
+
+    <view style="height: 80px;"></view>
+  </scroll-view>
+</view>

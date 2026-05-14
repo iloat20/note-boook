@@ -3,6 +3,12 @@
  * 使用腾讯财经 API（支持 HTTPS）
  */
 
+// 请求并发控制
+const MAX_CONCURRENT_REQUESTS = 5
+const REQUEST_DELAY_MS = 100
+let _activeRequests = 0
+let _requestQueue = []
+
 // A股代码前缀映射
 function getAsharePrefix(code) {
   const codeNum = parseInt(code)
@@ -48,9 +54,30 @@ function parseTencentData(data) {
   }
 }
 
+// 带并发控制的请求执行器
+function _executeWithThrottle(fn) {
+  return new Promise((resolve, reject) => {
+    const run = () => {
+      _activeRequests++
+      fn().then(resolve).catch(reject).finally(() => {
+        _activeRequests--
+        if (_requestQueue.length > 0) {
+          const next = _requestQueue.shift()
+          setTimeout(next, REQUEST_DELAY_MS)
+        }
+      })
+    }
+    if (_activeRequests < MAX_CONCURRENT_REQUESTS) {
+      run()
+    } else {
+      _requestQueue.push(run)
+    }
+  })
+}
+
 // 获取单个股票行情
 function fetchStockPrice(market, code) {
-  return new Promise((resolve, reject) => {
+  return _executeWithThrottle(() => new Promise((resolve, reject) => {
     const url = buildUrl(market, code)
     if (!url) {
       reject(new Error('不支持的市场类型'))
@@ -80,7 +107,7 @@ function fetchStockPrice(market, code) {
         reject(new Error(`网络请求失败: ${err.errMsg}`))
       }
     })
-  })
+  }))
 }
 
 // 批量获取股票行情

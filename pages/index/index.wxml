@@ -1,10 +1,4 @@
 <view class="page-container" style="padding-top: {{statusBarHeight}}px;">
-  <view class="nav-bar" style="height: {{navBarHeight}}px;">
-    <view class="nav-header">
-      <text class="nav-header-title">持仓</text>
-    </view>
-  </view>
-
   <!-- 骨架屏 -->
   <view wx:if="{{loading}}" class="skeleton-container">
     <view class="skeleton-card" wx:for="{{[1,2,3]}}" wx:key="*this">
@@ -26,7 +20,12 @@
     <!-- 汇总卡片 -->
     <view class="summary-card card" style="margin-bottom: 16px;">
       <view style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-        <text class="caption">总市值</text>
+        <view style="display: flex; align-items: center; gap: 8px;">
+          <text class="caption">总市值</text>
+          <view bindtap="onSharePortfolio" style="display: flex; align-items: center; padding: 2px;">
+            <image src="/images/share.svg" mode="aspectFit" style="width: 12px; height: 12px; opacity: 0.4;" />
+          </view>
+        </view>
         <text class="caption">总盈亏</text>
       </view>
       <view style="display: flex; justify-content: space-between; align-items: baseline;">
@@ -115,6 +114,77 @@
     </view>
 
     <!-- 添加按钮 -->
-    <view class="fab" bindtap="goToAddTransaction">+</view>
+    <view class="fab {{showQuickRecord ? 'fab-hidden' : ''}}" bindtap="onQuickRecord" bindlongpress="goToAddTransaction">+</view>
   </block>
+
+  <!-- 快捷记录弹窗 -->
+  <view wx:if="{{showQuickRecord}}" class="qr-overlay" catchtap="closeQuickRecord">
+    <view class="qr-sheet" catchtap="onSheetTap">
+      <view class="qr-handle"></view>
+      <view class="qr-header">
+        <text class="qr-title">快速交易</text>
+        <view class="qr-close" catchtap="closeQuickRecord">✕</view>
+      </view>
+
+      <view class="qr-body">
+        <!-- 买入/卖出切换 -->
+        <view class="qr-type-row">
+          <view class="qr-type-btn {{qrType === 'BUY' ? 'qr-type-buy' : ''}}" catchtap="onQrTypeSelect" data-type="BUY">买入</view>
+          <view class="qr-type-btn {{qrType === 'SELL' ? 'qr-type-sell' : ''}}" catchtap="onQrTypeSelect" data-type="SELL">卖出</view>
+        </view>
+
+        <!-- 股票代码 -->
+        <view class="qr-field">
+          <text class="qr-label">代码</text>
+          <view class="qr-input-wrap">
+            <input class="qr-input" placeholder="输入代码或名称" value="{{qrCode}}" bindinput="onQrCodeInput" />
+            <text wx:if="{{qrName}}" class="qr-name-tag">{{qrName}}</text>
+            <text wx:if="{{qrMarketLabel}}" class="qr-market-tag">{{qrMarketLabel}}</text>
+          </view>
+          <!-- 联想列表 -->
+          <view wx:if="{{showQrSuggestions}}" class="qr-suggestions" catchtap="onSheetTap">
+            <view wx:for="{{qrSuggestions}}" wx:key="code" class="qr-suggestion-item" catchtap="onQrSelectSuggestion" data-item="{{item}}">
+              <text class="qr-suggestion-code">{{item.code}}</text>
+              <text class="qr-suggestion-name">{{item.name}}</text>
+            </view>
+          </view>
+        </view>
+
+        <!-- 价格 -->
+        <view class="qr-field">
+          <text class="qr-label">价格</text>
+          <input class="qr-input" type="digit" placeholder="0.00" value="{{qrPrice}}" bindinput="onQrPriceInput" />
+        </view>
+
+        <!-- 数量 -->
+        <view class="qr-field">
+          <text class="qr-label">数量</text>
+          <view class="qr-qty-row">
+            <view class="qr-qty-btn" catchtap="onQrQtyMinus">−</view>
+            <view class="qr-input-wrap" style="flex: 1;">
+              <input class="qr-input" type="number" placeholder="0" value="{{qrQuantity}}" bindinput="onQrQuantityInput" style="text-align: center;" />
+            </view>
+            <view class="qr-qty-btn" catchtap="onQrQtyPlus">+</view>
+          </view>
+        </view>
+
+        <!-- 费用预览 -->
+        <view class="qr-preview">
+          <view class="qr-preview-row">
+            <text class="qr-preview-label">手续费</text>
+            <text class="qr-preview-value">¥{{qrFeeText}}</text>
+          </view>
+          <view class="qr-preview-row">
+            <text class="qr-preview-label">实际金额</text>
+            <text class="qr-preview-value" style="font-weight: 600;">¥{{qrActualText}}</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="qr-submit" catchtap="submitQuickRecord">确认{{qrType === 'BUY' ? '买入' : '卖出'}}</view>
+    </view>
+  </view>
+
+  <!-- 隐藏 canvas 用于生成分享图 -->
+  <canvas type="2d" id="shareCanvas" style="position: fixed; left: -9999px; top: 0; width: 375px; height: 667px;"></canvas>
 </view>

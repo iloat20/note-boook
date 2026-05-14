@@ -1,27 +1,27 @@
-/* Minimal + Spatial UI Design System */
+/* iOS 26.5 Frosted Glass Design System */
 
 /* === Design Tokens === */
 page {
   --color-bg: #F2F2F7;
-  --color-surface: #FFFFFF;
+  --color-surface: rgba(255, 255, 255, 0.65);
   --color-title: #1C1C1E;
   --color-body: #3C3C43;
   --color-caption: #8E8E93;
-  --color-separator: rgba(60, 60, 67, 0.12);
-  --color-accent: #FF6B35;
-  --color-profit: #FF3B30;
+  --color-separator: rgba(60, 60, 67, 0.08);
+  --color-accent: #FF3B30;
+  --color-profit: #FF6B6B;
   --color-loss: #34C759;
   --color-market-a: #007AFF;
   --color-market-hk: #FF9500;
   --color-market-us: #AF52DE;
 
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
-  --shadow-md: 0 1px 3px rgba(0,0,0,0.06);
-  --shadow-lg: 0 4px 16px rgba(0,0,0,0.08);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.06);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.08);
 
-  --radius-card: 12px;
+  --radius-card: 14px;
   --radius-btn: 12px;
-  --radius-tag: 6px;
+  --radius-tag: 8px;
   --radius-input: 10px;
 
   --space-page: 16px;
@@ -47,12 +47,13 @@ page {
 
   --transition-page: opacity 200ms ease-out, transform 200ms ease-out;
 
-  /* === Liquid Glass Design Tokens === */
-  --glass-bg: rgba(255,255,255,0.72);
-  --glass-bg-hover: rgba(255,255,255,0.85);
-  --glass-border: rgba(255,255,255,0.3);
-  --glass-shadow-out: 0 8px 32px rgba(0,0,0,0.08);
-  --glass-shadow-in: inset 0 1px 0 rgba(255,255,255,0.6);
+  /* === iOS 26.5 Glass Tokens === */
+  --glass-bg: #FFFFFF;
+  --glass-bg-hover: rgba(255, 255, 255, 0.95);
+  --glass-border: rgba(0, 0, 0, 0.06);
+  --glass-blur: blur(20px) saturate(1.8);
+  --glass-shadow-out: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.06);
+  --glass-shadow-in: inset 0 0.5px 0 rgba(255, 255, 255, 1);
   --glass-radius: 16px;
 
   background-color: var(--color-bg);
@@ -117,26 +118,77 @@ page {
   color: var(--color-caption);
 }
 
-/* === Surface Card (Apple Inset Grouped) === */
+/* === Surface Card (iOS Frosted Glass) === */
 .card {
-  background: var(--color-surface);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   border-radius: var(--radius-card);
+  border: 0.5px solid var(--glass-border);
+  box-shadow: var(--glass-shadow-out), var(--glass-shadow-in);
   padding: var(--space-card-pad);
+  position: relative;
+  overflow: hidden;
+}
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.9), transparent);
+  pointer-events: none;
 }
 .card-sm {
-  background: var(--color-surface);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   border-radius: var(--radius-card);
+  border: 0.5px solid var(--glass-border);
+  box-shadow: var(--glass-shadow-out), var(--glass-shadow-in);
   padding: var(--space-card-pad);
+  position: relative;
+  overflow: hidden;
+}
+.card-sm::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.9), transparent);
+  pointer-events: none;
 }
 .card-lg {
-  background: var(--color-surface);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   border-radius: var(--radius-card);
+  border: 0.5px solid var(--glass-border);
+  box-shadow: var(--glass-shadow-out), var(--glass-shadow-in);
   padding: var(--space-card-pad);
+  position: relative;
+  overflow: hidden;
+}
+.card-lg::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.9), transparent);
+  pointer-events: none;
 }
 
-/* === CTA Button === */
+/* === CTA Button (Frosted Glass) === */
 .cta-btn {
-  background: var(--color-accent);
+  background: linear-gradient(135deg, rgba(255, 59, 48, 0.92), rgba(255, 59, 48, 0.98));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 4px 16px rgba(255, 59, 48, 0.3), inset 0 0.5px 0 rgba(255, 255, 255, 0.3);
   color: #FFFFFF;
   border-radius: var(--radius-btn);
   font-size: var(--font-body);
@@ -160,40 +212,45 @@ page {
   transition: opacity 100ms;
 }
 
-/* === Tag Badge === */
+/* === Tag Badge (Frosted Glass) === */
 .tag {
   display: inline-block;
-  padding: 2px 8px;
+  padding: 3px 10px;
   border-radius: var(--radius-tag);
   font-size: var(--font-caption);
   font-weight: 500;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 /* === Profit / Loss Colors === */
 .profit { color: var(--color-profit) !important; }
 .loss { color: var(--color-loss) !important; }
 
-/* === Transaction Type Tags === */
+/* === Transaction Type Tags (Frosted Glass) === */
 .type-tag { margin-left: auto; }
-.tag-buy { background: #E8F5E9; color: #2E7D32; }
-.tag-sell { background: #FFEBEE; color: #C62828; }
-.tag-dividend { background: #FFF3E0; color: #E65100; }
+.tag-buy { background: rgba(52, 199, 89, 0.12); color: #34C759; border: 0.5px solid rgba(52, 199, 89, 0.2); }
+.tag-sell { background: rgba(255, 59, 48, 0.1); color: #FF3B30; border: 0.5px solid rgba(255, 59, 48, 0.18); }
+.tag-dividend { background: rgba(255, 149, 0, 0.1); color: #FF9500; border: 0.5px solid rgba(255, 149, 0, 0.18); }
 
-/* === Market Colors === */
-.market-a { background-color: var(--color-market-a); color: #FFF; }
-.market-hk { background-color: var(--color-market-hk); color: #FFF; }
-.market-us { background-color: var(--color-market-us); color: #FFF; }
+/* === Market Colors (Frosted Glass) === */
+.market-a { background: rgba(0, 122, 255, 0.12); color: #007AFF; border: 0.5px solid rgba(0, 122, 255, 0.2); }
+.market-hk { background: rgba(255, 149, 0, 0.12); color: #FF9500; border: 0.5px solid rgba(255, 149, 0, 0.2); }
+.market-us { background: rgba(175, 82, 222, 0.12); color: #AF52DE; border: 0.5px solid rgba(175, 82, 222, 0.2); }
 
 /* === Divider === */
 .divider {
-  height: 1px;
-  background: var(--color-separator);
+  height: 0.5px;
+  background: rgba(60, 60, 67, 0.08);
   margin: var(--space-module) 0;
 }
 
-/* === Input === */
+/* === Input (Frosted Glass) === */
 .input {
-  background: var(--color-bg);
+  background: rgba(0, 0, 0, 0.04);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 0.5px solid rgba(0, 0, 0, 0.06);
   border-radius: var(--radius-input);
   height: 44px;
   padding: 0 12px;
@@ -223,21 +280,25 @@ page {
   margin-bottom: 12px;
 }
 
-/* === Chip / Pill === */
+/* === Chip / Pill (Frosted Glass) === */
 .chip {
   display: inline-flex;
   align-items: center;
   padding: 6px 14px;
   border-radius: 20px;
-  background: var(--color-surface);
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 0.5px solid var(--glass-border);
   font-size: var(--font-caption);
   color: var(--color-body);
   min-height: 32px;
   transition: opacity 100ms;
 }
 .chip-active {
-  background: var(--color-accent);
-  color: #FFFFFF;
+  background: rgba(255, 59, 48, 0.15);
+  color: #FF3B30;
+  border-color: rgba(255, 59, 48, 0.25);
 }
 
 /* === Empty State === */
@@ -265,12 +326,12 @@ page {
   position: sticky;
   top: 0;
   z-index: 50;
-  background: rgba(242, 242, 247, 0.72);
-  backdrop-filter: saturate(180%) blur(20px);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  background: rgba(242, 242, 247, 0.6);
+  backdrop-filter: saturate(180%) blur(40px);
+  -webkit-backdrop-filter: saturate(180%) blur(40px);
   padding-top: 0;
   padding-bottom: 8px;
-  border-bottom: 0.5px solid rgba(0, 0, 0, 0.08);
+  border-bottom: 0.5px solid rgba(255, 255, 255, 0.5);
 }
 .nav-header {
   display: flex;
@@ -287,10 +348,13 @@ page {
   padding-bottom: 4px;
 }
 
-/* === Liquid Slider (液态滑动器) === */
+/* === Liquid Slider (Frosted Glass) === */
 .liquid-slider {
   display: flex;
-  background: #F0F0F3;
+  background: rgba(0, 0, 0, 0.04);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 0.5px solid rgba(0, 0, 0, 0.06);
   border-radius: 12px;
   padding: 3px;
   position: relative;
@@ -299,8 +363,11 @@ page {
 .liquid-slider-bg {
   position: absolute;
   height: calc(100% - 6px);
-  background: var(--color-accent);
-  opacity: 0.15;
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 0.5px solid var(--glass-border);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
   border-radius: 10px;
   transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -327,7 +394,7 @@ page {
   min-height: 0;
 }
 
-/* === Liquid Dissolve Animation (液态消融删除) === */
+/* === Liquid Dissolve Animation === */
 @keyframes dissolve-out {
   0% {
     transform: scale(1);
@@ -343,9 +410,9 @@ page {
   pointer-events: none;
 }
 
-/* === Visual Feedback (视差效果用 scale 替代) === */
+/* === Visual Feedback === */
 .parallax-container {
-  /* 容器，无特殊样式 */
+  /* container */
 }
 .parallax-card {
   transition: transform 100ms ease-out, box-shadow 100ms ease-out;
@@ -360,13 +427,16 @@ page {
   transform: scale(0.98);
 }
 
-/* === Skeleton Screen (骨架屏) === */
+/* === Skeleton Screen === */
 .skeleton-container {
   padding: var(--space-page);
 }
 
 .skeleton-card {
-  background: var(--color-surface);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 0.5px solid var(--glass-border);
   border-radius: var(--radius-card);
   padding: var(--space-card-pad);
   margin-bottom: var(--space-module);
@@ -383,13 +453,13 @@ page {
   width: 48px;
   height: 24px;
   border-radius: var(--radius-tag);
-  background: #E5E5EA;
+  background: rgba(0, 0, 0, 0.06);
 }
 
 .skeleton-text {
   height: 20px;
   border-radius: 4px;
-  background: #E5E5EA;
+  background: rgba(0, 0, 0, 0.06);
 }
 
 .skeleton-header .skeleton-text:first-child {
@@ -411,12 +481,12 @@ page {
 .skeleton-item {
   height: 40px;
   border-radius: 8px;
-  background: #E5E5EA;
+  background: rgba(0, 0, 0, 0.06);
 }
 
-/* === Shimmer Animation (微光动画) === */
+/* === Shimmer Animation === */
 .shimmer {
-  background: linear-gradient(90deg, #E5E5EA 25%, #F5F5F7 50%, #E5E5EA 75%);
+  background: linear-gradient(90deg, rgba(0,0,0,0.04) 25%, rgba(0,0,0,0.08) 50%, rgba(0,0,0,0.04) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }

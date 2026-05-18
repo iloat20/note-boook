@@ -1,5 +1,6 @@
 // components/ec-canvas/wx-canvas.js
 // WxCanvas - 适配微信小程序 Canvas API 到 ECharts
+// 正确行为：setter/getter 均操作物理像素，模拟真实 canvas 行为
 
 module.exports = class WxCanvas {
   constructor(ctx, canvasId, isNew, canvasNode) {
@@ -56,12 +57,14 @@ module.exports = class WxCanvas {
     });
   }
 
+  // zrender 传入物理像素，直接写入 canvasNode
   set width(w) {
     if (this.canvasNode) this.canvasNode.width = w;
   }
   set height(h) {
     if (this.canvasNode) this.canvasNode.height = h;
   }
+  // 返回物理像素，与真实 canvas 行为一致
   get width() {
     if (this.canvasNode) return this.canvasNode.width;
     return 0;

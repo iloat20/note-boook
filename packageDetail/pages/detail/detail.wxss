@@ -1,5 +1,31 @@
 /* Minimal + Spatial UI - 详情页 */
 
+.back-btn {
+  min-height: 44px;
+  min-width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.back-icon-wrap {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.back-icon {
+  font-size: 28px;
+  color: var(--color-title);
+  font-weight: 400;
+  line-height: 1;
+  margin-left: -2px;
+}
+
 .record-item-card {
   min-height: 44px;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);

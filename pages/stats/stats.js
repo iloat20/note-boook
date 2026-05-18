@@ -125,11 +125,14 @@ Page({
                 axisLabel: { color: '#999', fontSize: 10 }
               }
             ],
+            progressive: 200,
+            progressiveThreshold: 10,
             series: [
               {
                 name: '月度盈亏',
                 type: 'bar',
                 data: mixed.barData,
+                large: mixed.barData.length > 20,
                 itemStyle: {
                   color: function (params) {
                     return params.value >= 0 ? getCachedGradient('barPositive') : getCachedGradient('barNegative')
@@ -138,7 +141,8 @@ Page({
                   shadowBlur: 4,
                   shadowColor: 'rgba(0,0,0,0.1)'
                 },
-                animationDuration: 1000
+                animationDuration: 600,
+                animationEasing: 'cubicOut'
               },
               {
                 name: '累计收益',
@@ -146,11 +150,13 @@ Page({
                 yAxisIndex: 1,
                 data: mixed.lineData,
                 smooth: true,
+                sampling: 'lttb',  // 120Hz 下降采样，减少绘制压力
+                large: mixed.lineData.length > 20,
                 lineStyle: { width: 3, shadowBlur: 8, shadowColor: 'rgba(255,107,53,0.3)' },
                 itemStyle: { color: '#FF6B35' },
                 areaStyle: { color: getCachedGradient('lineArea') },
-                animationDuration: 1500,
-                animationEasing: 'cubicInOut'
+                animationDuration: 800,
+                animationEasing: 'cubicOut'
               }
             ]
           }
@@ -214,28 +220,53 @@ Page({
     var stocks = Stock.getAll()
     var stockMap = {}
     stocks.forEach(function (s) { stockMap[s.id] = s })
-    var allTx = Transaction.getAll().concat(
-      Dividend.getAll().map(function (d) {
-        return { id: d.id, stockId: d.stockId, type: 'DIVIDEND', date: d.date, amount: d.totalAmount, quantity: d.quantity }
-      })
-    )
-    allTx.sort(function (a, b) { return (b.date || '').localeCompare(a.date || '') || (b.id - a.id) })
-    var completeTrades = allTx.map(function (t) {
+    
+    // 优化：分别构建交易和分红列表，避免大数组 concat + sort
+    var txList = Transaction.getAll().map(function (t) {
       var stock = stockMap[t.stockId]
-      var typeStr = t.type === 'BUY' ? '买入' : t.type === 'SELL' ? '卖出' : '分红'
-      var amount = t.type === 'DIVIDEND' ? (t.amount || 0) : (t.price || 0) * (t.quantity || 0)
       return {
         id: t.id,
+        stockId: t.stockId,
+        type: t.type,
+        typeText: t.type === 'BUY' ? '买入' : '卖出',
+        dateText: t.date ? fmtDate(new Date(t.date)) : '-',
+        amountText: fmt((t.price || 0) * (t.quantity || 0)),
+        totalPnLText: (t.type === 'BUY' ? '-' : '+') + fmt((t.price || 0) * (t.quantity || 0)),
         name: stock ? stock.name : '-',
         code: stock ? stock.code : '-',
-        market: stock ? stock.market : '',
-        type: t.type,
-        typeText: typeStr,
-        dateText: t.date ? fmtDate(new Date(t.date)) : '-',
-        amountText: fmt(amount),
-        totalPnLText: (t.type === 'BUY' ? '-' : '+') + fmt(amount)
+        market: stock ? stock.market : ''
       }
     })
+    
+    var divList = Dividend.getAll().map(function (d) {
+      var stock = stockMap[d.stockId]
+      return {
+        id: d.id,
+        stockId: d.stockId,
+        type: 'DIVIDEND',
+        typeText: '分红',
+        dateText: d.date ? fmtDate(new Date(d.date)) : '-',
+        amountText: fmt(d.totalAmount),
+        totalPnLText: '+' + fmt(d.totalAmount),
+        name: stock ? stock.name : '-',
+        code: stock ? stock.code : '-',
+        market: stock ? stock.market : ''
+      }
+    })
+    
+    // 按日期倒序合并两个已排序数组（O(n) 而非 O(n log n)）
+    var completeTrades = []
+    var i = 0, j = 0
+    while (i < txList.length && j < divList.length) {
+      if ((txList[i].dateText || '') >= (divList[j].dateText || '')) {
+        completeTrades.push(txList[i]); i++
+      } else {
+        completeTrades.push(divList[j]); j++
+      }
+    }
+    while (i < txList.length) { completeTrades.push(txList[i]); i++ }
+    while (j < divList.length) { completeTrades.push(divList[j]); j++ }
+    
     var clearedPositions = getClearedPositions().map(function (p) {
       var totalPnL = p.realizedPnL + p.dividendIncome
       return Object.assign({}, p, {
@@ -296,103 +327,72 @@ Page({
   },
 
   onOpenAnnualReport: function () {
-    var year = new Date().getFullYear()
-    var transactions = Transaction.getAll()
-    var dividends = Dividend.getAll()
-    var stocks = Stock.getAll()
-    var stockMap = {}
-    stocks.forEach(function (s) { stockMap[s.id] = s })
+    const year = new Date().getFullYear()
+    const yearPrefix = year + '-'
 
-    // 筛选本年交易
-    var yearStart = new Date(year, 0, 1)
-    var yearEnd = new Date(year, 11, 31, 23, 59, 59, 999)
-    var yearTx = transactions.filter(function (t) {
-      var d = new Date(t.date)
-      return d >= yearStart && d <= yearEnd
-    })
-    var yearDivs = dividends.filter(function (d) {
-      var dd = new Date(d.date)
-      return dd >= yearStart && dd <= yearEnd
-    })
-
-    // 交易统计
-    var buyCount = 0, sellCount = 0, buyAmount = 0, sellAmount = 0
+    // 本年交易统计
+    const yearStart = new Date(year, 0, 1)
+    const yearEnd = new Date(year, 11, 31, 23, 59, 59, 999)
+    const yearTx = Transaction.getByDateRange(yearStart, yearEnd)
+    let buyCount = 0, sellCount = 0
     yearTx.forEach(function (t) {
-      if (t.type === 'BUY') { buyCount++; buyAmount += t.price * t.quantity }
-      else { sellCount++; sellAmount += t.price * t.quantity }
+      if (t.type === 'BUY') buyCount++
+      else sellCount++
     })
-    var tradeCount = yearTx.length
 
-    // 月度盈亏
-    var monthlyPnL = []
-    for (var m = 0; m < 12; m++) {
-      var mStart = new Date(year, m, 1)
-      var mEnd = new Date(year, m + 1, 0, 23, 59, 59, 999)
-      var mTx = transactions.filter(function (t) {
-        var d = new Date(t.date)
-        return d >= mStart && d <= mEnd
-      })
-      var mDivs = dividends.filter(function (d) {
-        var dd = new Date(d.date)
-        return dd >= mStart && dd <= mEnd
-      })
-      var mBuy = 0, mSell = 0, mBuyFee = 0, mSellFee = 0
-      mTx.forEach(function (t) {
-        if (t.type === 'BUY') { mBuy += t.price * t.quantity; mBuyFee += t.fee }
-        else { mSell += t.price * t.quantity; mSellFee += t.fee }
-      })
-      var mDiv = mDivs.reduce(function (s, d) { return s + d.totalAmount }, 0)
-      var mPnL = mSell - mSellFee - mBuy - mBuyFee + mDiv
-      monthlyPnL.push({ month: m + 1, pnL: parseFloat(mPnL.toFixed(2)) })
+    // 月度盈亏 — 复用 getPeriodStatsList
+    const periodList = getPeriodStatsList('MONTH', 120)
+    const monthlyPnL = []
+    for (let m = 1; m <= 12; m++) {
+      const label = yearPrefix + String(m).padStart(2, '0')
+      const found = periodList.find(function (item) { return item.label === label })
+      monthlyPnL.push({ month: m, pnL: found ? found.pnL : 0 })
     }
 
-    // 胜率：本年已清仓且 totalPnL > 0
-    var cleared = getClearedPositions()
-    var yearCleared = cleared.filter(function (p) {
-      return p.quantity === 0
-    })
-    var winCount = yearCleared.filter(function (p) {
+    // 胜率：已清仓持仓中 totalPnL > 0
+    const cleared = getClearedPositions()
+    const winCount = cleared.filter(function (p) {
       return (p.realizedPnL + p.dividendIncome) > 0
     }).length
-    var winRate = yearCleared.length > 0 ? Math.round(winCount / yearCleared.length * 100) : 0
+    const winRate = cleared.length > 0 ? Math.round(winCount / cleared.length * 100) : 0
 
     // Top/Bottom 股票
-    var allPositions = getPositionSummary().concat(cleared.map(function (p) {
+    const allPositions = getPositionSummary().concat(cleared.map(function (p) {
       return Object.assign({}, p, { floatingPnL: 0 })
     }))
-    var stockPnL = {}
+    const stockPnL = {}
     allPositions.forEach(function (p) {
-      var key = p.code
+      const key = p.code
       if (!stockPnL[key]) {
         stockPnL[key] = { code: p.code, name: p.name, market: p.market, totalPnL: 0 }
       }
       stockPnL[key].totalPnL += (p.realizedPnL || 0) + (p.floatingPnL || 0) + (p.dividendIncome || 0)
     })
-    var stockList = Object.values(stockPnL).map(function (s) {
+    const stockList = Object.values(stockPnL).map(function (s) {
       s.totalPnL = parseFloat(s.totalPnL.toFixed(2))
       s.totalPnLText = fmt(Math.abs(s.totalPnL))
       return s
     }).sort(function (a, b) { return b.totalPnL - a.totalPnL })
-    var topStocks = stockList.slice(0, 5)
-    var bottomStocks = stockList.slice(-5).reverse()
+    const topStocks = stockList.slice(0, 5)
+    const bottomStocks = stockList.slice(-5).reverse()
 
-    // 策略分布
-    var strategyStats = getStrategyStats()
-    var maxStrategyCount = strategyStats.length > 0 ? strategyStats[0].count : 1
+    // 策略分布 — 复用 getStrategyStats
+    let strategyStats = getStrategyStats()
+    const maxStrategyCount = strategyStats.length > 0 ? strategyStats[0].count : 1
     strategyStats = strategyStats.slice(0, 8).map(function (s) {
       s.percent = Math.round(s.count / maxStrategyCount * 100)
       return s
     })
 
-    // 总计
-    var totalStats = getTotalStats()
-    var dividendIncome = yearDivs.reduce(function (s, d) { return s + d.totalAmount }, 0)
+    // 总计 — 复用 getTotalStats
+    const totalStats = getTotalStats()
+    const yearPeriodStats = getStatsByPeriod('YEAR')
 
     this.setData({
       showAnnualReport: true,
       annualReportData: {
         year: year,
-        tradeCount: tradeCount,
+        tradeCount: yearTx.length,
         buyCount: buyCount,
         sellCount: sellCount,
         winRate: winRate,
@@ -401,7 +401,7 @@ Page({
         totalPnLPercent: totalStats.totalPnLPercent,
         totalInvestmentText: fmt(totalStats.totalInvestment),
         totalRecoveryText: fmt(totalStats.totalInvestment + totalStats.totalPnL),
-        dividendIncomeText: fmt(dividendIncome),
+        dividendIncomeText: fmt(yearPeriodStats.dividendIncome),
         monthlyPnL: monthlyPnL,
         topStocks: topStocks,
         bottomStocks: bottomStocks,

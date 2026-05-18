@@ -12,8 +12,12 @@ let _requestQueue = []
 // A股代码前缀映射
 function getAsharePrefix(code) {
   const codeNum = parseInt(code)
-  if (codeNum >= 600000 && codeNum < 700000) return 'sh'  // 上海（600xxx-699xxx）
-  if (codeNum >= 0 && codeNum < 400000) return 'sz'        // 深圳（000xxx-399xxx）
+  if (codeNum >= 600000 && codeNum < 700000) return 'sh'   // 上海主板（600xxx-699xxx）
+  if (codeNum >= 688000 && codeNum < 690000) return 'sh'   // 科创板（688xxx）
+  if (codeNum >= 0 && codeNum < 400000) return 'sz'         // 深圳（000xxx-399xxx）
+  if (codeNum >= 300000 && codeNum < 400000) return 'sz'    // 创业板（300xxx）
+  if (codeNum >= 800000 && codeNum < 900000) return 'bj'    // 北交所（8xxxxx）
+  if (codeNum >= 400000 && codeNum < 500000) return 'bj'    // 北交所（4xxxxx）
   return 'sh'  // 默认上海
 }
 
@@ -33,7 +37,24 @@ function buildUrl(market, code) {
   }
 }
 
-// 解析腾讯财经API返回的数据
+// 构建批量查询 URL（腾讯 API 支持逗号分隔多只股票）
+function buildBatchUrl(stocks) {
+  const symbols = []
+  stocks.forEach(stock => {
+    let symbol = null
+    if (stock.market === 'A_SHARE') {
+      symbol = getAsharePrefix(stock.code) + stock.code
+    } else if (stock.market === 'HK_SHARE') {
+      symbol = 'r_hk' + stock.code.padStart(5, '0')
+    } else if (stock.market === 'US_SHARE') {
+      symbol = 'us.' + stock.code.toLowerCase()
+    }
+    if (symbol) symbols.push(symbol)
+  })
+  return symbols.length > 0 ? 'https://qt.gtimg.cn/q=' + symbols.join(',') : null
+}
+
+// 解析单条腾讯财经 API 数据
 function parseTencentData(data) {
   const match = data.match(/="(.+)"/)
   if (!match) return null
@@ -52,6 +73,31 @@ function parseTencentData(data) {
     low: parseFloat(fields[34]) || 0,
     amount: parseFloat(fields[37]) || 0
   }
+}
+
+// 解析批量查询响应（多条 v_xxYY="..." 数据）
+function parseBatchData(responseText) {
+  const results = {}
+  const regex = /v_([^=]+)="([^"]+)"/g
+  let match
+  while ((match = regex.exec(responseText)) !== null) {
+    const fields = match[2].split('~')
+    if (fields.length >= 35) {
+      const code = fields[2]
+      results[code] = {
+        code: code,
+        name: fields[1],
+        currentPrice: parseFloat(fields[3]) || 0,
+        yesterdayClose: parseFloat(fields[4]) || 0,
+        todayOpen: parseFloat(fields[5]) || 0,
+        volume: parseInt(fields[6]) || 0,
+        high: parseFloat(fields[33]) || 0,
+        low: parseFloat(fields[34]) || 0,
+        amount: parseFloat(fields[37]) || 0
+      }
+    }
+  }
+  return results
 }
 
 // 带并发控制的请求执行器
@@ -110,17 +156,41 @@ function fetchStockPrice(market, code) {
   }))
 }
 
-// 批量获取股票行情
+// 批量获取股票行情（单次 HTTP 请求查询多只股票）
 function fetchAllPrices(stocks) {
-  const promises = stocks.map(stock => 
-    fetchStockPrice(stock.market, stock.code)
-      .then(price => ({ stockId: stock.id, price: price.currentPrice }))
-      .catch(() => ({ stockId: stock.id, price: null }))
-  )
-  
-  return Promise.all(promises)
+  if (!stocks || stocks.length === 0) return Promise.resolve([])
+
+  const url = buildBatchUrl(stocks)
+  if (!url) return Promise.resolve(stocks.map(s => ({ stockId: s.id, price: null })))
+
+  return new Promise((resolve) => {
+    wx.request({
+      url: url,
+      method: 'GET',
+      timeout: 15000,
+      success(res) {
+        if (res.statusCode !== 200) {
+          resolve(stocks.map(s => ({ stockId: s.id, price: null })))
+          return
+        }
+        const parsed = parseBatchData(String(res.data || ''))
+        const results = stocks.map(stock => {
+          const data = parsed[stock.code]
+          return {
+            stockId: stock.id,
+            price: (data && data.currentPrice > 0) ? data.currentPrice : null
+          }
+        })
+        resolve(results)
+      },
+      fail() {
+        resolve(stocks.map(s => ({ stockId: s.id, price: null })))
+      }
+    })
+  })
 }
 
 module.exports = {
-  fetchStockPrice
+  fetchStockPrice,
+  fetchAllPrices
 }

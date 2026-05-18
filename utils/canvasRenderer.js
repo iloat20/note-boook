@@ -1,8 +1,8 @@
 /**
  * Canvas 渲染工具 — 持仓截图卡片（雪球风格）
  */
-var { fmt } = require('./format')
-var { getMarketLabel } = require('./market')
+const { fmt } = require('./format')
+const { getMarketLabel } = require('./market')
 
 function roundRect(ctx, x, y, w, h, r) {
   ctx.beginPath()
@@ -19,12 +19,12 @@ function roundRect(ctx, x, y, w, h, r) {
 }
 
 function renderPortfolioCard(ctx, canvas, data, w, h) {
-  var dpr = data.dpr || 2
-  var W = w
-  var H = h
+  const dpr = data.dpr || 2
+  const W = w
+  const H = h
 
   // === 背景渐变 ===
-  var bgGrad = ctx.createLinearGradient(0, 0, W, H)
+  const bgGrad = ctx.createLinearGradient(0, 0, W, H)
   bgGrad.addColorStop(0, '#1A1A2E')
   bgGrad.addColorStop(1, '#0F3460')
   ctx.fillStyle = bgGrad
@@ -42,8 +42,8 @@ function renderPortfolioCard(ctx, canvas, data, w, h) {
   ctx.globalAlpha = 1
 
   // === 顶部标题 ===
-  var padX = 32
-  var y = 60
+  let padX = 32
+  let y = 60
 
   ctx.fillStyle = 'rgba(255,255,255,0.5)'
   ctx.font = '13px -apple-system, "PingFang SC", sans-serif'
@@ -67,10 +67,10 @@ function renderPortfolioCard(ctx, canvas, data, w, h) {
 
   // === 总盈亏 ===
   y += 40
-  var pnl = data.totalPnL || 0
-  var pnlPct = data.totalPnLPercent || 0
-  var pnlColor = pnl >= 0 ? '#FF6B6B' : '#51CF66'
-  var pnlSign = pnl >= 0 ? '+' : ''
+  const pnl = data.totalPnL || 0
+  const pnlPct = data.totalPnLPercent || 0
+  const pnlColor = pnl >= 0 ? '#FF6B6B' : '#51CF66'
+  const pnlSign = pnl >= 0 ? '+' : ''
 
   ctx.fillStyle = 'rgba(255,255,255,0.6)'
   ctx.font = '13px -apple-system, "PingFang SC", sans-serif'
@@ -78,10 +78,10 @@ function renderPortfolioCard(ctx, canvas, data, w, h) {
 
   ctx.fillStyle = pnlColor
   ctx.font = 'bold 24px -apple-system, "PingFang SC", sans-serif'
-  var pnlText = pnlSign + fmt(pnl)
+  const pnlText = pnlSign + fmt(pnl)
   ctx.fillText(pnlText, padX, y + 32)
 
-  var pnlTextW = ctx.measureText(pnlText).width
+  const pnlTextW = ctx.measureText(pnlText).width
   ctx.fillStyle = pnlColor
   ctx.font = '16px -apple-system, "PingFang SC", sans-serif'
   ctx.fillText(pnlSign + pnlPct.toFixed(2) + '%', padX + pnlTextW + 12, y + 32)
@@ -102,7 +102,7 @@ function renderPortfolioCard(ctx, canvas, data, w, h) {
   ctx.stroke()
 
   // === 持仓明细 ===
-  var topPositions = (data.positions || []).slice(0, 5)
+  const topPositions = (data.positions || []).slice(0, 5)
   y += 28
 
   topPositions.forEach(function (pos, i) {
@@ -117,9 +117,9 @@ function renderPortfolioCard(ctx, canvas, data, w, h) {
     ctx.fillText(String(i + 1), padX + 5, y + 3)
 
     // 市场标签
-    var mktLabel = getMarketLabel(pos.market)
+    const mktLabel = getMarketLabel(pos.market)
     ctx.font = '10px -apple-system, "PingFang SC", sans-serif'
-    var mktW = ctx.measureText(mktLabel).width + 12
+    const mktW = ctx.measureText(mktLabel).width + 12
     roundRect(ctx, padX + 28, y - 10, mktW, 18, 4)
     ctx.fillStyle = 'rgba(255,255,255,0.12)'
     ctx.fill()
@@ -136,11 +136,11 @@ function renderPortfolioCard(ctx, canvas, data, w, h) {
     ctx.fillText(pos.code, padX + 28 + mktW + 8 + ctx.measureText(pos.name).width + 6, y + 2)
 
     // 盈亏
-    var posPnl = pos.floatingPnL || 0
-    var posPnlSign = posPnl >= 0 ? '+' : ''
+    const posPnl = pos.floatingPnL || 0
+    const posPnlSign = posPnl >= 0 ? '+' : ''
     ctx.fillStyle = posPnl >= 0 ? '#FF6B6B' : '#51CF66'
     ctx.font = 'bold 14px -apple-system, "PingFang SC", sans-serif'
-    var posPnlText = posPnlSign + fmt(posPnl)
+    const posPnlText = posPnlSign + fmt(posPnl)
     ctx.fillText(posPnlText, W - padX - ctx.measureText(posPnlText).width, y + 2)
 
     y += 40
@@ -161,7 +161,7 @@ function renderPortfolioCard(ctx, canvas, data, w, h) {
 
   ctx.fillStyle = 'rgba(255,255,255,0.2)'
   ctx.font = '10px -apple-system, "PingFang SC", sans-serif'
-  var brandW = ctx.measureText('股票记账 · 投资备忘录').width
+  const brandW = ctx.measureText('股票记账 · 投资备忘录').width
   ctx.fillText(data.date || '', padX + brandW + 16, y)
 }
 

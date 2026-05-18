@@ -1,13 +1,14 @@
 <view class="page-container" style="padding-top: {{statusBarHeight}}px;">
   <view class="nav-bar" style="height: {{navBarHeight}}px; display: flex; align-items: flex-end; padding: 0 16px;">
-    <view bindtap="goBack" style="min-height: 44px; min-width: 44px; display: flex; align-items: center; justify-content: flex-start;">
-      <text style="font-size: 22px; color: var(--color-accent); font-weight: 300;">‹</text>
+    <view bindtap="goBack" class="back-btn">
+      <view class="back-icon-wrap">
+        <text class="back-icon">‹</text>
+      </view>
     </view>
-    <text class="nav-header-title" style="flex: 1;">{{stockName}}</text>
   </view>
 
   <scroll-view wx:if="{{stock}}" class="scroll-container" scroll-y>
-    <view style="display: flex; align-items: center; gap: 8px; margin-bottom: var(--space-module);">
+    <view style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: var(--space-module);">
       <view class="tag market-{{stock.market === 'A_SHARE' ? 'a' : stock.market === 'HK_SHARE' ? 'hk' : 'us'}}">{{marketLabel}}</view>
       <text class="title">{{stock.code}}</text>
       <text class="body">{{stock.name}}</text>
@@ -68,14 +69,12 @@
       </view>
       <view wx:if="{{transactions.length > 0}}">
         <view wx:for="{{transactions}}" wx:key="id" class="card-sm record-item-card {{disTransId === item.id ? 'dissolving' : ''}}" style="margin-bottom: 8px;" bindtap="showTransactionActions" data-id="{{item.id}}" data-type="transaction">
-          <view style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
-            <view class="tag type-tag {{item.type === 'BUY' ? 'tag-buy' : 'tag-sell'}}">{{item.typeText}}</view>
-            <text class="caption">{{item.dateText}} {{item.timeText}}</text>
-          </view>
-          <view style="display: flex; gap: 16px;">
-            <text class="caption">价格: {{item.priceText}}</text>
-            <text class="caption">数量: {{item.quantity}}股</text>
-            <text class="caption">手续费: {{item.feeText}}</text>
+          <view style="text-align: center; padding: 4px 0;">
+            <view class="tag type-tag {{item.type === 'BUY' ? 'tag-buy' : 'tag-sell'}}" style="display: inline-block; margin: 0 4px;">{{item.typeText}}</view>
+            <text class="caption" style="margin: 0 4px;">{{item.dateText}} {{item.timeText}}</text>
+            <text class="caption" style="margin: 0 4px;">价格:{{item.priceText}}</text>
+            <text class="caption" style="margin: 0 4px;">数量:{{item.quantity}}</text>
+            <text class="caption" style="margin: 0 4px;">手续费:{{item.feeText}}</text>
           </view>
           <view wx:if="{{item.hasJournal}}" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--color-separator);">
             <view wx:if="{{item.strategies.length > 0}}" style="display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 4px;">

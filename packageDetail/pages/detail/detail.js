@@ -1,6 +1,6 @@
-﻿﻿// pages/detail/detail.js
+// pages/detail/detail.js
 const { Stock, Transaction, Dividend, calculatePosition, PriceCache } = require("../../../utils/storage")
-const { fmt, fmtShortDate, fmtDate, fmtTime } = require("../../../utils/format")
+const { fmt, fmtShortDate, fmtTime } = require("../../../utils/format")
 const { getMarketLabel, getMarketColor } = require("../../../utils/market")
 
 Page({
@@ -40,7 +40,7 @@ Page({
 
   onLoad(options) {
     this.setData(getApp().getNavBarInfo())
-    
+
     if (options && options.stockId) {
       this._stockId = parseInt(options.stockId)
       this.loadData()
@@ -48,30 +48,34 @@ Page({
   },
 
   onShow() {
+    const app = getApp()
+    if (app.globalData.dataDirty) {
+      app.globalData.dataDirty = false
+    }
     this.loadData()
   },
 
   loadData() {
-    var stockId = this._stockId
+    let stockId = this._stockId
     if (!stockId) {
       stockId = this.data.stockId
     }
-    var stock = Stock.getById(stockId)
+    const stock = Stock.getById(stockId)
     if (!stock) {
       this.setData({ stockId: stockId })
       return
     }
 
-    var position = calculatePosition(stock.id)
-    var rawTransactions = Transaction.getByStockId(stock.id)
-    var transactions = rawTransactions.map(this._formatTransaction.bind(this))
-    var dividends = Dividend.getByStockId(stock.id).map(this._formatDividend.bind(this))
-    var strategySummary = this._buildStrategySummary(rawTransactions)
+    const position = calculatePosition(stock.id)
+    const rawTransactions = Transaction.getByStockId(stock.id)
+    const transactions = rawTransactions.map(this._formatTransaction.bind(this))
+    const dividends = Dividend.getByStockId(stock.id).map(this._formatDividend.bind(this))
+    const strategySummary = this._buildStrategySummary(rawTransactions)
 
-    var marketValue = position.currentPrice && position.quantity > 0
+    const marketValue = position.currentPrice && position.quantity > 0
       ? position.currentPrice * position.quantity
       : 0
-    var totalPnL = position.realizedPnL + position.floatingPnL + position.dividendIncome
+    const totalPnL = position.realizedPnL + position.floatingPnL + position.dividendIncome
 
     this.setData({
       stock: stock,
@@ -97,9 +101,9 @@ Page({
   },
 
   _formatTransaction(transaction) {
-    var typeClass = transaction.type === "BUY" ? "buy" : "sell"
-    var strategies = transaction.strategies || []
-    var reason = transaction.reason || ''
+    const typeClass = transaction.type === "BUY" ? "buy" : "sell"
+    const strategies = transaction.strategies || []
+    const reason = transaction.reason || ''
     return {
       id: transaction.id,
       stockId: transaction.stockId,
@@ -123,7 +127,7 @@ Page({
   },
 
   _buildStrategySummary(transactions) {
-    var map = {}
+    const map = {}
     transactions.forEach(function (t) {
       if (!t.strategies || !t.strategies.length) return
       t.strategies.forEach(function (tag) {
@@ -137,7 +141,7 @@ Page({
       })
     })
     return Object.keys(map).map(function (tag) {
-      var s = map[tag]
+      const s = map[tag]
       s.netPnL = parseFloat((s.sellAmount - s.buyAmount).toFixed(2))
       s.buyAmount = parseFloat(s.buyAmount.toFixed(2))
       s.sellAmount = parseFloat(s.sellAmount.toFixed(2))
@@ -168,8 +172,8 @@ Page({
   },
 
   updatePrice(e) {
-    var price = parseFloat(e.detail.value)
-    var stockId = this.data.stockId || this._stockId
+    const price = parseFloat(e.detail.value)
+    const stockId = this.data.stockId || this._stockId
     if (!isNaN(price) && price > 0) {
       PriceCache.set(stockId, price)
     }
@@ -181,18 +185,18 @@ Page({
   },
 
   goToRecord() {
-    var stockId = this.data.stockId || this._stockId
+    const stockId = this.data.stockId || this._stockId
     wx.navigateTo({ url: "/pages/record/record?stockId=" + stockId })
   },
 
   goToDividend() {
-    var stockId = this.data.stockId || this._stockId
+    const stockId = this.data.stockId || this._stockId
     wx.navigateTo({ url: "/packageDetail/pages/dividend/dividend?stockId=" + stockId })
   },
 
   showTransactionActions(e) {
-    var id = e.currentTarget.dataset.id
-    var self = this
+    const id = e.currentTarget.dataset.id
+    const self = this
     wx.showActionSheet({
       itemList: ["编辑", "删除"],
       success: function (res) {
@@ -218,8 +222,8 @@ Page({
   },
 
   showDividendActions(e) {
-    var id = e.currentTarget.dataset.id
-    var self = this
+    const id = e.currentTarget.dataset.id
+    const self = this
     wx.showActionSheet({
       itemList: ["编辑", "删除"],
       success: function (res) {

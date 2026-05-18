@@ -142,30 +142,30 @@ const US_SHARE = [
 ]
 
 // 预构建带 market 标签的完整池，避免每次搜索都创建新对象
-var _poolA = A_SHARE.map(function (s) { return { code: s.code, name: s.name, market: 'A_SHARE' } })
-var _poolHK = HK_SHARE.map(function (s) { return { code: s.code, name: s.name, market: 'HK_SHARE' } })
-var _poolUS = US_SHARE.map(function (s) { return { code: s.code, name: s.name, market: 'US_SHARE' } })
-var _poolAll = _poolA.concat(_poolHK, _poolUS)
+const _poolA = A_SHARE.map(function (s) { return { code: s.code, name: s.name, market: 'A_SHARE' } })
+const _poolHK = HK_SHARE.map(function (s) { return { code: s.code, name: s.name, market: 'HK_SHARE' } })
+const _poolUS = US_SHARE.map(function (s) { return { code: s.code, name: s.name, market: 'US_SHARE' } })
+const _poolAll = _poolA.concat(_poolHK, _poolUS)
 
 function searchStocks(keyword, market, limit) {
   limit = limit || 10
   keyword = (keyword || '').toLowerCase().trim()
   if (!keyword) return []
 
-  var hkPrefix = false
+  let hkPrefix = false
   if (/^(hk)(\d+)$/i.test(keyword)) {
     keyword = keyword.replace(/^(hk)/i, '')
     hkPrefix = true
   }
 
-  var pool
+  let pool
   if (!market) pool = _poolAll
   else if (market === 'A_SHARE') pool = _poolA
   else if (market === 'HK_SHARE') pool = _poolHK
   else if (market === 'US_SHARE') pool = _poolUS
   else pool = _poolAll
 
-  var results = pool.filter(function (s) {
+  const results = pool.filter(function (s) {
     // 如果输入了 hk 前缀，只匹配港股
     if (hkPrefix && s.market !== 'HK_SHARE') return false
     return s.code.toLowerCase().indexOf(keyword) !== -1 ||
@@ -174,14 +174,14 @@ function searchStocks(keyword, market, limit) {
 
   // 按匹配优先级排序：代码前缀匹配 > 名称前缀匹配 > 其他
   results.sort(function (a, b) {
-    var aCodeExact = a.code.toLowerCase() === keyword
-    var bCodeExact = b.code.toLowerCase() === keyword
+    const aCodeExact = a.code.toLowerCase() === keyword
+    const bCodeExact = b.code.toLowerCase() === keyword
     if (aCodeExact !== bCodeExact) return aCodeExact ? -1 : 1
-    var aCodeStart = a.code.toLowerCase().indexOf(keyword) === 0
-    var bCodeStart = b.code.toLowerCase().indexOf(keyword) === 0
+    const aCodeStart = a.code.toLowerCase().indexOf(keyword) === 0
+    const bCodeStart = b.code.toLowerCase().indexOf(keyword) === 0
     if (aCodeStart !== bCodeStart) return aCodeStart ? -1 : 1
-    var aNameStart = a.name.toLowerCase().indexOf(keyword) === 0
-    var bNameStart = b.name.toLowerCase().indexOf(keyword) === 0
+    const aNameStart = a.name.toLowerCase().indexOf(keyword) === 0
+    const bNameStart = b.name.toLowerCase().indexOf(keyword) === 0
     if (aNameStart !== bNameStart) return aNameStart ? -1 : 1
     return 0
   })

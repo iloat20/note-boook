@@ -1,7 +1,7 @@
 const { MARKETS, Stock, getPositionSummary, getTotalStats, PriceCache, Transaction, Dividend } = require('../../utils/storage.js')
 const { fmt } = require('../../utils/format.js')
 const { getMarketLabel, getMarketColor, validateStockCode, formatStockCode } = require('../../utils/market.js')
-const { fetchStockPrice } = require('../../utils/stockPrice.js')
+const { fetchStockPrice, fetchAllPrices } = require('../../utils/stockPrice.js')
 const { calculateFee } = require('../../utils/feeCalculator.js')
 const { searchStocks } = require('../../utils/stockDatabase.js')
 const { renderPortfolioCard } = require('../../utils/canvasRenderer.js')
@@ -376,22 +376,21 @@ Page({
 
     wx.showLoading({ title: '获取行情中...' })
 
-    const promises = positions.map(pos => {
-      return fetchStockPrice(pos.market, pos.code)
-        .then(priceData => {
-          if (priceData && priceData.currentPrice > 0) {
-            PriceCache.set(pos.id, priceData.currentPrice)
-          }
-        })
-        .catch(err => {
-          console.warn('[Index] 获取行情失败:', pos.code, err.message)
-        })
-    })
-
-    Promise.all(promises).then(() => {
+    fetchAllPrices(positions).then(results => {
+      let updated = 0
+      results.forEach(r => {
+        if (r.price !== null) {
+          PriceCache.set(r.stockId, r.price)
+          updated++
+        }
+      })
       wx.hideLoading()
       this.loadData()
-      wx.showToast({ title: '行情已更新', icon: 'success' })
+      if (updated > 0) {
+        wx.showToast({ title: '行情已更新', icon: 'success' })
+      } else {
+        wx.showToast({ title: '获取失败', icon: 'none' })
+      }
     }).catch(() => {
       wx.hideLoading()
       this.loadData()
@@ -493,6 +492,7 @@ Page({
       content: '将删除该股票的所有交易记录和分红记录，是否确认？',
       success: function (res) {
         if (res.confirm) {
+          Stock.delete(stockId)
           Transaction.deleteByStockId(stockId)
           Dividend.deleteByStockId(stockId)
           wx.showToast({ title: '删除成功', icon: 'success' })

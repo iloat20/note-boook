@@ -2,26 +2,26 @@ const { MARKETS, TRANSACTION_TYPE, DEFAULT_STRATEGIES } = require('./constants')
 const { validateStockCode, formatStockCode } = require('./market.js')
 
 // 持仓计算结果缓存，数据变更时由 markDataDirty 清空
-let _positionCache = {}
-let _heatmapCache = {}
+// 使用 Map 实现 LRU 缓存（访问时移到末尾，淘汰时删除第一个）
+let _positionCache = new Map()
+let _heatmapCache = new Map()
+let _periodStatsCache = new Map()
 
 // 缓存配置
 const MAX_POSITION_CACHE = 100
 const MAX_HEATMAP_CACHE = 50
 
 function _clearExpiredCache() {
-  // 清理 _positionCache（LRU 策略 - 简化版）
-  const posKeys = Object.keys(_positionCache)
-  if (posKeys.length > MAX_POSITION_CACHE) {
-    const keysToDelete = posKeys.slice(0, posKeys.length - MAX_POSITION_CACHE)
-    keysToDelete.forEach(key => delete _positionCache[key])
+  // 清理 _positionCache（LRU 策略）
+  while (_positionCache.size > MAX_POSITION_CACHE) {
+    const oldestKey = _positionCache.keys().next().value
+    _positionCache.delete(oldestKey)
   }
   
   // 清理 _heatmapCache
-  const heatKeys = Object.keys(_heatmapCache)
-  if (heatKeys.length > MAX_HEATMAP_CACHE) {
-    const keysToDelete = heatKeys.slice(0, heatKeys.length - MAX_HEATMAP_CACHE)
-    keysToDelete.forEach(key => delete _heatmapCache[key])
+  while (_heatmapCache.size > MAX_HEATMAP_CACHE) {
+    const oldestKey = _heatmapCache.keys().next().value
+    _heatmapCache.delete(oldestKey)
   }
 }
 
@@ -39,8 +39,9 @@ function markDataDirty() {
   } catch (e) {
     console.warn('[markDataDirty]', e)
   }
-  _positionCache = {}
-  _heatmapCache = {}
+  _positionCache.clear()
+  _heatmapCache.clear()
+  _periodStatsCache.clear()
 }
 
 const STOCK_KEY = 'stock_trade_stocks'
@@ -292,8 +293,8 @@ const PriceCache = {
     prices[stockId] = parseFloat(price)
     saveData(PRICE_KEY, prices)
     // 价格变更，清除该股票的持仓缓存
-    if (_positionCache && _positionCache[stockId]) {
-      delete _positionCache[stockId]
+    if (_positionCache && _positionCache.has(stockId)) {
+      _positionCache.delete(stockId)
     }
   },
 
@@ -383,12 +384,12 @@ function getStrategyStats() {
 }
 
 function calculatePosition(stockId) {
-  if (_positionCache[stockId]) {
-    return _positionCache[stockId]
+  if (_positionCache.has(stockId)) {
+    return _positionCache.get(stockId)
   }
 
   // 仅在缓存达到上限时执行清理
-  if (Object.keys(_positionCache).length >= MAX_POSITION_CACHE) {
+  if (_positionCache.size >= MAX_POSITION_CACHE) {
     _clearExpiredCache()
   }
   
@@ -444,12 +445,95 @@ function calculatePosition(stockId) {
     floatingPnL: parseFloat(floatingPnL.toFixed(2)),
     totalPnL: parseFloat((realizedPnL + floatingPnL + dividendIncome).toFixed(2))
   }
-  _positionCache[stockId] = result
+  _positionCache.set(stockId, result)
   return result
+}
+
+// 批量计算多个股票的持仓，避免重复读取和过滤
+// 一次性获取所有交易和分红数据，按 stockId 分组后批量计算
+function batchCalculatePositions(stockIds) {
+  // 过滤掉已有缓存的，只计算缺失的
+  const needCalc = stockIds.filter(id => !_positionCache.has(id))
+  if (needCalc.length === 0) return
+  
+  // 一次性获取所有数据
+  const allTransactions = Transaction.getAll()
+  const allDividends = Dividend.getAll()
+  
+  // 按 stockId 分组
+  const txMap = {}
+  const divMap = {}
+  allTransactions.forEach(t => {
+    if (!txMap[t.stockId]) txMap[t.stockId] = []
+    txMap[t.stockId].push(t)
+  })
+  allDividends.forEach(d => {
+    if (!divMap[d.stockId]) divMap[d.stockId] = []
+    divMap[d.stockId].push(d)
+  })
+  
+  // 批量计算
+  needCalc.forEach(stockId => {
+    const transactions = txMap[stockId] || []
+    let totalBuyQuantity = 0
+    let totalBuyAmount = 0
+    let totalSellQuantity = 0
+    let totalSellAmount = 0
+    let totalBuyFee = 0
+    let totalSellFee = 0
+    
+    transactions.forEach(t => {
+      if (t.type === TRANSACTION_TYPE.BUY) {
+        totalBuyQuantity += t.quantity
+        totalBuyAmount += t.price * t.quantity
+        totalBuyFee += t.fee
+      } else {
+        totalSellQuantity += t.quantity
+        totalSellAmount += t.price * t.quantity
+        totalSellFee += t.fee
+      }
+    })
+    
+    const dividends = divMap[stockId] || []
+    let dividendIncome = 0
+    let shareDividendQty = 0
+    dividends.forEach(function (d) {
+      if (d.type === 'SHARE') {
+        shareDividendQty += d.shareQuantity || 0
+      } else {
+        dividendIncome += d.totalAmount
+      }
+    })
+    
+    const positionQuantity = totalBuyQuantity + shareDividendQty - totalSellQuantity
+    const avgCost = totalBuyQuantity > 0 ? (totalBuyAmount + totalBuyFee) / totalBuyQuantity : 0
+    const realizedPnL = totalBuyQuantity > 0
+      ? totalSellAmount - totalSellFee - avgCost * totalSellQuantity
+      : totalSellAmount - totalSellFee
+    
+    const currentPrice = PriceCache.get(stockId)
+    const floatingPnL = currentPrice && positionQuantity > 0 ? (currentPrice - avgCost) * positionQuantity : 0
+    
+    _positionCache.set(stockId, {
+      stockId,
+      quantity: positionQuantity,
+      avgCost: parseFloat(avgCost.toFixed(4)),
+      realizedPnL: parseFloat(realizedPnL.toFixed(2)),
+      dividendIncome: parseFloat(dividendIncome.toFixed(2)),
+      currentPrice: currentPrice ? parseFloat(currentPrice.toFixed(2)) : null,
+      floatingPnL: parseFloat(floatingPnL.toFixed(2)),
+      totalPnL: parseFloat((realizedPnL + floatingPnL + dividendIncome).toFixed(2))
+    })
+  })
 }
 
 function getPositionSummary(market = null) {
   const stocks = market ? Stock.getByMarket(market) : Stock.getAll()
+  
+  // 批量计算持仓，减少重复读取
+  const stockIds = stocks.map(s => s.id)
+  batchCalculatePositions(stockIds)
+  
   const positions = stocks.map(stock => {
     const pos = calculatePosition(stock.id)
     return {
@@ -469,6 +553,11 @@ function getPositionSummary(market = null) {
 
 function getAllPositionsWithRealizedPnL(market = null) {
   const stocks = market ? Stock.getByMarket(market) : Stock.getAll()
+  
+  // 批量计算持仓
+  const stockIds = stocks.map(s => s.id)
+  batchCalculatePositions(stockIds)
+  
   const positions = stocks.map(stock => {
     const pos = calculatePosition(stock.id)
     return {
@@ -477,13 +566,18 @@ function getAllPositionsWithRealizedPnL(market = null) {
     }
   }).filter(p => Math.abs(p.realizedPnL) > 0.01 || Math.abs(p.dividendIncome) > 0.01)
 
-  positions.sort((a, b) => b.realizedPnL + b.dividendIncome - (a.realizedPnL + a.dividendIncome))
+  positions.sort((a, b) => (b.realizedPnL + b.dividendIncome) - (a.realizedPnL + a.dividendIncome))
 
   return positions
 }
 
 function getClearedPositions() {
   const stocks = Stock.getAll()
+  
+  // 批量计算持仓
+  const stockIds = stocks.map(s => s.id)
+  batchCalculatePositions(stockIds)
+  
   const cleared = stocks.map(stock => {
     const pos = calculatePosition(stock.id)
     return {
@@ -498,13 +592,15 @@ function getClearedPositions() {
 }
 
 function getTotalStats() {
-  const transactions = Transaction.getAll()
-  const dividends = Dividend.getAll()
-
+  // 使用 getPositionSummary 获取所有持仓，避免重复计算
+  const positions = getPositionSummary()
+  
   let totalInvestment = 0
   let totalBuyFee = 0
   let totalSellFee = 0
 
+  // 从交易记录计算投入和手续费
+  const transactions = Transaction.getAll()
   transactions.forEach(t => {
     const amount = t.price * t.quantity
     if (t.type === TRANSACTION_TYPE.BUY) {
@@ -515,10 +611,6 @@ function getTotalStats() {
     }
   })
 
-  const dividendIncome = dividends.reduce((sum, d) => sum + d.totalAmount, 0)
-
-  // 计算每个股票的盈亏，然后求和
-  const positions = Stock.getAll().map(s => calculatePosition(s.id))
   const totalRealizedPnL = positions.reduce((sum, p) => sum + p.realizedPnL, 0)
   const totalFloatingPnL = positions.reduce((sum, p) => sum + p.floatingPnL, 0)
   const totalDividendIncome = positions.reduce((sum, p) => sum + p.dividendIncome, 0)
@@ -643,6 +735,12 @@ function calcStatsForRange(transactions, dividends, startDate, endDate, label) {
 }
 
 function getPeriodStatsList(periodType, count = 12) {
+  // 检查缓存
+  const cacheKey = `${periodType}-${count}`
+  if (_periodStatsCache.has(cacheKey)) {
+    return _periodStatsCache.get(cacheKey).slice()
+  }
+  
   const transactions = Transaction.getAll()
   const dividends = Dividend.getAll()
   
@@ -725,24 +823,26 @@ function getPeriodStatsList(periodType, count = 12) {
     }
   }
   
-  return result.slice(-count)
+  const finalResult = result.slice(-count)
+  _periodStatsCache.set(cacheKey, finalResult.slice())
+  return finalResult
 }
 
 function getHeatmapData(year, month) {
   const cacheKey = year + '-' + month
-  if (_heatmapCache[cacheKey]) return _heatmapCache[cacheKey]
-
+  if (_heatmapCache.has(cacheKey)) return _heatmapCache.get(cacheKey)
+  
   const transactions = Transaction.getAll()
   const dividends = Dividend.getAll()
-
+  
   const startDate = new Date(year, month - 1, 1)
   const endDate = new Date(year, month, 0, 23, 59, 59, 999)
-
+  
   const dayMap = {}
   for (let d = 1; d <= 31; d++) {
     dayMap[d] = { count: 0, amount: 0 }
   }
-
+  
   transactions.forEach(t => {
     const date = new Date(t.date)
     if (date >= startDate && date <= endDate) {
@@ -753,7 +853,7 @@ function getHeatmapData(year, month) {
       }
     }
   })
-
+  
   dividends.forEach(d => {
     const date = new Date(d.date)
     if (date >= startDate && date <= endDate) {
@@ -764,7 +864,7 @@ function getHeatmapData(year, month) {
       }
     }
   })
-
+  
   const result = []
   for (let day = 1; day <= 31; day++) {
     const data = dayMap[day]
@@ -780,8 +880,8 @@ function getHeatmapData(year, month) {
       level
     })
   }
-
-  _heatmapCache[cacheKey] = result
+  
+  _heatmapCache.set(cacheKey, result)
   return result
 }
 

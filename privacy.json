@@ -1,19 +1,10 @@
-
 {
   "desc": "隐私保护指引",
   "version": "1.0.0",
   "privacyItems": [
     {
-      "key": "scope.record",
-      "text": "用于录制语音消息"
-    },
-    {
-      "key": "scope.camera",
-      "text": "用于拍摄照片和视频"
-    },
-    {
       "key": "scope.album",
-      "text": "用于选择相册中的图片和视频"
+      "text": "用于保存持仓截图到相册"
     }
   ]
 }

@@ -13,11 +13,11 @@ Page({
 
   onLoad(o) {
     this.setData(getApp().getNavBarInfo())
-    
+
     const n = new Date()
     this.setData({ date: `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}` })
     this._loadStocks()
-    if (o && o.id) { this._isEdit = true; this._editId = parseInt(o.id); this._loadEdit(o.id) }
+    if (o && o.id) { this._isEdit = true; this._editId = parseInt(o.id); this._loadEdit(parseInt(o.id)) }
     this._preview()
   },
 

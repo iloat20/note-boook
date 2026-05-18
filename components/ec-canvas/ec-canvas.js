@@ -115,6 +115,9 @@ Component({
         const canvasDpr = windowInfo.pixelRatio || 1;
         const canvasWidth = res[0].width;
         const canvasHeight = res[0].height;
+        // 关键：将 canvas 实际像素尺寸乘以 dpr，保证高分屏清晰
+        canvasNode.width = canvasWidth * canvasDpr;
+        canvasNode.height = canvasHeight * canvasDpr;
         const ctx = canvasNode.getContext('2d');
         const canvas = new WxCanvas(ctx, this.data.canvasId, true, canvasNode);
 

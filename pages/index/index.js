@@ -1,6 +1,6 @@
-const { MARKETS, Stock, getPositionSummary, getTotalStats, PriceCache, Transaction, Dividend } = require('../../utils/storage.js')
+const { MARKETS, Stock, getPositionSummary, getPortfolioPositions, getSellableQuantity, PriceCache, Transaction, Dividend } = require('../../utils/storage.js')
 const { fmt } = require('../../utils/format.js')
-const { getMarketLabel, getMarketColor, validateStockCode, formatStockCode } = require('../../utils/market.js')
+const { getMarketLabel, getMarketColor, formatStockCode } = require('../../utils/market.js')
 const { fetchStockPrice, fetchAllPrices } = require('../../utils/stockPrice.js')
 const { calculateFee } = require('../../utils/feeCalculator.js')
 const { searchStocks } = require('../../utils/stockDatabase.js')
@@ -91,9 +91,13 @@ Page({
     try {
     // 一次性计算所有持仓（无筛选），避免 updateMarketTabs 重复计算
     const allPositions = getPositionSummary()
+    const allPortfolioPositions = getPortfolioPositions()
     const positions = this.data.currentMarket
       ? allPositions.filter(p => p.market === this.data.currentMarket)
       : allPositions
+    const portfolioPositions = this.data.currentMarket
+      ? allPortfolioPositions.filter(p => p.market === this.data.currentMarket)
+      : allPortfolioPositions
 
     let totalMarketValue = 0
     let totalCost = 0
@@ -101,10 +105,11 @@ Page({
     let totalFloatingPnL = 0
     let totalDividendIncome = 0
     let totalBuyFee = 0
+    let totalInvestment = 0
 
-    allPositions.forEach(p => {
+    portfolioPositions.forEach(p => {
       totalRealizedPnL += p.realizedPnL
-      totalFloatingPnL += p.floatingPnL
+      if (p.quantity > 0) totalFloatingPnL += p.floatingPnL
       totalDividendIncome += p.dividendIncome
     })
 
@@ -116,8 +121,15 @@ Page({
       totalBuyFee += p.totalBuyFee || 0
     })
 
+    const portfolioStockIds = new Set(portfolioPositions.map(function (p) { return p.id }))
+    Transaction.getAll().forEach(function (t) {
+      if (portfolioStockIds.has(t.stockId) && t.type === 'BUY') {
+        totalInvestment += t.price * t.quantity + t.fee
+      }
+    })
+    if (totalInvestment <= 0) totalInvestment = totalCost + totalBuyFee
+
     const totalPnL = totalRealizedPnL + totalFloatingPnL + totalDividendIncome
-    const totalInvestment = totalCost + totalBuyFee
 
     const formattedPositions = positions.map(p => {
       const pnlPercent = p.quantity > 0 && p.avgCost > 0
@@ -361,6 +373,14 @@ Page({
     if (!d.qrQuantity || parseInt(d.qrQuantity) <= 0) { wx.showToast({ title: '请输入有效数量', icon: 'none' }); return }
 
     var stock = Stock.getByCode(code, d.qrMarket)
+    if (d.qrType === 'SELL') {
+      if (!stock) { wx.showToast({ title: '暂无可卖持仓', icon: 'none' }); return }
+      var sellableQuantity = getSellableQuantity(stock.id)
+      if (parseInt(d.qrQuantity) > sellableQuantity) {
+        wx.showToast({ title: '卖出数量超过持仓', icon: 'none' })
+        return
+      }
+    }
     if (!stock) { stock = Stock.create(code, name, d.qrMarket); Stock.save(stock) }
 
     var tx = Transaction.create(stock.id, d.qrType, d.qrPrice, d.qrQuantity, d.qrFee, new Date().toISOString())

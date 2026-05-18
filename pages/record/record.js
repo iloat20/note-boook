@@ -1,6 +1,6 @@
 // pages/record/record.js
 const { MARKETS } = require("../../utils/constants")
-const { Stock, Transaction, PriceCache, Strategy } = require("../../utils/storage")
+const { Stock, Transaction, Strategy, getSellableQuantity } = require("../../utils/storage")
 const { calculateFee, getFeeBreakdown } = require("../../utils/feeCalculator")
 const { fmt } = require("../../utils/format")
 const { getMarketLabel, validateStockCode, formatStockCode } = require("../../utils/market")
@@ -223,6 +223,15 @@ Page({
     if (!date || !time) { wx.showToast({ title: "请选择日期时间", icon: "none" }); return }
 
     let stock = Stock.getByCode(code, market)
+    if (type === 'SELL') {
+      if (!stock) { wx.showToast({ title: '暂无可卖持仓', icon: 'none' }); return }
+      const ignoredTransactionId = this._isEdit ? this._editId : null
+      const sellableQuantity = getSellableQuantity(stock.id, ignoredTransactionId)
+      if (parseInt(quantity) > sellableQuantity) {
+        wx.showToast({ title: '卖出数量超过持仓', icon: 'none' })
+        return
+      }
+    }
     if (!stock) { stock = Stock.create(code, name, market); Stock.save(stock) }
 
     const transaction = Transaction.create(stock.id, type, price, quantity, fee, new Date(date + "T" + time + ":00").toISOString(), note, data.reason, data.strategies)

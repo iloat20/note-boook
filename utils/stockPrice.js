@@ -6,6 +6,7 @@
 // 请求并发控制
 const MAX_CONCURRENT_REQUESTS = 5
 const REQUEST_DELAY_MS = 100
+const BATCH_SIZE = 40
 let _activeRequests = 0
 let _requestQueue = []
 
@@ -156,14 +157,11 @@ function fetchStockPrice(market, code) {
   }))
 }
 
-// 批量获取股票行情（单次 HTTP 请求查询多只股票）
-function fetchAllPrices(stocks) {
-  if (!stocks || stocks.length === 0) return Promise.resolve([])
-
+function fetchPriceBatch(stocks) {
   const url = buildBatchUrl(stocks)
   if (!url) return Promise.resolve(stocks.map(s => ({ stockId: s.id, price: null })))
 
-  return new Promise((resolve) => {
+  return _executeWithThrottle(() => new Promise((resolve) => {
     wx.request({
       url: url,
       method: 'GET',
@@ -187,6 +185,22 @@ function fetchAllPrices(stocks) {
         resolve(stocks.map(s => ({ stockId: s.id, price: null })))
       }
     })
+  }))
+}
+
+// 批量获取股票行情，按固定数量分片，避免 URL 过长导致整批失败
+function fetchAllPrices(stocks) {
+  if (!stocks || stocks.length === 0) return Promise.resolve([])
+
+  const chunks = []
+  for (let i = 0; i < stocks.length; i += BATCH_SIZE) {
+    chunks.push(stocks.slice(i, i + BATCH_SIZE))
+  }
+
+  return Promise.all(chunks.map(fetchPriceBatch)).then(function (chunkResults) {
+    return chunkResults.reduce(function (all, current) {
+      return all.concat(current)
+    }, [])
   })
 }
 

@@ -292,10 +292,8 @@ const PriceCache = {
     const prices = this.getAll()
     prices[stockId] = parseFloat(price)
     saveData(PRICE_KEY, prices)
-    // 价格变更，清除该股票的持仓缓存
-    if (_positionCache && _positionCache.has(stockId)) {
-      _positionCache.delete(stockId)
-    }
+    // Price changes affect floating PnL, so invalidate derived position data globally.
+    markDataDirty()
   },
 
   get(stockId) {
@@ -449,6 +447,53 @@ function calculatePosition(stockId) {
   return result
 }
 
+function getSellableQuantity(stockId, ignoredTransactionId) {
+  const transactions = Transaction.getByStockId(stockId)
+  const dividends = Dividend.getByStockId(stockId)
+  let buyQuantity = 0
+  let sellQuantity = 0
+  let shareDividendQty = 0
+
+  transactions.forEach(function (t) {
+    if (ignoredTransactionId && t.id === ignoredTransactionId) return
+    if (t.type === TRANSACTION_TYPE.BUY) {
+      buyQuantity += t.quantity || 0
+    } else {
+      sellQuantity += t.quantity || 0
+    }
+  })
+
+  dividends.forEach(function (d) {
+    if (d.type === 'SHARE') shareDividendQty += d.shareQuantity || 0
+  })
+
+  return buyQuantity + shareDividendQty - sellQuantity
+}
+
+function getPortfolioPositions(market = null) {
+  const stocks = market ? Stock.getByMarket(market) : Stock.getAll()
+  const stockIds = stocks.map(s => s.id)
+  batchCalculatePositions(stockIds)
+
+  const positions = stocks.map(stock => {
+    const pos = calculatePosition(stock.id)
+    return {
+      ...stock,
+      ...pos
+    }
+  }).filter(function (p) {
+    return p.quantity > 0 || Math.abs(p.realizedPnL) > 0.01 || Math.abs(p.dividendIncome) > 0.01
+  })
+
+  positions.sort((a, b) => {
+    const aTotal = (a.realizedPnL || 0) + (a.floatingPnL || 0) + (a.dividendIncome || 0)
+    const bTotal = (b.realizedPnL || 0) + (b.floatingPnL || 0) + (b.dividendIncome || 0)
+    return bTotal - aTotal
+  })
+
+  return positions
+}
+
 // 批量计算多个股票的持仓，避免重复读取和过滤
 // 一次性获取所有交易和分红数据，按 stockId 分组后批量计算
 function batchCalculatePositions(stockIds) {
@@ -592,8 +637,8 @@ function getClearedPositions() {
 }
 
 function getTotalStats() {
-  // 使用 getPositionSummary 获取所有持仓，避免重复计算
-  const positions = getPositionSummary()
+  const positions = getPortfolioPositions()
+  const activePositions = positions.filter(function (p) { return p.quantity > 0 })
   
   let totalInvestment = 0
   let totalBuyFee = 0
@@ -612,7 +657,7 @@ function getTotalStats() {
   })
 
   const totalRealizedPnL = positions.reduce((sum, p) => sum + p.realizedPnL, 0)
-  const totalFloatingPnL = positions.reduce((sum, p) => sum + p.floatingPnL, 0)
+  const totalFloatingPnL = activePositions.reduce((sum, p) => sum + p.floatingPnL, 0)
   const totalDividendIncome = positions.reduce((sum, p) => sum + p.dividendIncome, 0)
   const totalPnL = totalRealizedPnL + totalFloatingPnL + totalDividendIncome
   const totalPnLPercent = totalInvestment > 0 ? (totalPnL / totalInvestment * 100) : 0
@@ -961,7 +1006,9 @@ module.exports = {
   getDataCopy,
   clearMemCache,
   calculatePosition,
+  getSellableQuantity,
   getPositionSummary,
+  getPortfolioPositions,
   getAllPositionsWithRealizedPnL,
   getClearedPositions,
   getTotalStats,

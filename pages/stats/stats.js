@@ -1,4 +1,4 @@
-const { getTotalStats, getStatsByPeriod, getPeriodStatsList, getHeatmapData, getClearedPositions, getMixedChartData, getPositionSummary, getStrategyStats, Stock, Transaction, Dividend } = require('../../utils/storage.js')
+const { getStatsByPeriod, getPeriodStatsList, getHeatmapData, getClearedPositions, getMixedChartData, getPositionSummary, getStrategyStats, Stock, Transaction, Dividend } = require('../../utils/storage.js')
 const { fmt, fmtDate } = require('../../utils/format.js')
 const { exportMD } = require('../../utils/export.js')
 const echarts = require('../../components/ec-canvas/echarts')
@@ -384,9 +384,10 @@ Page({
       return s
     })
 
-    // 总计 — 复用 getTotalStats
-    const totalStats = getTotalStats()
     const yearPeriodStats = getStatsByPeriod('YEAR')
+    const yearInvestment = yearPeriodStats.buyAmount + yearPeriodStats.buyFee
+    const yearRecovery = yearPeriodStats.sellAmount - yearPeriodStats.sellFee + yearPeriodStats.dividendIncome
+    const yearPnLPercent = yearInvestment > 0 ? parseFloat((yearPeriodStats.pnL / yearInvestment * 100).toFixed(2)) : 0
 
     this.setData({
       showAnnualReport: true,
@@ -396,11 +397,11 @@ Page({
         buyCount: buyCount,
         sellCount: sellCount,
         winRate: winRate,
-        totalPnL: totalStats.totalPnL,
-        totalPnLText: fmt(Math.abs(totalStats.totalPnL)),
-        totalPnLPercent: totalStats.totalPnLPercent,
-        totalInvestmentText: fmt(totalStats.totalInvestment),
-        totalRecoveryText: fmt(totalStats.totalInvestment + totalStats.totalPnL),
+        totalPnL: yearPeriodStats.pnL,
+        totalPnLText: fmt(Math.abs(yearPeriodStats.pnL)),
+        totalPnLPercent: yearPnLPercent,
+        totalInvestmentText: fmt(yearInvestment),
+        totalRecoveryText: fmt(yearRecovery),
         dividendIncomeText: fmt(yearPeriodStats.dividendIncome),
         monthlyPnL: monthlyPnL,
         topStocks: topStocks,

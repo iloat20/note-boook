@@ -81,7 +81,7 @@
                 <view
                   style="min-height: 24px; min-width: 24px; display: flex; align-items: center; justify-content: center;"
                   data-stock-id="{{item.id}}"
-                  bindtap="onRefreshPrice"
+                  catchtap="onRefreshPrice"
                 >
                   <text class="caption" style="font-size: 14px;">↻</text>
                 </view>

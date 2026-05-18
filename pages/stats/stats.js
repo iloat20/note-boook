@@ -43,7 +43,7 @@ Page({
       { key: 'YEAR', label: '年' }
     ],
     chartsLoaded: { trend: false },
-    ecTrend: { onInit: null },
+    ecTrend: { lazyLoad: true, onInit: null },
     stats: {},
     detailItems: [],
     heatmapData: [],
@@ -94,6 +94,7 @@ Page({
 
     this.setData({
       ecTrend: {
+        lazyLoad: true,
         onInit: function (canvas, width, height, dpr) {
           var chart = echarts.init(canvas, null, { width: width, height: height, dpr: dpr })
           that._charts = that._charts || {}
@@ -164,6 +165,11 @@ Page({
           that.setData({ 'chartsLoaded.trend': true })
           return chart
         }
+      }
+    }, function () {
+      var component = that.selectComponent('#trendChart')
+      if (component && component.init) {
+        component.init()
       }
     })
   },

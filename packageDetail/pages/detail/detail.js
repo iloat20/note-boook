@@ -1,7 +1,10 @@
 // pages/detail/detail.js
-const { Stock, Transaction, Dividend, calculatePosition, PriceCache } = require("../../../utils/storage")
-const { fmt, fmtShortDate, fmtTime } = require("../../../utils/format")
-const { getMarketLabel, getMarketColor } = require("../../../utils/market")
+const { Stock, Transaction, Dividend, PriceCache } = require('../../../utils/models/index')
+const { calculatePosition } = require('../../../utils/services/positionService')
+const { getStrategyStats } = require('../../../utils/services/statsService')
+const { fmt, fmtShortDate, fmtTime } = require("../../../utils/helpers/format")
+const { calcFloatingPercent } = require('../../../utils/helpers/positionCalculator')
+const { getMarketLabel, getMarketColor } = require("../../../utils/constants/market")
 
 Page({
   data: {
@@ -48,10 +51,7 @@ Page({
   },
 
   onShow() {
-    const app = getApp()
-    if (app.globalData.dataDirty) {
-      app.globalData.dataDirty = false
-    }
+    // 始终重新加载数据以反映可能的变更
     this.loadData()
   },
 
@@ -70,7 +70,7 @@ Page({
     const rawTransactions = Transaction.getByStockId(stock.id)
     const transactions = rawTransactions.map(this._formatTransaction.bind(this))
     const dividends = Dividend.getByStockId(stock.id).map(this._formatDividend.bind(this))
-    const strategySummary = this._buildStrategySummary(rawTransactions)
+    const strategySummary = getStrategyStats(rawTransactions)
 
     const marketValue = position.currentPrice && position.quantity > 0
       ? position.currentPrice * position.quantity
@@ -92,7 +92,7 @@ Page({
       formatDividendIncome: fmt(position.dividendIncome),
       floatingPnLClass: position.floatingPnL >= 0 ? "profit" : "loss",
       floatingPnLText: (position.floatingPnL >= 0 ? "+" : "") + fmt(position.floatingPnL),
-      floatingPnLPercent: this._calcFloatingPercent(position),
+      floatingPnLPercent: calcFloatingPercent(position),
       realizedPnLClass: position.realizedPnL >= 0 ? "profit" : "loss",
       realizedPnLText: (position.realizedPnL >= 0 ? "+" : "") + fmt(position.realizedPnL),
       totalPnLClass: totalPnL >= 0 ? "profit" : "loss",
@@ -126,29 +126,6 @@ Page({
     }
   },
 
-  _buildStrategySummary(transactions) {
-    const map = {}
-    transactions.forEach(function (t) {
-      if (!t.strategies || !t.strategies.length) return
-      t.strategies.forEach(function (tag) {
-        if (!map[tag]) map[tag] = { tag: tag, count: 0, buyAmount: 0, sellAmount: 0 }
-        map[tag].count++
-        if (t.type === 'BUY') {
-          map[tag].buyAmount += t.price * t.quantity
-        } else {
-          map[tag].sellAmount += t.price * t.quantity
-        }
-      })
-    })
-    return Object.keys(map).map(function (tag) {
-      const s = map[tag]
-      s.netPnL = parseFloat((s.sellAmount - s.buyAmount).toFixed(2))
-      s.buyAmount = parseFloat(s.buyAmount.toFixed(2))
-      s.sellAmount = parseFloat(s.sellAmount.toFixed(2))
-      return s
-    }).sort(function (a, b) { return b.count - a.count })
-  },
-
   _formatDividend(dividend) {
     return {
       id: dividend.id,
@@ -162,13 +139,6 @@ Page({
       perShareText: fmt(dividend.perShareAmount),
       totalText: fmt(dividend.totalAmount)
     }
-  },
-
-  _calcFloatingPercent(position) {
-    if (position.quantity > 0 && position.avgCost > 0) {
-      return ((position.floatingPnL / (position.avgCost * position.quantity)) * 100).toFixed(2)
-    }
-    return "0.00"
   },
 
   updatePrice(e) {
@@ -186,7 +156,7 @@ Page({
 
   goToRecord() {
     const stockId = this.data.stockId || this._stockId
-    wx.navigateTo({ url: "/pages/record/record?stockId=" + stockId })
+    wx.navigateTo({ url: "/packageRecord/pages/record/record?stockId=" + stockId })
   },
 
   goToDividend() {
@@ -201,7 +171,7 @@ Page({
       itemList: ["编辑", "删除"],
       success: function (res) {
         if (res.tapIndex === 0) {
-          wx.navigateTo({ url: "/pages/record/record?id=" + id })
+          wx.navigateTo({ url: "/packageRecord/pages/record/record?id=" + id })
         } else if (res.tapIndex === 1) {
           wx.showModal({
             title: "确认删除",

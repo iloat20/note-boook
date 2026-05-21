@@ -1,11 +1,14 @@
-const { MARKETS, Stock, Transaction, Dividend, Strategy } = require('../../utils/storage.js')
-const { fmt, fmtDate, fmtTime } = require('../../utils/format.js')
-const { getMarketLabel, getMarketColor } = require('../../utils/market.js')
+const { MARKETS } = require('../../utils/constants/index')
+const { Stock, Transaction, Dividend, Strategy } = require('../../utils/models/index')
+const { fmt, fmtDate, fmtTime } = require('../../utils/helpers/format')
+const { buildStockMap } = require('../../utils/helpers/stockHelpers')
+const { getMarketLabel, getMarketColor } = require('../../utils/constants/market')
+const pageMixin = require('../../utils/ui/pageMixin')
 
 Page({
   data: {
-    statusBarHeight: 0,
-    navBarHeight: 44,
+    ...pageMixin.initPageData(),
+    loading: true,
     currentFilter: 'ALL',
     currentMarket: null,
     currentStrategy: null,
@@ -27,29 +30,24 @@ Page({
     displayCount: 10,  // 初始显示 10 天
     loadingMore: false,
     hasMore: true,
-    sliderLeft: 0,
-    sliderWidth: 0,
     dissolvingId: null,
     searchKeyword: '',
     // 缓存相关
     cacheTimestamp: 0,
-    isFromCache: false
+    isFromCache: false,
+    // 批量选择
+    selectMode: false,
+    selectedIds: [],
+    selectAll: false
   },
 
   onLoad() {
-    this.setData(getApp().getNavBarInfo())
+    pageMixin.onLoadMixin(this)
     this.loadHistory()
   },
 
   onShow() {
-    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-      this.getTabBar().setData({ selected: 1 })
-    }
-    const app = getApp()
-    if (app.globalData.dataDirty) {
-      this.loadHistory()
-      app.globalData.dataDirty = false
-    }
+    pageMixin.onShowMixin(this, 1, this.loadHistory)
   },
 
   // 构建全部记录并缓存，仅在数据变更时调用
@@ -58,13 +56,12 @@ Page({
     const dividends = Dividend.getAll()
     const stocks = Stock.getAll()
 
-    const stockMap = new Map()
-    stocks.forEach(s => stockMap.set(s.id, s))
+    const stockMap = buildStockMap(stocks)
 
     const allRecords = []
 
     transactions.forEach(t => {
-      const stock = stockMap.get(t.stockId)
+      const stock = stockMap[t.stockId]
       if (stock) {
         const date = new Date(t.date)
         const amount = t.type === 'BUY' ? -(t.price * t.quantity + t.fee) : t.price * t.quantity - t.fee
@@ -96,7 +93,7 @@ Page({
     })
 
     dividends.forEach(d => {
-      const stock = stockMap.get(d.stockId)
+      const stock = stockMap[d.stockId]
       if (stock) {
         const date = new Date(d.date)
         allRecords.push({
@@ -173,23 +170,25 @@ Page({
       groupedHistory: displayData,
       hasMore: hasMore,
       loadingMore: false,
-      isFromCache: false,
-      cacheTimestamp: Date.now()
+    isFromCache: false,
+    cacheTimestamp: Date.now()
     })
 
-    this.calculateSliderPosition()
   },
 
   loadHistory() {
     this._buildAllRecords()
-    this.setData({ activeStrategies: Strategy.getUsedStrategies() })
+    this.setData({
+      activeStrategies: Strategy.getUsedStrategies(),
+      loading: false
+    })
     this._applyFilters()
   },
 
-  switchFilter(e) {
-    const filter = e.currentTarget.dataset.filter
+  // 筛选 tab 切换（由 liquid-slider 组件触发）
+  onFilterTabChange(e) {
+    const filter = e.detail.key
     this.setData({ currentFilter: filter })
-    this.calculateSliderPosition()
     this._applyFilters()
   },
 
@@ -204,19 +203,7 @@ Page({
     this.setData({ currentStrategy: strategy || null })
     this._applyFilters()
   },
-
-  calculateSliderPosition() {
-    const systemInfo = getApp().globalData.systemInfo || wx.getWindowInfo() || {}
-    const screenWidth = systemInfo.windowWidth
-    const tabs = this.data.filterTabs
-    const tabWidth = screenWidth / tabs.length
-    const selectedIndex = tabs.findIndex(t => t.key === this.data.currentFilter)
-    this.setData({
-      sliderWidth: tabWidth,
-      sliderLeft: selectedIndex * tabWidth
-    })
-  },
-
+  
   clearSearch() {
     this.setData({ searchKeyword: '' })
     this._applyFilters()
@@ -235,6 +222,70 @@ Page({
       groupedHistory: displayData,
       hasMore: hasMore,
       loadingMore: false
+    })
+  },
+
+  // ========== 批量选择 ==========
+  toggleSelectMode() {
+    this.setData({
+      selectMode: !this.data.selectMode,
+      selectedIds: [],
+      selectAll: false
+    })
+  },
+
+  toggleSelectItem(e) {
+    const id = e.currentTarget.dataset.id
+    let selectedIds = [...this.data.selectedIds]
+    const idx = selectedIds.indexOf(id)
+    if (idx >= 0) {
+      selectedIds.splice(idx, 1)
+    } else {
+      selectedIds.push(id)
+    }
+    this.setData({ selectedIds })
+  },
+
+  toggleSelectAll() {
+    const selectAll = !this.data.selectAll
+    const selectedIds = selectAll ? this._getDisplayIds() : []
+    this.setData({ selectAll, selectedIds })
+  },
+
+  onRecordTap(e) {
+    if (!this.data.selectMode) return
+    this.toggleSelectItem(e)
+  },
+
+  _getDisplayIds() {
+    const ids = []
+    this.data.groupedHistory.forEach(group => {
+      group.items.forEach(item => ids.push(item.id))
+    })
+    return ids
+  },
+
+  batchDelete() {
+    const count = this.data.selectedIds.length
+    if (count === 0) return
+
+    wx.showModal({
+      title: '确认删除',
+      content: `确定要删除选中的 ${count} 条记录吗？`,
+      success: (res) => {
+        if (res.confirm) {
+          wx.showLoading({ title: '删除中...' })
+          const ids = this.data.selectedIds
+          ids.forEach(id => {
+            Transaction.delete(id)
+            Dividend.delete(id)
+          })
+          wx.hideLoading()
+          wx.showToast({ title: `已删除 ${count} 条`, icon: 'success' })
+          this.setData({ selectMode: false, selectedIds: [] })
+          this.loadHistory()
+        }
+      }
     })
   },
 
@@ -262,7 +313,7 @@ Page({
           if (record.type === 'DIVIDEND') {
             wx.navigateTo({ url: `/packageDetail/pages/dividend/dividend?id=${record.id}` })
           } else {
-            wx.navigateTo({ url: `/pages/record/record?id=${record.id}` })
+            wx.navigateTo({ url: `/packageRecord/pages/record/record?id=${record.id}` })
           }
         } else if (action.value === 'delete') {
           wx.showModal({
@@ -289,7 +340,7 @@ Page({
   },
 
   goToRecord() {
-    wx.navigateTo({ url: '/pages/record/record' })
+    wx.navigateTo({ url: '/packageRecord/pages/record/record' })
   },
 
   goToDividend() {

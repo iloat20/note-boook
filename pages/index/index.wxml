@@ -17,173 +17,118 @@
 
   <!-- 非加载状态 -->
   <block wx:else>
+    <!-- 标题栏（仅间距） -->
+    <view class="page-title"></view>
+
     <!-- 汇总卡片 -->
-    <view class="summary-card card" style="margin-bottom: 16px;">
-      <view style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-        <view style="display: flex; align-items: center; gap: 8px;">
-          <text class="caption">总市值</text>
-          <view bindtap="onSharePortfolio" style="display: flex; align-items: center; padding: 2px;">
-            <image src="/images/share.svg" mode="aspectFit" style="width: 12px; height: 12px; opacity: 0.4;" />
-          </view>
-        </view>
-        <text class="caption">总盈亏</text>
-      </view>
-      <view style="display: flex; justify-content: space-between; align-items: baseline;">
-        <text class="title" style="color: var(--color-title);">¥{{displayValues.totalMarketValue}}</text>
-        <view style="text-align: right;">
-          <text class="title {{totalPnL >= 0 ? 'profit' : 'loss'}}">{{totalPnL >= 0 ? '+' : ''}}{{displayValues.totalPnL}}</text>
-          <text class="caption {{totalPnL >= 0 ? 'profit' : 'loss'}}" style="margin-left: 8px;">{{displayValues.totalPnLPercent}}%</text>
+    <view class="summary-card card" style="margin-bottom: var(--xhs-space-lg);">
+      <view style="display: flex; align-items: center; gap: var(--xhs-space-xs); margin-bottom: var(--xhs-space-md);">
+        <text class="caption">总市值</text>
+        <view bindtap="onSharePortfolio" style="display: flex; align-items: center; padding: 2px;">
+          <image src="/images/share.svg" mode="aspectFit" lazy-load="{{true}}" style="width: 24rpx; height: 24rpx; opacity: 0.4;" />
         </view>
       </view>
+      <text class="title mono-num" style="color: var(--xhs-title);">¥{{displayValues.totalMarketValue}}</text>
     </view>
 
     <!-- 市场筛选 -->
-    <view class="liquid-slider" style="margin-bottom: 16px; position: relative;">
-      <view class="liquid-slider-bg" style="left: {{sliderLeft}}px; width: {{sliderWidth}}px;"></view>
-      <view wx:for="{{marketTabs}}" wx:key="key" class="liquid-slider-item {{currentMarket === item.key ? 'active' : ''}}" bindtap="switchMarket" data-market="{{item.key}}">{{item.label}}</view>
-    </view>
+    <liquid-slider
+      tabs="{{marketTabs}}"
+      currentKey="{{currentMarket}}"
+      showCount="{{true}}"
+      bind:change="onMarketTabChange"
+      style="margin-bottom: 16px;"
+    />
 
     <!-- 持仓列表 -->
-    <scroll-view wx:if="{{positions.length > 0}}" class="scroll-container" scroll-y>
+    <scroll-view wx:if="{{positions.length > 0}}" class="scroll-container" scroll-y style="height: {{scrollHeight}}px;">
       <view wx:for="{{positions}}" wx:key="id" class="swipe-container">
         <view class="swipe-actions">
-          <view class="swipe-action-btn swipe-action-edit" data-stock-id="{{item.id}}" bindtap="onSwipeEdit">编辑</view>
-          <view class="swipe-action-btn swipe-action-sell" data-stock-id="{{item.id}}" data-item="{{item}}" bindtap="onSwipeSell">卖出</view>
+          <view class="swipe-action-btn swipe-action-edit" data-stock-id="{{item.id}}" bindtap="onSwipeEdit">
+            <view style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
+              <text>编辑</text>
+              <text style="font-size: 18rpx; opacity: 0.8;">{{item.quantityText}}股</text>
+            </view>
+          </view>
+          <view class="swipe-action-btn swipe-action-sell" data-stock-id="{{item.id}}" data-item="{{item}}" bindtap="onSwipeSell">
+            <view style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
+              <text>卖出</text>
+              <text wx:if="{{item.quantity > 0}}" style="font-size: 18rpx; opacity: 0.8;">可卖{{item.quantityText}}</text>
+            </view>
+          </view>
           <view class="swipe-action-btn swipe-action-delete" data-stock-id="{{item.id}}" bindtap="onSwipeDelete">删除</view>
         </view>
-        <view class="card section swipe-card {{item.swipeOpen ? 'swipe-card-open' : ''}}"
+        <view class="position-card {{item.swipeOpen ? 'swipe-card-open' : ''}}"
+          style="transform: translateX({{item.swipeOffset || 0}}px);"
           bindtouchstart="onTouchStart"
           bindtouchmove="onTouchMove"
           bindtouchend="onTouchEnd"
           bindtap="goToDetail"
           data-stock-id="{{item.id}}"
           data-index="{{index}}">
-          <view style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-            <view class="tag market-{{item.market === 'A_SHARE' ? 'a' : item.market === 'HK_SHARE' ? 'hk' : 'us'}}">{{item.marketLabel}}</view>
-            <text class="body" style="color: var(--color-title); font-weight: var(--weight-title);">{{item.code}}</text>
-            <text class="body">{{item.name}}</text>
+          <view style="display: flex; align-items: center; gap: var(--xhs-space-sm); margin-bottom: var(--xhs-space-md);">
+            <market-tag market="{{item.market}}" label="{{item.marketLabel}}" />
+            <text class="stock-code">{{item.code}}</text>
+            <text class="stock-name">{{item.name}}</text>
           </view>
 
-          <view style="display: flex; gap: 12px; margin-bottom: 12px; align-items: flex-start;">
+          <view style="display: flex; gap: var(--xhs-space-md); margin-bottom: var(--xhs-space-md); align-items: flex-start;">
             <view style="flex: 1;">
               <text class="caption">持仓</text>
-              <view class="body" style="color: var(--color-title);">{{item.quantityText}}股</view>
+              <view class="mono-num" style="color: var(--xhs-title);">{{item.quantityText}}股</view>
             </view>
             <view style="flex: 1;">
               <text class="caption">成本</text>
-              <view class="body" style="color: var(--color-title);">{{item.avgCostText}}</view>
+              <view class="mono-num" style="color: var(--xhs-title);">{{item.avgCostText}}</view>
             </view>
             <view style="flex: 1;">
               <text class="caption">现价</text>
-              <view style="display: flex; align-items: center; gap: 4px;">
-                <text wx:if="{{item.currentPrice > 0}}" class="body" style="color: var(--color-title);">{{item.currentPriceText}}</text>
-                <text wx:else class="caption">--</text>
+              <view class="mono-num {{item.priceFlashClass}}" style="color: var(--xhs-title); display: flex; align-items: center; gap: var(--xhs-space-xs);">
+                <text wx:if="{{item.currentPrice > 0}}">{{item.currentPriceText}}</text>
+                <text wx:else style="color: var(--xhs-caption);">--</text>
                 <view
-                  style="min-height: 24px; min-width: 24px; display: flex; align-items: center; justify-content: center;"
+                  class="refresh-btn"
                   data-stock-id="{{item.id}}"
                   catchtap="onRefreshPrice"
                 >
-                  <text class="caption" style="font-size: 14px;">↻</text>
+                  <text class="refresh-icon">↻</text>
                 </view>
               </view>
             </view>
           </view>
 
-          <view style="display: flex; justify-content: space-between; align-items: center; padding-top: 12px; border-top: 1px solid var(--color-separator);">
-            <text class="body {{item.floatingPnL >= 0 ? 'profit' : 'loss'}}">
+          <view style="display: flex; justify-content: space-between; align-items: center; padding-top: var(--xhs-space-md); border-top: 1px solid var(--xhs-divider);">
+            <text class="mono-num {{item.floatingPnL >= 0 ? 'profit' : 'loss'}}">
               {{item.floatingPnL >= 0 ? '+' : ''}}{{item.floatingPnLText}}
             </text>
-            <text class="caption {{item.floatingPnL >= 0 ? 'profit' : 'loss'}}">
+            <text class="caption mono-num {{item.floatingPnL >= 0 ? 'profit' : 'loss'}}">
               {{item.pnlPercentText}}%
             </text>
           </view>
         </view>
       </view>
-      <view style="height: 100px;"></view>
+      <view style="height: 160rpx;"></view>
     </scroll-view>
 
     <!-- 空状态 -->
-    <view wx:if="{{positions.length === 0}}" class="empty-state">
-      <view style="font-size: 64px; margin-bottom: 16px; opacity: 0.6;">📊</view>
-      <text class="empty-title">暂无持仓</text>
-      <text class="empty-desc">点击右下角 + 按钮添加第一笔交易</text>
-      <view style="margin-top: 24px; padding: 16px 24px; background: var(--color-surface); border-radius: 12px; box-shadow: var(--shadow-sm);">
-        <text class="caption" style="color: var(--color-caption);">💡 小贴士</text>
+    <empty-state 
+      wx:if="{{positions.length === 0}}"
+      icon="📊"
+      title="暂无持仓"
+      desc="点击右下角 + 按钮添加第一笔交易"
+      showSlot="{{true}}"
+    >
+      <view slot="actions" style="margin-top: var(--xhs-space-xl); padding: var(--xhs-space-lg) var(--xhs-space-xl); background: var(--xhs-surface); border-radius: var(--xhs-radius-md); box-shadow: var(--xhs-card-shadow);">
+        <text class="caption" style="color: var(--xhs-caption);">💡 小贴士</text>
         <text class="caption" style="display: block; margin-top: 8px; line-height: 1.6;">添加买入记录后，系统会自动计算持仓成本和浮动盈亏</text>
       </view>
-    </view>
+    </empty-state>
 
     <!-- 添加按钮 -->
     <view class="fab {{showQuickRecord ? 'fab-hidden' : ''}}" bindtap="onQuickRecord" bindlongpress="goToAddTransaction">+</view>
   </block>
 
-  <!-- 快捷记录弹窗 -->
-  <view wx:if="{{showQuickRecord}}" class="qr-overlay" catchtap="closeQuickRecord">
-    <view class="qr-sheet" catchtap="onSheetTap">
-      <view class="qr-handle"></view>
-      <view class="qr-header">
-        <text class="qr-title">快速交易</text>
-        <view class="qr-close" catchtap="closeQuickRecord">✕</view>
-      </view>
-
-      <view class="qr-body">
-        <!-- 买入/卖出切换 -->
-        <view class="qr-type-row">
-          <view class="qr-type-btn {{qrType === 'BUY' ? 'qr-type-buy' : ''}}" catchtap="onQrTypeSelect" data-type="BUY">买入</view>
-          <view class="qr-type-btn {{qrType === 'SELL' ? 'qr-type-sell' : ''}}" catchtap="onQrTypeSelect" data-type="SELL">卖出</view>
-        </view>
-
-        <!-- 股票代码 -->
-        <view class="qr-field">
-          <text class="qr-label">代码</text>
-          <view class="qr-input-wrap">
-            <input class="qr-input" placeholder="输入代码或名称" value="{{qrCode}}" bindinput="onQrCodeInput" />
-            <text wx:if="{{qrName}}" class="qr-name-tag">{{qrName}}</text>
-            <text wx:if="{{qrMarketLabel}}" class="qr-market-tag">{{qrMarketLabel}}</text>
-          </view>
-          <!-- 联想列表 -->
-          <view wx:if="{{showQrSuggestions}}" class="qr-suggestions" catchtap="onSheetTap">
-            <view wx:for="{{qrSuggestions}}" wx:key="code" class="qr-suggestion-item" catchtap="onQrSelectSuggestion" data-item="{{item}}">
-              <text class="qr-suggestion-code">{{item.code}}</text>
-              <text class="qr-suggestion-name">{{item.name}}</text>
-            </view>
-          </view>
-        </view>
-
-        <!-- 价格 -->
-        <view class="qr-field">
-          <text class="qr-label">价格</text>
-          <input class="qr-input" type="digit" placeholder="0.00" value="{{qrPrice}}" bindinput="onQrPriceInput" />
-        </view>
-
-        <!-- 数量 -->
-        <view class="qr-field">
-          <text class="qr-label">数量</text>
-          <view class="qr-qty-row">
-            <view class="qr-qty-btn" catchtap="onQrQtyMinus">−</view>
-            <view class="qr-input-wrap" style="flex: 1;">
-              <input class="qr-input" type="number" placeholder="0" value="{{qrQuantity}}" bindinput="onQrQuantityInput" style="text-align: center;" />
-            </view>
-            <view class="qr-qty-btn" catchtap="onQrQtyPlus">+</view>
-          </view>
-        </view>
-
-        <!-- 费用预览 -->
-        <view class="qr-preview">
-          <view class="qr-preview-row">
-            <text class="qr-preview-label">手续费</text>
-            <text class="qr-preview-value">¥{{qrFeeText}}</text>
-          </view>
-          <view class="qr-preview-row">
-            <text class="qr-preview-label">实际金额</text>
-            <text class="qr-preview-value" style="font-weight: 600;">¥{{qrActualText}}</text>
-          </view>
-        </view>
-      </view>
-
-      <view class="qr-submit" catchtap="submitQuickRecord">确认{{qrType === 'BUY' ? '买入' : '卖出'}}</view>
-    </view>
-  </view>
+  <quick-record visible="{{showQuickRecord}}" bind:close="onQuickRecordClose" bind:submit="onQuickRecordSubmit" />
 
   <!-- 隐藏 canvas 用于生成分享图 -->
   <canvas type="2d" id="shareCanvas" style="position: fixed; left: -9999px; top: 0; width: 375px; height: 667px;"></canvas>

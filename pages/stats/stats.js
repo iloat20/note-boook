@@ -1,39 +1,13 @@
-const { getStatsByPeriod, getPeriodStatsList, getHeatmapData, getClearedPositions, getMixedChartData, getPositionSummary, getStrategyStats, Stock, Transaction, Dividend } = require('../../utils/storage.js')
-const { fmt, fmtDate } = require('../../utils/format.js')
-const { exportMD } = require('../../utils/export.js')
-const echarts = require('../../components/ec-canvas/echarts')
-
-// 缓存渐变对象，避免重复创建
-const gradientCache = {
-  barPositive: null,
-  barNegative: null,
-  lineArea: null
-}
-
-function getCachedGradient(type) {
-  if (gradientCache[type]) return gradientCache[type]
-
-  const gradients = {
-    barPositive: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-      { offset: 0, color: 'rgba(255,107,53,0.9)' },
-      { offset: 1, color: 'rgba(255,107,53,0.2)' }
-    ]),
-    barNegative: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-      { offset: 0, color: 'rgba(26,160,79,0.9)' },
-      { offset: 1, color: 'rgba(26,160,79,0.2)' }
-    ]),
-    lineArea: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-      { offset: 0, color: 'rgba(255,107,53,0.25)' },
-      { offset: 1, color: 'rgba(255,107,53,0.02)' }
-    ])
-  }
-
-  gradientCache[type] = gradients[type]
-  return gradients[type]
-}
+const { getStatsByPeriod, getPeriodStatsList, getStrategyStats } = require('../../utils/services/statsService')
+const { getClearedPositions, getPositionSummary } = require('../../utils/services/positionService')
+const { Stock, Transaction, Dividend } = require('../../utils/models/index')
+const { fmt, fmtDate } = require('../../utils/helpers/format')
+const { buildStockMap } = require('../../utils/helpers/stockHelpers')
+const { exportMD } = require('../../utils/exporters/markdown')
 
 Page({
   data: {
+    loading: true,
     statusBarHeight: 0,
     navBarHeight: 44,
     currentPeriod: 'MONTH',
@@ -42,8 +16,6 @@ Page({
       { key: 'MONTH', label: '月' },
       { key: 'YEAR', label: '年' }
     ],
-    chartsLoaded: { trend: false },
-    ecTrend: { lazyLoad: true, onInit: null },
     stats: {},
     detailItems: [],
     heatmapData: [],
@@ -64,144 +36,31 @@ Page({
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({ selected: 2 })
     }
-    var app = getApp()
-    if (app.globalData.dataDirty) {
-      app.globalData.dataDirty = false
+    const appStore = require('../../utils/state/appStore')
+    if (appStore.getState('dataDirty')) {
+      appStore.commit('MARK_CLEAN')
     }
     this.loadStats()
-    this.loadHeatmap()
-    if (this._charts) {
-      this.updateCharts()
-    } else {
-      this.initCharts()
-    }
-  },
-
-  onHide() {
-    // 页面隐藏时不销毁图表（ec-canvas 事件仍会触发），仅标记状态
-    this._chartsHidden = true
+    this.setData({ loading: false })
   },
 
   onUnload() {
-    if (this._charts) {
-      if (this._charts.trend) { this._charts.trend.dispose(); this._charts.trend = null }
-      this._charts = null
-    }
-  },
-
-  initCharts() {
-    var that = this
-
-    this.setData({
-      ecTrend: {
-        lazyLoad: true,
-        onInit: function (canvas, width, height, dpr) {
-          var chart = echarts.init(canvas, null, { width: width, height: height, dpr: dpr })
-          that._charts = that._charts || {}
-          that._charts.trend = chart
-          var mixed = getMixedChartData(that.data.currentPeriod, 12)
-          var option = {
-            backgroundColor: 'transparent',
-            tooltip: { trigger: 'axis' },
-            legend: {
-              data: ['月度盈亏', '累计收益'],
-              top: 0,
-              textStyle: { fontSize: 11, color: '#666' }
-            },
-            grid: { left: 45, right: 45, top: 40, bottom: 35 },
-            xAxis: {
-              type: 'category',
-              data: mixed.labels,
-              axisLabel: { color: '#999', fontSize: 10 },
-              axisLine: { lineStyle: { color: '#eee' } }
-            },
-            yAxis: [
-              {
-                type: 'value',
-                axisLabel: { color: '#999', fontSize: 10 },
-                splitLine: { lineStyle: { color: '#f0f0f0' } }
-              },
-              {
-                type: 'value',
-                axisLabel: { color: '#999', fontSize: 10 }
-              }
-            ],
-            progressive: 200,
-            progressiveThreshold: 10,
-            series: [
-              {
-                name: '月度盈亏',
-                type: 'bar',
-                data: mixed.barData,
-                large: mixed.barData.length > 20,
-                itemStyle: {
-                  color: function (params) {
-                    return params.value >= 0 ? getCachedGradient('barPositive') : getCachedGradient('barNegative')
-                  },
-                  borderRadius: [3, 3, 0, 0],
-                  shadowBlur: 4,
-                  shadowColor: 'rgba(0,0,0,0.1)'
-                },
-                animationDuration: 600,
-                animationEasing: 'cubicOut'
-              },
-              {
-                name: '累计收益',
-                type: 'line',
-                yAxisIndex: 1,
-                data: mixed.lineData,
-                smooth: true,
-                sampling: 'lttb',  // 120Hz 下降采样，减少绘制压力
-                large: mixed.lineData.length > 20,
-                lineStyle: { width: 3, shadowBlur: 8, shadowColor: 'rgba(255,107,53,0.3)' },
-                itemStyle: { color: '#FF6B35' },
-                areaStyle: { color: getCachedGradient('lineArea') },
-                animationDuration: 800,
-                animationEasing: 'cubicOut'
-              }
-            ]
-          }
-          chart.setOption(option)
-          that.setData({ 'chartsLoaded.trend': true })
-          return chart
-        }
-      }
-    }, function () {
-      var component = that.selectComponent('#trendChart')
-      if (component && component.init) {
-        component.init()
-      }
-    })
-  },
-
-  updateCharts: function () {
-    var period = this.data.currentPeriod
-    if (this._charts && this._charts.trend) {
-      var mixed = getMixedChartData(period, 12)
-      this._charts.trend.setOption({
-        xAxis: { data: mixed.labels },
-        series: [{ data: mixed.barData }, { data: mixed.lineData }]
-      })
-    }
   },
 
   switchPeriod: function (e) {
     this.setData({ currentPeriod: e.currentTarget.dataset.period }, () => {
       this.loadStats()
-      if (this._charts) {
-        this.updateCharts()
-      } else {
-        this.initCharts()
-      }
     })
   },
 
   loadStats: function () {
-    var period = this.data.currentPeriod
-    var stats = getStatsByPeriod(period)
-    var totalInvestment = stats.buyAmount + stats.buyFee
-    var totalRecover = stats.sellAmount - stats.sellFee
-    var totalPnL = stats.pnL
+    const period = this.data.currentPeriod
+    const stats = getStatsByPeriod(period)
+    const totalInvestment = stats.buyAmount + stats.buyFee
+    const totalRecover = stats.sellAmount - stats.sellFee
+    const totalPnL = stats.pnL
+
+    const totalReturnRate = totalInvestment > 0 ? (totalPnL / totalInvestment) * 100 : 0
 
     this.setData({
       stats: {
@@ -211,25 +70,25 @@ Page({
         totalInvestmentText: fmt(totalInvestment),
         totalRecoverText: fmt(totalRecover),
         totalPnLText: fmt(totalPnL),
+        totalReturnRateText: (totalReturnRate >= 0 ? '+' : '') + totalReturnRate.toFixed(2) + '%',
         dividendIncomeText: fmt(stats.dividendIncome),
         totalBuyFeeText: fmt(stats.buyFee),
         totalSellFeeText: fmt(stats.sellFee)
       }
     })
 
-    var detailItems = [
+    const detailItems = [
       { label: '已实现盈亏', value: fmt(totalPnL), prefix: totalPnL >= 0 ? '+' : '', colorClass: totalPnL >= 0 ? 'profit' : 'loss' },
       { label: '分红收益', value: fmt(stats.dividendIncome), prefix: '+', colorClass: 'profit' },
       { label: '买入手续费', value: fmt(stats.buyFee), prefix: '-', colorClass: '' },
       { label: '卖出手续费', value: fmt(stats.sellFee), prefix: '-', colorClass: '' }
     ]
-    var stocks = Stock.getAll()
-    var stockMap = {}
-    stocks.forEach(function (s) { stockMap[s.id] = s })
+    const stocks = Stock.getAll()
+    const stockMap = buildStockMap(stocks)
     
     // 优化：分别构建交易和分红列表，避免大数组 concat + sort
-    var txList = Transaction.getAll().map(function (t) {
-      var stock = stockMap[t.stockId]
+    const txList = Transaction.getAll().map(function (t) {
+      const stock = stockMap[t.stockId]
       return {
         id: t.id,
         stockId: t.stockId,
@@ -244,8 +103,8 @@ Page({
       }
     })
     
-    var divList = Dividend.getAll().map(function (d) {
-      var stock = stockMap[d.stockId]
+    const divList = Dividend.getAll().map(function (d) {
+      const stock = stockMap[d.stockId]
       return {
         id: d.id,
         stockId: d.stockId,
@@ -261,8 +120,8 @@ Page({
     })
     
     // 按日期倒序合并两个已排序数组（O(n) 而非 O(n log n)）
-    var completeTrades = []
-    var i = 0, j = 0
+    let completeTrades = []
+    let i = 0, j = 0
     while (i < txList.length && j < divList.length) {
       if ((txList[i].dateText || '') >= (divList[j].dateText || '')) {
         completeTrades.push(txList[i]); i++
@@ -273,8 +132,8 @@ Page({
     while (i < txList.length) { completeTrades.push(txList[i]); i++ }
     while (j < divList.length) { completeTrades.push(divList[j]); j++ }
     
-    var clearedPositions = getClearedPositions().map(function (p) {
-      var totalPnL = p.realizedPnL + p.dividendIncome
+    const clearedPositions = getClearedPositions().map(function (p) {
+      const totalPnL = p.realizedPnL + p.dividendIncome
       return Object.assign({}, p, {
         totalPnL: totalPnL,
         totalPnLText: fmt(totalPnL),
@@ -284,48 +143,6 @@ Page({
       })
     })
     this.setData({ detailItems: detailItems, completeTrades: completeTrades, clearedPositions: clearedPositions })
-  },
-
-  loadHeatmap: function () {
-    var raw = getHeatmapData(this.data.heatmapYear, this.data.heatmapMonth)
-    var dayMap = {}
-    raw.forEach(function (item) { dayMap[item.day] = item })
-
-    var firstDay = new Date(this.data.heatmapYear, this.data.heatmapMonth - 1, 1)
-    var lastDay = new Date(this.data.heatmapYear, this.data.heatmapMonth, 0)
-    var daysInMonth = lastDay.getDate()
-    var startDow = firstDay.getDay()
-
-    var grid = []
-    for (var i = 0; i < startDow; i++) {
-      grid.push({ day: 0, count: 0, amount: 0, level: 0 })
-    }
-    for (var d = 1; d <= daysInMonth; d++) {
-      grid.push(dayMap[d] || { day: d, count: 0, amount: 0, level: 0 })
-    }
-
-    var label = this.data.heatmapYear + '年' + this.data.heatmapMonth + '月'
-    this.setData({ heatmapData: grid, heatmapLabel: label })
-  },
-
-  prevMonth: function () {
-    var heatmapYear = this.data.heatmapYear
-    var heatmapMonth = this.data.heatmapMonth
-    heatmapMonth--
-    if (heatmapMonth === 0) { heatmapMonth = 12; heatmapYear-- }
-    this.setData({ heatmapYear: heatmapYear, heatmapMonth: heatmapMonth }, () => {
-      this.loadHeatmap()
-    })
-  },
-
-  nextMonth: function () {
-    var heatmapYear = this.data.heatmapYear
-    var heatmapMonth = this.data.heatmapMonth
-    heatmapMonth++
-    if (heatmapMonth === 13) { heatmapMonth = 1; heatmapYear++ }
-    this.setData({ heatmapYear: heatmapYear, heatmapMonth: heatmapMonth }, () => {
-      this.loadHeatmap()
-    })
   },
 
   onExportMD: function () {

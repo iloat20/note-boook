@@ -1,0 +1,207 @@
+<view class="page-container" style="padding-top: {{statusBarHeight}}px;">
+  <!-- 导航栏 -->
+  <view class="nav-bar" style="height: {{navBarHeight}}px;">
+    <view class="nav-back" bindtap="goBack">
+      <view class="nav-back-circle">
+        <text class="nav-back-arrow">‹</text>
+      </view>
+    </view>
+    <text class="nav-title">{{isEdit ? (type === 'SELL' ? '编辑卖出交易' : '编辑买入交易') : (type === 'SELL' ? '编辑卖出交易' : '编辑交易')}}</text>
+  </view>
+
+  <scroll-view class="scroll-container" scroll-y="true">
+    <!-- 基本信息 -->
+    <view class="record-section">
+      <text class="section-title">基本信息</text>
+      <view class="record-card">
+        <!-- 市场选择 -->
+        <view class="segmented-control">
+          <view wx:for="{{markets}}" wx:key="key"
+            class="segment-item {{market === item.key ? 'segment-active' : ''}}"
+            bindtap="selectMarket" data-market="{{item.key}}">
+            {{item.label}}
+          </view>
+        </view>
+
+        <!-- 股票代码 -->
+        <view class="field-group">
+          <text class="field-label">股票代码</text>
+          <input class="record-input"
+            placeholder="请输入股票代码"
+            value="{{code}}"
+            bindinput="onCodeInput"
+            bindblur="hideSuggestions"/>
+          <text wx:if="{{codeError}}" class="field-error">{{codeError}}</text>
+          <!-- 搜索建议 -->
+          <view wx:if="{{showSuggestions}}" class="suggestions-dropdown">
+            <view wx:for="{{suggestions}}" wx:key="code"
+              class="suggestion-item"
+              bindtap="onSelectSuggestion" data-item="{{item}}">
+              <text class="suggestion-code">{{item.code}}</text>
+              <text class="suggestion-name">{{item.name}}</text>
+            </view>
+          </view>
+        </view>
+
+        <!-- 股票名称 -->
+        <view class="field-group">
+          <text class="field-label">股票名称</text>
+          <input class="record-input"
+            placeholder="请输入股票名称"
+            value="{{name}}"
+            bindinput="onNameInput"/>
+        </view>
+
+        <!-- 买卖切换 -->
+        <view class="segmented-control">
+          <view class="segment-item {{type === 'BUY' ? 'segment-active' : ''}}" bindtap="selectType" data-type="BUY">买入</view>
+          <view class="segment-item {{type === 'SELL' ? 'segment-active' : ''}}" bindtap="selectType" data-type="SELL">卖出</view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 交易详情 -->
+    <view class="record-section">
+      <text class="section-title">交易详情</text>
+      <view class="record-card">
+        <view class="field-group">
+          <text class="field-label">成交价格</text>
+          <input class="record-input" type="digit" placeholder="0.00" value="{{price}}" bindinput="onPriceInput"/>
+        </view>
+
+        <view class="field-group">
+          <text class="field-label">成交数量（股）</text>
+          <input class="record-input" type="digit" placeholder="0" value="{{quantity}}" bindinput="onQuantityInput"/>
+        </view>
+
+        <view class="field-group">
+          <text class="field-label">手续费</text>
+          <input class="record-input" type="digit" placeholder="0.00" value="{{fee}}" bindinput="onFeeInput"/>
+          <view wx:if="{{feePreview.length}}" class="fee-breakdown">
+            <view wx:for="{{feePreview}}" wx:key="name" class="fee-item">
+              <text class="fee-name">{{item.name}}</text>
+              <text class="fee-value">{{item.vt}}</text>
+            </view>
+          </view>
+        </view>
+
+        <view class="field-row">
+          <view class="field-group field-half">
+            <text class="field-label">交易日期</text>
+            <picker mode="date" value="{{date}}" bindchange="onDateChange">
+              <view class="record-input picker-input">
+                <text class="{{date ? '' : 'picker-placeholder'}}">{{date || '选择日期'}}</text>
+                <text class="picker-arrow">›</text>
+              </view>
+            </picker>
+          </view>
+          <view class="field-group field-half">
+            <text class="field-label">交易时间</text>
+            <picker mode="time" value="{{time}}" bindchange="onTimeChange">
+              <view class="record-input picker-input">
+                <text class="{{time ? '' : 'picker-placeholder'}}">{{time || '选择时间'}}</text>
+                <text class="picker-arrow">›</text>
+              </view>
+            </picker>
+          </view>
+        </view>
+
+        <view class="field-group field-last">
+          <text class="field-label">备注（选填）</text>
+          <textarea class="record-input record-textarea"
+            placeholder="添加备注..."
+            value="{{note}}"
+            bindinput="onNoteInput"/>
+        </view>
+      </view>
+    </view>
+
+    <!-- 交易笔记 -->
+    <view class="record-section">
+      <view class="record-card">
+        <view class="journal-toggle" bindtap="toggleJournal">
+          <text class="journal-title">交易笔记</text>
+          <text class="journal-optional">选填</text>
+          <view class="journal-spacer"></view>
+          <view wx:if="{{strategies.length > 0 || reason}}" class="journal-badges">
+            <view wx:if="{{strategies.length > 0}}" class="journal-badge">{{strategies.length}}个标签</view>
+            <view wx:if="{{reason}}" class="journal-badge">已填理由</view>
+          </view>
+          <text class="journal-arrow {{showJournal ? 'journal-arrow-open' : ''}}">›</text>
+        </view>
+
+        <view wx:if="{{showJournal}}" class="journal-body">
+          <view class="field-group">
+            <text class="field-label">策略标签</text>
+            <view class="tag-list">
+              <view wx:for="{{strategies}}" wx:key="*this"
+                class="tag-item tag-selected" bindtap="removeStrategy" data-tag="{{item}}">
+                <text>{{item}}</text>
+                <text class="tag-remove">×</text>
+              </view>
+              <view class="tag-item tag-add" bindtap="openStrategyPicker">+ 添加标签</view>
+            </view>
+          </view>
+          <view class="field-group field-last">
+            <text class="field-label">{{type === 'BUY' ? '买入' : '卖出'}}理由</text>
+            <textarea class="record-input record-textarea"
+              placeholder="{{type === 'BUY' ? '为什么买入这只股票？' : '为什么卖出？'}}"
+              value="{{reason}}"
+              bindinput="onReasonInput"/>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 策略选择弹窗 -->
+    <view wx:if="{{showStrategyPicker}}" class="picker-overlay" bindtap="closeStrategyPicker">
+      <view class="picker-sheet" catchtap="">
+        <view class="picker-header">
+          <text class="picker-title">选择策略标签</text>
+          <view class="picker-done" bindtap="confirmStrategyPicker">
+            <text>完成</text>
+          </view>
+        </view>
+        <view class="picker-custom">
+          <input class="record-input picker-custom-input"
+            placeholder="输入自定义标签..."
+            value="{{customStrategyInput}}"
+            bindinput="onCustomStrategyInput"/>
+          <view class="tag-item tag-add picker-custom-btn" bindtap="addCustomStrategy">添加</view>
+        </view>
+        <view class="picker-tag-list">
+          <view wx:for="{{allStrategies}}" wx:key="*this"
+            class="tag-item {{strategies.indexOf(item) >= 0 ? 'tag-selected' : ''}}"
+            bindtap="toggleStrategy" data-tag="{{item}}">
+            {{item}}
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 预览 -->
+    <view class="record-section">
+      <text class="section-title">预览</text>
+      <view class="record-card preview-card">
+        <view class="preview-row">
+          <text class="preview-label">交易金额</text>
+          <text class="preview-value">{{amountText}}</text>
+        </view>
+        <view class="preview-divider"></view>
+        <view class="preview-row">
+          <text class="preview-label preview-label-bold">实际{{type === 'BUY' ? '支出' : '收入'}}</text>
+          <text class="preview-value preview-value-bold">{{actualText}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="bottom-spacer"></view>
+  </scroll-view>
+
+  <!-- 底部确认按钮 -->
+  <view class="submit-bar">
+    <view class="submit-btn" bindtap="submit">
+      {{isEdit ? (type === 'SELL' ? '保存卖出修改' : '保存买入修改') : (type === 'SELL' ? '确认卖出' : '确认保存')}}
+    </view>
+  </view>
+</view>

@@ -1,433 +1,385 @@
-/* stats.wxss - Liquid Glass Design */
+/* ═════════════════════════════════════════╗
+   小红书风格 - 统计页 v2
+   ╚════════════════════════════════════════╝ */
 
-/* === Glass Card === */
-.card-glass {
-  background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border-radius: var(--glass-radius);
-  border: 0.5px solid var(--glass-border);
-  box-shadow: var(--glass-shadow-out), var(--glass-shadow-in);
-  padding: var(--space-card-pad);
-  transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
-}
-.card-glass::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.9), transparent);
-  pointer-events: none;
+@import '../../styles/common.wxss';
+
+page {
+  background: var(--xhs-bg);
 }
 
-.card-glass-sm {
-  background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border-radius: var(--glass-radius);
-  border: 0.5px solid var(--glass-border);
-  box-shadow: var(--glass-shadow-out), var(--glass-shadow-in);
-  padding: var(--space-card-pad);
-  transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
-}
-.card-glass-sm::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.9), transparent);
-  pointer-events: none;
+/* === 骨架屏 === */
+.skeleton-container {
+  padding-top: var(--xhs-space-lg);
 }
 
-/* === Heatmap Liquid Glass === */
-.heatmap-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
+.page-title {
+  margin-bottom: var(--xhs-space-lg);
 }
 
-.heatmap-nav {
-  min-height: 44px;
-  min-width: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-caption);
-  font-size: 24px;
-  background: var(--glass-bg);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-radius: 12px;
-  border: 0.5px solid var(--glass-border);
-  transition: all 200ms ease;
-  position: relative;
-  z-index: 1;
+.page-title-text {
+  font-size: var(--xhs-font-4xl);
+  font-weight: var(--xhs-weight-bold);
+  color: var(--xhs-title);
+  letter-spacing: -0.02em;
+  line-height: 1.15;
 }
 
-.heatmap-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  padding: 4px;
-}
-
-.heatmap-cell {
-  width: calc((100% - 36px) / 7);
-  aspect-ratio: 1;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--glass-bg);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 0.5px solid var(--glass-border);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), inset 0 0.5px 0 rgba(255, 255, 255, 0.7);
-  transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
-}
-
-.heatmap-cell::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 50%;
-  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.5), transparent);
-  border-radius: 10px 10px 0 0;
-  pointer-events: none;
-}
-
-.heatmap-day {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--color-caption);
-  position: relative;
-  z-index: 1;
-}
-
-/* Heatmap Levels with iOS Glass */
-.heatmap-level-0 {
-  background: rgba(0, 0, 0, 0.03);
-}
-
-.heatmap-level-1 {
-  background: rgba(255, 59, 48, 0.08);
-  border-color: rgba(255, 59, 48, 0.15);
-  box-shadow: 0 2px 8px rgba(255, 59, 48, 0.06), inset 0 0.5px 0 rgba(255, 255, 255, 0.6);
-}
-
-.heatmap-level-2 {
-  background: rgba(255, 59, 48, 0.15);
-  border-color: rgba(255, 59, 48, 0.22);
-  box-shadow: 0 3px 10px rgba(255, 59, 48, 0.1), inset 0 0.5px 0 rgba(255, 255, 255, 0.6);
-}
-
-.heatmap-level-3 {
-  background: rgba(255, 59, 48, 0.25);
-  border-color: rgba(255, 59, 48, 0.35);
-  box-shadow: 0 4px 12px rgba(255, 59, 48, 0.15), inset 0 0.5px 0 rgba(255, 255, 255, 0.5);
-}
-
-.heatmap-level-3 .heatmap-day {
-  color: #FF3B30;
-  font-weight: 600;
-}
-
-.heatmap-level-4 {
-  background: rgba(255, 59, 48, 0.4);
-  border-color: rgba(255, 59, 48, 0.5);
-  box-shadow: 0 4px 16px rgba(255, 59, 48, 0.25), inset 0 0.5px 0 rgba(255, 255, 255, 0.4);
-}
-
-.heatmap-level-4 .heatmap-day {
-  color: #FF3B30;
-  font-weight: 700;
-}
-
-/* === Heatmap Legend === */
-.heatmap-legend {
+/* === 时段选择 (pill 风格) === */
+.period-tabs {
   display: flex;
   justify-content: center;
-  align-items: center;
-  gap: 8px;
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.3);
+  gap: var(--xhs-space-sm);
+  padding: var(--xhs-space-md) 0;
+  margin-bottom: var(--xhs-space-sm);
 }
 
-.legend-item {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 10px;
-  color: var(--color-caption);
-}
-
-.legend-color {
-  width: 12px;
-  height: 12px;
-  border-radius: 3px;
-  border: 0.5px solid rgba(255, 255, 255, 0.4);
-}
-
-/* === Tab Bar Frosted Glass === */
-.tab-bar-line {
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-  padding: 12px 16px;
-  background: rgba(242, 242, 247, 0.6);
-  backdrop-filter: saturate(180%) blur(40px);
-  -webkit-backdrop-filter: saturate(180%) blur(40px);
-  border-bottom: 0.5px solid rgba(255, 255, 255, 0.5);
-  position: sticky;
-  top: 0;
-  z-index: 10;
-}
-
-.tab-line-item {
+.period-tab {
   flex: 1;
-  max-width: 100px;
-  height: 36px;
+  max-width: 120rpx;
+  height: 72rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
-  color: var(--color-caption);
-  background: transparent;
-  border-radius: 10px;
-  transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: var(--xhs-font-md);
+  color: var(--xhs-caption);
+  font-weight: var(--xhs-weight-medium);
+  border-radius: var(--xhs-radius-pill);
+  transition: var(--xhs-transition);
+}
+
+.period-active {
+  color: #1C1C1E;
+  font-weight: var(--xhs-weight-semibold);
   position: relative;
-  overflow: hidden;
+  background: transparent;
+  border: none;
 }
 
-.tab-line-active {
-  color: var(--color-accent);
-  font-weight: 600;
-  background: var(--glass-bg);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 0.5px solid var(--glass-border);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06), inset 0 0.5px 0 rgba(255, 255, 255, 0.7);
+.period-active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 24rpx;
+  height: 4rpx;
+  background: #FF2442;
+  border-radius: 2rpx;
 }
 
-/* === Stats Card Grid === */
+/* === 统计卡片网格 === */
 .stats-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: var(--space-module);
-  padding-top: 12px;
+  gap: var(--xhs-space-sm);
+  margin-bottom: var(--xhs-space-xl);
 }
 
 .stat-card {
-  background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border-radius: var(--glass-radius);
-  border: 0.5px solid var(--glass-border);
-  box-shadow: var(--glass-shadow-out), var(--glass-shadow-in);
-  padding: 16px;
-  transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
+  background: var(--xhs-surface);
+  border-radius: var(--xhs-radius-md);
+  box-shadow: var(--xhs-card-shadow);
+  padding: var(--xhs-space-md);
+  transition: var(--xhs-transition-slow);
   width: calc(50% - 6px);
   box-sizing: border-box;
 }
 
-.stat-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.9), transparent);
-  pointer-events: none;
+.stat-card:active {
+  transform: scale(0.97);
 }
+
+/* 统计卡片顶部色条 */
+.stat-card:nth-child(1) { border-top: 4rpx solid var(--xhs-primary); }
+.stat-card:nth-child(2) { border-top: 4rpx solid var(--xhs-market-a); }
+.stat-card:nth-child(3) { border-top: 4rpx solid var(--xhs-market-hk); }
+.stat-card:nth-child(4) { border-top: 4rpx solid var(--xhs-market-us); }
 
 .stat-label {
-  font-size: 12px;
-  color: var(--color-caption);
-  font-weight: 400;
+  font-size: var(--xhs-font-sm);
+  color: var(--xhs-caption);
+  font-weight: var(--xhs-weight-medium);
   display: block;
-  margin-bottom: 4px;
-  position: relative;
-  z-index: 1;
-}
-
-.stat-value {
-  font-size: 20px;
-  color: var(--color-title);
-  font-weight: 600;
-  display: block;
-  position: relative;
-  z-index: 1;
-}
-
-/* === Section Title === */
-.section-title {
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--color-title);
-  display: block;
-  margin-bottom: 12px;
+  margin-bottom: var(--xhs-space-xs);
   letter-spacing: 0.02em;
 }
 
-/* === List Item Glass === */
-.list-item-glass {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 0;
-  border-bottom: 0.5px solid rgba(60, 60, 67, 0.08);
-  transition: all 200ms ease;
+.stat-value {
+  font-size: var(--xhs-font-2xl);
+  color: var(--xhs-title);
+  font-weight: var(--xhs-weight-bold);
+  display: block;
+  letter-spacing: 0.01em;
 }
 
-.list-item-glass:last-child {
+.stat-profit { color: var(--xhs-profit); }
+.stat-loss { color: var(--xhs-loss); }
+
+/* === Section 通用 === */
+.section {
+  margin-bottom: var(--xhs-space-xl);
+}
+
+.section-title {
+  font-size: var(--xhs-font-2xl);
+  font-weight: var(--xhs-weight-semibold);
+  color: var(--xhs-title);
+  display: block;
+  letter-spacing: -0.01em;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--xhs-space-md);
+}
+
+/* === XHS Card (替代旧的 card-glass) === */
+.xhs-card {
+  background: var(--xhs-surface);
+  border-radius: var(--xhs-radius-md);
+  box-shadow: var(--xhs-card-shadow);
+  padding: var(--xhs-space-lg);
+  position: relative;
+  overflow: hidden;
+  transition: var(--xhs-transition-slow);
+}
+
+/* === 热力图 === */
+/* === 明细列表 === */
+.detail-list {
+  max-height: 800rpx;
+  overflow-y: auto;
+}
+
+.detail-item {
+  padding: var(--xhs-space-md) 0;
+  border-bottom: 1px solid var(--xhs-divider);
+  transition: var(--xhs-transition);
+}
+
+.detail-item:last-child {
   border-bottom: none;
 }
 
-/* === Empty State Glass === */
-.empty-state-glass {
-  text-align: center;
-  padding: 40px 20px;
-  color: var(--color-caption);
-  font-size: 14px;
-}
-
-/* === Chart Box === */
-.chart-box {
-  width: 100%;
-  height: 220px;
-  min-height: 220px;
-  position: relative;
-  padding: 0;
-  overflow: hidden;
-}
-
-.chart-box ec-canvas {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
-/* === Chart Skeleton Loading === */
-.chart-skeleton {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+.detail-top {
   display: flex;
-  align-items: flex-end;
-  justify-content: space-around;
-  padding: 40px 20px 40px 40px;
-  z-index: 10;
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--xhs-space-xs);
 }
 
-.skeleton-bar {
+.detail-info {
+  display: flex;
+  align-items: center;
+  gap: var(--xhs-space-sm);
   flex: 1;
-  margin: 0 4px;
-  background: linear-gradient(135deg, rgba(255, 59, 48, 0.15), rgba(255, 59, 48, 0.06));
-  border-radius: 4px 4px 0 0;
-  animation: chart-shimmer 1.5s infinite;
-  position: relative;
-  overflow: hidden;
+  min-width: 0;
 }
 
-.skeleton-bar::after {
+.detail-code {
+  font-size: var(--xhs-font-md);
+  font-weight: var(--xhs-weight-semibold);
+  color: var(--xhs-title);
+}
+
+.detail-name {
+  font-size: var(--xhs-font-sm);
+  color: var(--xhs-caption);
+}
+
+.detail-amount {
+  font-size: var(--xhs-font-lg);
+  font-weight: var(--xhs-weight-semibold);
+  letter-spacing: 0.01em;
+  color: var(--xhs-title);
+  flex-shrink: 0;
+}
+
+.detail-date {
+  font-size: var(--xhs-font-sm);
+  color: var(--xhs-caption);
+}
+
+.detail-meta {
+  display: flex;
+  gap: var(--xhs-space-lg);
+  margin-top: var(--xhs-space-xs);
+}
+
+.detail-meta text {
+  font-size: var(--xhs-font-sm);
+  color: var(--xhs-caption);
+}
+
+.detail-empty {
+  text-align: center;
+  padding: 60rpx 0;
+  font-size: var(--xhs-font-md);
+  color: var(--xhs-caption);
+}
+
+/* === 综合明细行 === */
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--xhs-space-md) 0;
+  border-bottom: 1px solid var(--xhs-divider);
+}
+
+.detail-row:last-child {
+  border-bottom: none;
+}
+
+.detail-row-label {
+  font-size: var(--xhs-font-md);
+  color: var(--xhs-body);
+}
+
+.detail-row-value {
+  font-size: var(--xhs-font-lg);
+  font-weight: var(--xhs-weight-semibold);
+  letter-spacing: 0.01em;
+}
+
+/* === 按钮 === */
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24rpx;
+  height: 24rpx;
+  flex-shrink: 0;
+}
+
+/* 下载图标：向下箭头 + 底部横线 */
+.icon-download {
+  position: relative;
+  width: 24rpx;
+  height: 24rpx;
+}
+.icon-download::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
-  animation: chart-shimmer-slide 1.5s infinite;
+  bottom: 2rpx;
+  left: 2rpx;
+  right: 2rpx;
+  height: 2rpx;
+  background: currentColor;
+  border-radius: 1rpx;
 }
-
-/* === Trend Chart Skeleton === */
-.skeleton-line {
+.icon-download::after {
+  content: '';
   position: absolute;
-  left: 50px;
-  right: 20px;
-  height: 2px;
-  background: linear-gradient(90deg, rgba(255, 59, 48, 0.2), rgba(255, 59, 48, 0.08));
-  border-radius: 1px;
-  animation: chart-shimmer 1.5s infinite;
+  top: 4rpx;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 6rpx solid transparent;
+  border-right: 6rpx solid transparent;
+  border-top: 8rpx solid currentColor;
 }
 
-.skeleton-bar-group {
+/* 报告图标：文档 + 折角 */
+.icon-report {
+  position: relative;
+  width: 24rpx;
+  height: 24rpx;
+}
+.icon-report::before {
+  content: '';
   position: absolute;
-  bottom: 40px;
-  left: 50px;
-  right: 20px;
-  height: 150px;
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-around;
+  top: 2rpx;
+  left: 2rpx;
+  right: 2rpx;
+  bottom: 2rpx;
+  border: 2rpx solid currentColor;
+  border-radius: 3rpx;
+}
+.icon-report::after {
+  content: '';
+  position: absolute;
+  top: 8rpx;
+  left: 8rpx;
+  right: 2rpx;
+  height: 2rpx;
+  background: currentColor;
+  border-radius: 1rpx;
+  box-shadow: 0 6rpx 0 currentColor;
 }
 
-.skeleton-bar-small {
-  width: 20px;
-  height: 40%;
-  background: linear-gradient(135deg, rgba(255, 59, 48, 0.2), rgba(255, 59, 48, 0.08));
-  border-radius: 3px 3px 0 0;
-  animation: chart-shimmer 1.5s infinite;
-  animation-delay: inherit;
-}
-
-/* === Scatter Chart Skeleton === */
-.scatter-skeleton {
-  justify-content: center;
+.export-btn {
+  display: inline-flex;
   align-items: center;
+  gap: 4rpx;
+  padding: 4rpx 16rpx;
+  border: 1px solid var(--xhs-divider-strong);
+  border-radius: var(--xhs-radius-pill);
+  font-size: var(--xhs-font-sm);
+  color: var(--xhs-title);
+  font-weight: var(--xhs-weight-medium);
+  transition: var(--xhs-transition);
+  min-height: 48rpx;
 }
 
-.skeleton-dot {
-  position: absolute;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 59, 48, 0.2), rgba(255, 59, 48, 0.08));
-  animation: chart-shimmer 1.5s infinite;
-  animation-delay: inherit;
+.export-btn:active {
+  background: var(--xhs-bg-secondary);
+  transform: scale(0.96);
 }
 
-/* === Annual Report Button (Frosted Glass) === */
-.annual-report-btn {
-  padding: 6px 14px;
-  background: var(--glass-bg);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 0.5px solid var(--glass-border);
-  border-radius: 8px;
-  margin-bottom: 16px;
+.annual-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 4rpx 16rpx;
+  background: var(--xhs-primary);
+  border-radius: var(--xhs-radius-pill);
+  font-size: var(--xhs-font-sm);
+  color: #FFFFFF;
+  font-weight: var(--xhs-weight-medium);
+  transition: var(--xhs-transition);
+  min-height: 48rpx;
 }
 
-/* === Chart Shimmer Animation === */
-@keyframes chart-shimmer {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
+.annual-btn:active {
+  opacity: 0.85;
+  transform: scale(0.96);
 }
 
-@keyframes chart-shimmer-slide {
-  0% { left: -100%; }
-  100% { left: 100%; }
+/* === 类型标签 === */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: var(--xhs-radius-pill);
+  font-size: var(--xhs-font-xs);
+  font-weight: var(--xhs-weight-medium);
+  letter-spacing: 0.01em;
+  flex-shrink: 0;
 }
+
+.type-tag {
+  margin: 0;
+}
+
+.tag-buy {
+  background: var(--xhs-loss-bg);
+  color: var(--xhs-loss);
+}
+
+.tag-sell {
+  background: var(--xhs-profit-bg);
+  color: var(--xhs-profit);
+}
+
+.tag-dividend {
+  background: var(--xhs-dividend-bg);
+  color: var(--xhs-dividend);
+}
+
+/* === Profit/Loss colors for detail rows === */
+.profit { color: var(--xhs-profit); }
+.loss { color: var(--xhs-loss); }

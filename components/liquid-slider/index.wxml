@@ -1,0 +1,10 @@
+<view class="liquid-slider" style="position: relative;">
+  <view class="liquid-slider-bg" style="left: {{sliderLeft}}px; width: {{sliderWidth}}px;"></view>
+  <view wx:for="{{tabs}}" wx:key="key"
+        class="liquid-slider-item {{currentKey === item.key ? 'active' : ''}}"
+        bindtap="onTap"
+        data-key="{{item.key}}">
+    {{item.label}}
+    <text wx:if="{{showCount && item.count !== undefined}}"> ({{item.count}})</text>
+  </view>
+</view>

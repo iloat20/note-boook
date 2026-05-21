@@ -1,4 +1,7 @@
-/* iOS 26.5 Frosted Glass Tab Bar */
+/* ═════════════════════════════════════════╗
+   小红书风格底部导航栏 (XHS Tab Bar)
+   ╚════════════════════════════════════════╝ */
+
 .tab-bar {
   display: flex;
   flex-direction: row;
@@ -6,11 +9,9 @@
   bottom: 0;
   left: 0;
   right: 0;
-  height: 49px;
-  background: rgba(242, 242, 247, 0.6);
-  backdrop-filter: saturate(180%) blur(40px);
-  -webkit-backdrop-filter: saturate(180%) blur(40px);
-  border-top: 0.5px solid rgba(255, 255, 255, 0.5);
+  height: 104rpx;
+  background: #FFFFFF;
+  border-top: 1rpx solid rgba(0, 0, 0, 0.04);
   padding-bottom: env(safe-area-inset-bottom);
   z-index: 999;
 }
@@ -21,22 +22,30 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 4px 0;
+  padding: 12rpx 0 8rpx;
 }
 
 .tab-icon {
-  width: 24px;
-  height: 24px;
-  margin-bottom: 2px;
+  width: 48rpx;
+  height: 48rpx;
+  margin-bottom: 4rpx;
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .tab-text {
-  font-size: 10px;
-  color: #8E8E93;
+  font-size: 20rpx;
+  color: #C7C7CC;
   line-height: 1;
+  letter-spacing: 0.01em;
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Active: 底部红线 + 黑色文字 */
 .tab-item.active .tab-text {
-  color: var(--color-accent);
+  color: #1C1C1E;
   font-weight: 600;
+}
+
+.tab-item:active {
+  transform: scale(0.95);
 }

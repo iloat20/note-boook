@@ -1,0 +1,9 @@
+<view class="empty-state">
+  <view style="font-size: 64px; margin-bottom: 16px; opacity: 0.6;">{{icon}}</view>
+  <text class="empty-title">{{title}}</text>
+  <text class="empty-desc">{{desc}}</text>
+  <!-- 操作区 slot -->
+  <view wx:if="{{showSlot}}" style="margin-top: 24px;">
+    <slot name="actions"></slot>
+  </view>
+</view>

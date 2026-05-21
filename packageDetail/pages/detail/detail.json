@@ -1,0 +1,10 @@
+{
+  "navigationBarTitleText": "详情",
+  "usingComponents": {
+    "market-tag": "/components/market-tag/index",
+    "section-header": "/components/section-header/index",
+    "strategy-tags": "/components/strategy-tags/index",
+    "empty-state": "/components/empty-state/index"
+  },
+  "styleIsolation": "apply-shared"
+}

@@ -1,0 +1,37 @@
+/* ═════════════════════════════════════════╗
+   小红书风格 - 市场标签
+   ╚════════════════════════════════════════╝ */
+
+/* 标签的基础样式：pill 胶囊风格 */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: var(--xhs-radius-pill);
+  font-size: var(--xhs-font-xs);
+  font-weight: var(--xhs-weight-medium);
+  letter-spacing: 0.02em;
+  transition: var(--xhs-transition);
+  white-space: nowrap;
+}
+
+/* A 股 (蓝色) */
+.market-a {
+  background: var(--xhs-market-a-bg);
+  color: var(--xhs-market-a);
+  border: 1px solid rgba(0, 122, 255, 0.12);
+}
+
+/* 港股 (橙色) */
+.market-hk {
+  background: var(--xhs-market-hk-bg);
+  color: var(--xhs-market-hk);
+  border: 1px solid rgba(255, 149, 0, 0.12);
+}
+
+/* 美股 (紫色) */
+.market-us {
+  background: var(--xhs-market-us-bg);
+  color: var(--xhs-market-us);
+  border: 1px solid rgba(175, 82, 222, 0.12);
+}

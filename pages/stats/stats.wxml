@@ -1,163 +1,125 @@
 <view class="page-container" style="padding-top: {{statusBarHeight}}px;">
+  <!-- 页面标题 -->
+  <!-- 标题栏（仅间距） -->
+  <view class="page-title"></view>
 
-  <scroll-view class="scroll-container" scroll-y>
+  <!-- 骨架屏 -->
+  <view wx:if="{{loading}}" class="skeleton-container">
+    <view class="xhs-skeleton-card" wx:for="{{[1,2,3]}}" wx:key="*this">
+      <view class="xhs-skeleton-header">
+        <view class="xhs-skeleton-tag xhs-shimmer"></view>
+        <view class="xhs-skeleton-text xhs-shimmer"></view>
+      </view>
+      <view class="xhs-skeleton-body">
+        <view class="xhs-skeleton-item xhs-shimmer"></view>
+        <view class="xhs-skeleton-item xhs-shimmer"></view>
+      </view>
+    </view>
+  </view>
 
-    <view class="tab-bar-line">
+  <scroll-view wx:else class="scroll-container" scroll-y>
+
+    <!-- 时段选择 (pill 风格) -->
+    <view class="period-tabs">
       <view
         wx:for="{{periodTabs}}"
         wx:key="key"
-        class="tab-line-item {{currentPeriod === item.key ? 'tab-line-active' : ''}}"
+        class="period-tab {{currentPeriod === item.key ? 'period-active' : ''}}"
         bindtap="switchPeriod"
         data-period="{{item.key}}"
       >{{item.label}}</view>
     </view>
 
+    <!-- 统计卡片网格 (2x2) -->
     <view class="stats-grid">
       <view class="stat-card">
         <text class="stat-label">投入</text>
-        <text class="stat-value" style="color: var(--color-title);">{{stats.totalInvestmentText}}</text>
+        <text class="stat-value">{{stats.totalInvestmentText}}</text>
       </view>
       <view class="stat-card">
         <text class="stat-label">回收</text>
-        <text class="stat-value" style="color: var(--color-title);">{{stats.totalRecoverText}}</text>
+        <text class="stat-value">{{stats.totalRecoverText}}</text>
       </view>
       <view class="stat-card">
         <text class="stat-label">盈亏</text>
-        <text class="stat-value {{stats.totalPnL >= 0 ? 'profit' : 'loss'}}">
+        <text class="stat-value {{stats.totalPnL >= 0 ? 'stat-profit' : 'stat-loss'}}">
           {{stats.totalPnL >= 0 ? '+' : ''}}{{stats.totalPnLText}}
         </text>
       </view>
       <view class="stat-card">
-        <text class="stat-label">累计收益</text>
-        <text class="stat-value {{stats.totalPnL >= 0 ? 'profit' : 'loss'}}">
-          {{stats.totalPnL >= 0 ? '+' : ''}}{{stats.totalPnLText}}
+        <text class="stat-label">收益率</text>
+        <text class="stat-value {{stats.totalPnL >= 0 ? 'stat-profit' : 'stat-loss'}}">
+          {{stats.totalReturnRateText || '0.00%'}}
         </text>
       </view>
     </view>
 
-    <!-- 图表容器：盈亏趋势 混合图表 -->
-    <view class="section">
-      <text class="section-title">盈亏趋势</text>
-      <view class="card-glass chart-box">
-        <view wx:if="{{!chartsLoaded.trend}}" class="chart-skeleton">
-          <view class="skeleton-line" style="top: 30%;"></view>
-          <view class="skeleton-line" style="top: 50%;"></view>
-          <view class="skeleton-line" style="top: 70%;"></view>
-          <view class="skeleton-bar-group">
-            <view class="skeleton-bar-small" wx:for="{{[1,2,3,4,5,6]}}" wx:key="*this"
-                  style="animation-delay: {{index * 0.15}}s;"></view>
-          </view>
-        </view>
-        <ec-canvas id="trendChart" canvas-id="trendChart" ec="{{ecTrend}}" force-use-new-canvas="{{true}}"></ec-canvas>
-      </view>
-    </view>
 
-    <view class="section">
-      <text class="section-title">交易热力图</text>
-      <view class="card-glass">
-        <view class="heatmap-header">
-          <view class="heatmap-nav" bindtap="prevMonth">‹</view>
-          <text class="body" style="color: var(--color-title); font-weight: var(--weight-title);">{{heatmapLabel}}</text>
-          <view class="heatmap-nav" bindtap="nextMonth">›</view>
-        </view>
-        <view class="heatmap-grid">
-          <view wx:for="{{heatmapData}}" wx:key="day"
-            class="heatmap-cell heatmap-level-{{item.level}}" wx:if="{{item.day > 0}}">
-            <text class="heatmap-day">{{item.day}}</text>
-          </view>
-        </view>
-        <view class="heatmap-legend">
-          <view class="legend-item">
-            <view class="legend-color" style="background: linear-gradient(135deg, rgba(240, 240, 245, 0.7), rgba(240, 240, 245, 0.4));"></view>
-            <text>0笔</text>
-          </view>
-          <view class="legend-item">
-            <view class="legend-color" style="background: linear-gradient(135deg, rgba(255, 224, 208, 0.8), rgba(255, 200, 170, 0.5));"></view>
-            <text>1-2笔</text>
-          </view>
-          <view class="legend-item">
-            <view class="legend-color" style="background: linear-gradient(135deg, rgba(255, 192, 160, 0.85), rgba(255, 170, 130, 0.6));"></view>
-            <text>3-5笔</text>
-          </view>
-          <view class="legend-item">
-            <view class="legend-color" style="background: linear-gradient(135deg, rgba(255, 140, 90, 0.9), rgba(255, 120, 70, 0.7));"></view>
-            <text>6-9笔</text>
-          </view>
-          <view class="legend-item">
-            <view class="legend-color" style="background: linear-gradient(135deg, rgba(255, 107, 53, 0.95), rgba(255, 87, 33, 0.8));"></view>
-            <text>10+笔</text>
-          </view>
-        </view>
-      </view>
-    </view>
 
+    <!-- 完整交易明细 -->
     <view class="section">
-      <view style="display: flex; align-items: center; justify-content: space-between;">
-        <text class="section-title" style="margin-bottom: 0;">完整交易明细</text>
-        <view bindtap="onExportMD" style="padding: 4px 12px; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 8px; font-size: 12px; color: var(--color-accent); font-weight: 500;">导出 MD</view>
+      <view class="section-header">
+        <text class="section-title">完整交易明细</text>
+        <view class="export-btn" bindtap="onExportMD"><text class="btn-icon icon-download"></text> 导出</view>
       </view>
-      <view class="card-glass">
-        <view style="max-height: 400px; overflow-y: auto;">
-          <view wx:for="{{completeTrades}}" wx:key="id" class="list-item-glass" style="flex-direction: column; align-items: flex-start; gap: 4px;">
-            <view style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
-              <view style="display: flex; align-items: center; gap: 6px;">
+      <view class="xhs-card">
+        <view wx:if="{{completeTrades.length > 0}}" class="detail-list">
+          <view wx:for="{{completeTrades}}" wx:key="id" class="detail-item">
+            <view class="detail-top">
+              <view class="detail-info">
                 <view class="tag type-tag {{item.type === 'BUY' ? 'tag-buy' : item.type === 'SELL' ? 'tag-sell' : 'tag-dividend'}}">{{item.typeText}}</view>
-                <text class="body" style="font-weight: var(--weight-title);">{{item.code}}</text>
-                <text class="caption">{{item.name}}</text>
+                <text class="detail-code">{{item.code}}</text>
+                <text class="detail-name">{{item.name}}</text>
               </view>
-              <text class="body" style="font-weight: var(--weight-title); color: var(--color-title);">{{item.amountText}}</text>
+              <text class="detail-amount mono-num">{{item.amountText}}</text>
             </view>
-            <text class="caption">{{item.dateText}}</text>
+            <text class="detail-date">{{item.dateText}}</text>
           </view>
         </view>
-        <view wx:if="{{completeTrades.length === 0}}" class="empty-state-glass">
-          <text>暂无交易记录</text>
-        </view>
+        <view wx:else class="detail-empty">暂无交易记录</view>
       </view>
     </view>
 
+    <!-- 已清仓股票 -->
     <view class="section">
-      <view style="display: flex; align-items: center; justify-content: space-between;">
-        <text class="section-title" style="margin-bottom: 0;">已清仓股票</text>
-        <view class="annual-report-btn" bindtap="onOpenAnnualReport">
-          <text style="font-size: 12px; color: var(--color-accent); font-weight: 500;">年度报告</text>
-        </view>
+      <view class="section-header">
+        <text class="section-title">已清仓股票</text>
+        <view class="annual-btn" bindtap="onOpenAnnualReport"><text class="btn-icon icon-report"></text> 年度报告</view>
       </view>
-      <view class="card-glass">
-        <view wx:if="{{clearedPositions.length > 0}}" style="max-height: 400px; overflow-y: auto;">
-          <view wx:for="{{clearedPositions}}" wx:key="id" class="list-item-glass" style="flex-direction: column; align-items: flex-start; gap: 8px;">
-            <view style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+      <view class="xhs-card">
+        <view wx:if="{{clearedPositions.length > 0}}" class="detail-list">
+          <view wx:for="{{clearedPositions}}" wx:key="id" class="detail-item">
+            <view class="detail-top">
               <view>
-                <text class="body" style="font-weight: var(--weight-title);">{{item.name}}</text>
-                <text class="caption" style="margin-left: 8px; color: var(--color-text-secondary);">{{item.code}}</text>
+                <text class="detail-code">{{item.name}}</text>
+                <text class="detail-name" style="margin-left: 8px;">{{item.code}}</text>
               </view>
-              <text class="body {{item.pnlClass}}" style="font-weight: var(--weight-title);">
+              <text class="detail-amount mono-num {{item.pnlClass}}">
                 {{item.totalPnL >= 0 ? '+' : ''}}{{item.totalPnLText}}
               </text>
             </view>
-            <view style="display: flex; gap: 16px; width: 100%;">
-              <text class="caption">已实现: {{item.realizedPnLText}}</text>
-              <text class="caption">分红: +{{item.dividendIncomeText}}</text>
+            <view class="detail-meta">
+              <text>已实现: {{item.realizedPnLText}}</text>
+              <text>分红: +{{item.dividendIncomeText}}</text>
             </view>
           </view>
         </view>
-        <view wx:else class="empty-state-glass">
-          <text>暂无已清仓股票</text>
-        </view>
+        <view wx:else class="detail-empty">暂无已清仓股票</view>
       </view>
     </view>
 
+    <!-- 综合明细 -->
     <view class="section">
-      <text class="section-title">明细</text>
-      <view class="card-glass">
-        <view wx:for="{{detailItems}}" wx:key="label" class="list-item-glass">
-          <text class="body">{{item.label}}</text>
-          <text class="body {{item.colorClass}}" style="font-weight: var(--weight-title);">{{item.prefix}}{{item.value}}</text>
+      <text class="section-title">综合明细</text>
+      <view class="xhs-card">
+        <view wx:for="{{detailItems}}" wx:key="label" class="detail-row">
+          <text class="detail-row-label">{{item.label}}</text>
+          <text class="detail-row-value {{item.colorClass}}">{{item.prefix}}{{item.value}}</text>
         </view>
       </view>
     </view>
 
-    <view style="height: 100px;"></view>
+    <view style="height: 160rpx;"></view>
   </scroll-view>
 
   <annual-report wx:if="{{showAnnualReport}}" data="{{annualReportData}}" bind:close="onCloseAnnualReport" />

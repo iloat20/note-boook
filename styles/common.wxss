@@ -1,0 +1,123 @@
+/* ═════════════════════════════════════════╗
+   跨页面共享样式 — 各页面通过 @import 引用
+   ╚════════════════════════════════════════╝ */
+
+/* === Typography (RF 通用) === */
+.title {
+  font-size: var(--xhs-font-xl);
+  font-weight: var(--xhs-weight-semibold);
+  color: var(--xhs-title);
+  letter-spacing: -0.01em;
+}
+
+.caption {
+  font-size: var(--xhs-font-sm);
+  font-weight: var(--xhs-weight-medium);
+  color: var(--xhs-caption);
+  letter-spacing: 0.02em;
+}
+
+.body {
+  font-size: var(--xhs-font-md);
+  font-weight: var(--xhs-weight-regular);
+  color: var(--xhs-body);
+}
+
+.mono-num {
+  letter-spacing: 0.01em;
+  font-weight: var(--xhs-weight-semibold);
+}
+
+/* === Section === */
+.section {
+  margin-bottom: var(--xhs-space-lg);
+}
+
+/* === Page Container === */
+.page-container {
+  min-height: 100vh;
+  padding: var(--xhs-space-lg);
+  padding-bottom: calc(160rpx + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+.scroll-container {
+  flex: 1;
+  height: 0;
+  min-height: 0;
+}
+
+/* === Market Tag === */
+.market-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: var(--xhs-radius-pill);
+  font-size: var(--xhs-font-xs);
+  font-weight: var(--xhs-weight-medium);
+  letter-spacing: 0.01em;
+}
+
+.market-a {
+  background: var(--xhs-market-a-bg);
+  color: var(--xhs-market-a);
+}
+
+.market-hk {
+  background: var(--xhs-market-hk-bg);
+  color: var(--xhs-market-hk);
+}
+
+.market-us {
+  background: var(--xhs-market-us-bg);
+  color: var(--xhs-market-us);
+}
+
+/* === Text Button === */
+.text-btn {
+  color: var(--xhs-primary);
+  font-size: var(--xhs-font-md);
+  font-weight: var(--xhs-weight-semibold);
+  min-height: 88rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--xhs-transition);
+}
+
+/* === Dissolve Animation === */
+@keyframes dissolve-out {
+  0% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(0.85); opacity: 0; }
+}
+.dissolving {
+  animation: dissolve-out 350ms ease-in forwards;
+  pointer-events: none;
+}
+
+/* === Empty State === */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 40px;
+  text-align: center;
+}
+
+.empty-title {
+  font-size: var(--xhs-font-xl);
+  font-weight: var(--xhs-weight-semibold);
+  color: var(--xhs-title);
+  margin-top: var(--xhs-space-lg);
+}
+
+.empty-desc {
+  font-size: var(--xhs-font-md);
+  color: var(--xhs-caption);
+  margin-top: var(--xhs-space-sm);
+  line-height: 1.5;
+}
+

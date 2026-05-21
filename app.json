@@ -2,8 +2,7 @@
   "pages": [
     "pages/index/index",
     "pages/history/history",
-    "pages/stats/stats",
-    "pages/record/record"
+    "pages/stats/stats"
   ],
   "subpackages": [
     {
@@ -12,14 +11,23 @@
         "pages/detail/detail",
         "pages/dividend/dividend"
       ]
+    },
+    {
+      "root": "packageRecord",
+      "pages": [
+        "pages/record/record"
+      ]
     }
   ],
   "preloadRule": {
     "pages/index/index": {
-      "packages": ["packageDetail"]
+      "packages": ["packageDetail", "packageRecord"]
     },
     "pages/history/history": {
-      "packages": ["packageDetail"]
+      "packages": ["packageDetail", "packageRecord"]
+    },
+    "pages/stats/stats": {
+      "packages": ["packageRecord"]
     }
   },
   "window": {

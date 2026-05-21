@@ -39,6 +39,7 @@
     "useSrcMode": false
   },
   "compileType": "miniprogram",
+  "workers": ["workers/positionWorker"],
   "simulatorPluginLibVersion": {},
   "packOptions": {
     "ignore": [],

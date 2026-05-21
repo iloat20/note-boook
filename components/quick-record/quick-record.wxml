@@ -1,0 +1,132 @@
+<view wx:if="{{visible}}" class="qr-overlay" catchtap="close">
+  <view class="qr-sheet" catchtap="onSheetTap">
+    <!-- 抓手 + 标题 -->
+    <view class="qr-handle"></view>
+    <view class="qr-header">
+      <text class="qr-title">快速交易</text>
+      <view class="qr-close" catchtap="close">
+        <text>✕</text>
+      </view>
+    </view>
+
+    <scroll-view class="qr-body" scroll-y="true" enhanced show-scrollbar="{{false}}">
+      <!-- 买入/卖出 — 大按钮切换 -->
+      <view class="qr-type-row">
+        <view class="qr-type-btn qr-type-buy-btn {{qrType === 'BUY' ? 'active' : ''}}" catchtap="onQrTypeSelect" data-type="BUY">
+          <text class="qr-type-label">买入</text>
+          <text class="qr-type-desc">开仓做多</text>
+        </view>
+        <view class="qr-type-btn qr-type-sell-btn {{qrType === 'SELL' ? 'active' : ''}}" catchtap="onQrTypeSelect" data-type="SELL">
+          <text class="qr-type-label">卖出</text>
+          <text class="qr-type-desc">平仓止盈</text>
+        </view>
+      </view>
+
+      <!-- 股票代码 — 智能输入 -->
+      <view class="qr-field">
+        <text class="qr-label">股票代码</text>
+        <view class="qr-code-row">
+          <input class="qr-input qr-code-input"
+            placeholder="输入代码或名称"
+            value="{{qrCode}}"
+            bindinput="onQrCodeInput"
+            bindblur="onQrCodeBlur"
+            focus="{{qrCodeFocus}}"/>
+          <view wx:if="{{qrName}}" class="qr-code-info">
+            <text class="qr-stock-name">{{qrName}}</text>
+            <text wx:if="{{qrMarketLabel}}" class="qr-market-tag">{{qrMarketLabel}}</text>
+          </view>
+          <view wx:if="{{qrFetching}}" class="qr-fetching">…</view>
+        </view>
+      </view>
+
+      <!-- 联想列表 -->
+      <view wx:if="{{showQrSuggestions}}" class="qr-suggestions" catchtap="onSheetTap">
+        <view wx:for="{{qrSuggestions}}" wx:key="code"
+          class="qr-suggestion-item"
+          catchtap="onQrSelectSuggestion" data-item="{{item}}">
+          <text class="qr-suggestion-code">{{item.code}}</text>
+          <text class="qr-suggestion-name">{{item.name}}</text>
+          <text class="qr-suggestion-market">{{item.market === 'A_SHARE' ? 'A股' : item.market === 'HK_SHARE' ? '港股' : '美股'}}</text>
+        </view>
+      </view>
+
+      <!-- 价格 + 数量 并排 -->
+      <view class="qr-price-qty-row">
+        <view class="qr-field qr-field-half">
+          <text class="qr-label">价格</text>
+          <input class="qr-input" type="digit" placeholder="0.00" value="{{qrPrice}}" bindinput="onQrPriceInput"/>
+        </view>
+        <view class="qr-field qr-field-half">
+          <text class="qr-label">数量（股）</text>
+          <view class="qr-qty-row">
+            <view class="qr-qty-btn" catchtap="onQrQtyMinus">−</view>
+            <input class="qr-input qr-qty-input" type="number" placeholder="0" value="{{qrQuantity}}" bindinput="onQrQuantityInput"/>
+            <view class="qr-qty-btn" catchtap="onQrQtyPlus">+</view>
+          </view>
+        </view>
+      </view>
+
+      <!-- 数量快捷预设 -->
+      <view class="qr-qty-presets">
+        <view class="qr-preset-btn" catchtap="onQrQtyPreset" data-qty="100">100</view>
+        <view class="qr-preset-btn" catchtap="onQrQtyPreset" data-qty="500">500</view>
+        <view class="qr-preset-btn" catchtap="onQrQtyPreset" data-qty="1000">1,000</view>
+        <view class="qr-preset-btn" catchtap="onQrQtyPreset" data-qty="0">全仓</view>
+      </view>
+
+      <!-- 日期/时间 — 折叠 -->
+      <view class="qr-more-toggle" catchtap="toggleQrMore">
+        <text class="qr-more-label">{{qrDate}} {{qrTime}}</text>
+        <text class="qr-more-arrow {{showQrMore ? 'open' : ''}}">›</text>
+      </view>
+      <view wx:if="{{showQrMore}}" class="qr-more-body">
+        <view class="qr-field">
+          <text class="qr-label">日期</text>
+          <picker mode="date" value="{{qrDate}}" bindchange="onQrDateChange">
+            <view class="qr-input qr-picker-input">
+              <text>{{qrDate || '选择日期'}}</text>
+              <text class="qr-picker-arrow">›</text>
+            </view>
+          </picker>
+        </view>
+        <view class="qr-field">
+          <text class="qr-label">时间</text>
+          <picker mode="time" value="{{qrTime}}" bindchange="onQrTimeChange">
+            <view class="qr-input qr-picker-input">
+              <text>{{qrTime || '选择时间'}}</text>
+              <text class="qr-picker-arrow">›</text>
+            </view>
+          </picker>
+        </view>
+      </view>
+
+      <!-- 预览 -->
+      <view class="qr-preview">
+        <view class="qr-preview-row">
+          <text class="qr-preview-label">交易金额</text>
+          <text class="qr-preview-value">{{qrAmountText}}</text>
+        </view>
+        <view class="qr-preview-row">
+          <text class="qr-preview-label">手续费</text>
+          <text class="qr-preview-value">{{qrFeeText}}</text>
+        </view>
+        <view class="qr-preview-divider"></view>
+        <view class="qr-preview-row">
+          <text class="qr-preview-label qr-preview-label-bold">实际{{qrType === 'BUY' ? '支出' : '收入'}}</text>
+          <text class="qr-preview-value qr-preview-value-bold">{{qrActualText}}</text>
+        </view>
+      </view>
+
+      <view class="qr-body-spacer"></view>
+    </scroll-view>
+
+    <!-- 提交按钮 -->
+    <view class="qr-submit-bar">
+      <view class="qr-submit" catchtap="submitQuickRecord">
+        <text class="qr-submit-text">{{qrType === 'BUY' ? '确认买入' : '确认卖出'}}</text>
+        <text class="qr-submit-amount">{{qrActualText}}</text>
+      </view>
+    </view>
+  </view>
+</view>

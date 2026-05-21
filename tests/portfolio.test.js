@@ -2,11 +2,13 @@
  * Portfolio correctness tests for closed positions and sell validation helpers.
  */
 
+const { MARKETS } = require('../utils/constants/index')
+const { Stock, Transaction, PriceCache } = require('../utils/models')
+const { getTotalStats, getPositionSummary, getPortfolioPositions, getSellableQuantity } = require('../utils/services')
+
 let _mockStorage = {}
 
 describe('Portfolio calculations', () => {
-  let storage
-
   beforeEach(() => {
     jest.resetModules()
     _mockStorage = {}
@@ -14,38 +16,37 @@ describe('Portfolio calculations', () => {
       getStorageSync: jest.fn((key) => _mockStorage[key] || null),
       setStorageSync: jest.fn((key, value) => { _mockStorage[key] = value })
     }
-    global.getApp = jest.fn(() => ({ globalData: { dataDirty: false } }))
-    storage = require('../utils/storage')
   })
 
   test('should include realized PnL when position is fully closed', () => {
-    const stock = storage.Stock.save(storage.Stock.create('600000', '浦发银行', storage.MARKETS.A_SHARE))
-    storage.Transaction.save(storage.Transaction.create(stock.id, 'BUY', 10, 100, 1, '2026-01-01T00:00:00.000Z'))
-    storage.Transaction.save(storage.Transaction.create(stock.id, 'SELL', 12, 100, 1, '2026-01-02T00:00:00.000Z'))
+    const stock = Stock.save(Stock.create('600000', '浦发银行', MARKETS.A_SHARE))
+    Transaction.save(Transaction.create(stock.id, 'BUY', 10, 100, 1, '2026-01-01T00:00:00.000Z'))
+    Transaction.save(Transaction.create(stock.id, 'SELL', 12, 100, 1, '2026-01-02T00:00:00.000Z'))
 
-    const stats = storage.getTotalStats()
+    const stats = getTotalStats()
 
     expect(stats.realizedPnL).toBe(198)
     expect(stats.totalPnL).toBe(198)
-    expect(storage.getPositionSummary()).toHaveLength(0)
-    expect(storage.getPortfolioPositions()).toHaveLength(1)
+    expect(getPositionSummary()).toHaveLength(0)
+    expect(getPortfolioPositions()).toHaveLength(1)
   })
 
   test('should return sellable quantity when excluding edited sell transaction', () => {
-    const stock = storage.Stock.save(storage.Stock.create('600000', '浦发银行', storage.MARKETS.A_SHARE))
-    storage.Transaction.save(storage.Transaction.create(stock.id, 'BUY', 10, 100, 1, '2026-01-01T00:00:00.000Z'))
-    const sell = storage.Transaction.save(storage.Transaction.create(stock.id, 'SELL', 12, 60, 1, '2026-01-02T00:00:00.000Z'))
+    const stock = Stock.save(Stock.create('600000', '浦发银行', MARKETS.A_SHARE))
+    Transaction.save(Transaction.create(stock.id, 'BUY', 10, 100, 1, '2026-01-01T00:00:00.000Z'))
+    const sell = Transaction.save(Transaction.create(stock.id, 'SELL', 12, 60, 1, '2026-01-02T00:00:00.000Z'))
 
-    expect(storage.getSellableQuantity(stock.id)).toBe(40)
-    expect(storage.getSellableQuantity(stock.id, sell.id)).toBe(100)
+    expect(getSellableQuantity(stock.id)).toBe(40)
+    expect(getSellableQuantity(stock.id, sell.id)).toBe(100)
   })
 
-  test('should mark app data dirty when price cache changes', () => {
-    const app = { globalData: { dataDirty: false } }
-    global.getApp = jest.fn(() => app)
+  test('should mark data dirty via appStore when price cache changes', () => {
+    const appStore = require('../utils/state/appStore')
+    appStore.commit('MARK_CLEAN')
+    expect(appStore.getState('dataDirty')).toBe(false)
 
-    storage.PriceCache.set(1, 12.34)
+    PriceCache.set(1, 12.34)
 
-    expect(app.globalData.dataDirty).toBe(true)
+    expect(appStore.getState('dataDirty')).toBe(true)
   })
 })

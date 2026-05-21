@@ -29,17 +29,15 @@ beforeEach(() => {
 })
 
 describe('Storage LRU Cache', () => {
-  // 需要重新加载模块以重置内部状态
   let storage
 
   beforeEach(() => {
-    // 清除模块缓存，重新加载以重置 _memCache
     jest.resetModules()
     global.wx = {
       getStorageSync: jest.fn((key) => _mockStorage[key] || null),
       setStorageSync: jest.fn((key, value) => { _mockStorage[key] = value })
     }
-    storage = require('../utils/storage')
+    storage = require('../utils/storageCore')
   })
 
   test('getData returns data from wx.getStorageSync on cache miss', () => {
@@ -136,24 +134,24 @@ describe('Storage LRU Cache', () => {
 })
 
 describe('Cache Size Constants', () => {
-  test('MAX_MEM_CACHE is 50', () => {
-    const storageContent = require('fs').readFileSync(
-      require('path').join(__dirname, '../utils/storage.js'), 'utf8'
+  test('MAX_MEM_CACHE in core.js is 50', () => {
+    const coreContent = require('fs').readFileSync(
+      require('path').join(__dirname, '../utils/storageCore/core.js'), 'utf8'
     )
-    expect(storageContent).toContain('const MAX_MEM_CACHE = 50')
+    expect(coreContent).toContain('const MAX_MEM_CACHE = 50')
   })
 
-  test('MAX_POSITION_CACHE is 100', () => {
-    const storageContent = require('fs').readFileSync(
-      require('path').join(__dirname, '../utils/storage.js'), 'utf8'
+  test('cacheManager position cache max size is 100', () => {
+    const cacheContent = require('fs').readFileSync(
+      require('path').join(__dirname, '../utils/cache/cacheManager.js'), 'utf8'
     )
-    expect(storageContent).toContain('const MAX_POSITION_CACHE = 100')
+    expect(cacheContent).toContain('position: new LRUCache(100)')
   })
 
-  test('MAX_HEATMAP_CACHE is 50', () => {
-    const storageContent = require('fs').readFileSync(
-      require('path').join(__dirname, '../utils/storage.js'), 'utf8'
+  test('cacheManager heatmap cache max size is 50', () => {
+    const cacheContent = require('fs').readFileSync(
+      require('path').join(__dirname, '../utils/cache/cacheManager.js'), 'utf8'
     )
-    expect(storageContent).toContain('const MAX_HEATMAP_CACHE = 50')
+    expect(cacheContent).toContain('heatmap: new LRUCache(50)')
   })
 })

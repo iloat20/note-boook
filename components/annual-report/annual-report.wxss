@@ -6,14 +6,15 @@
   right: 0;
   bottom: 0;
   background: #0D1117;
-  z-index: 2000;
+  z-index: 9999;
+  isolation: isolate;
   animation: arFadeIn 0.3s ease;
 }
 
 .ar-close {
   position: fixed;
   top: 48px;
-  right: 20px;
+  left: 20px;
   width: 36px;
   height: 36px;
   border-radius: 50%;
@@ -29,6 +30,7 @@
 .ar-scroll {
   width: 100%;
   height: 100%;
+  background: #0D1117;
 }
 
 /* Hero */
@@ -106,6 +108,7 @@
 }
 
 .ar-grid-item {
+  box-sizing: border-box;
   width: calc(50% - 6px);
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.06);
@@ -173,6 +176,19 @@
 .ar-monthly-canvas {
   width: 100%;
   height: 100%;
+}
+
+.ar-chart-empty {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ar-chart-empty-text {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.3);
 }
 
 /* Rank */
@@ -300,4 +316,47 @@
 @keyframes arFadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+/* 导出按钮 */
+.ar-export-btn {
+  position: fixed;
+  bottom: 120px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #FF6B6B, #FF3B30);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  padding: 14px 48px;
+  border-radius: 28px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 8px 32px rgba(255, 59, 48, 0.35);
+  z-index: 2010;
+}
+
+.ar-exporting {
+  opacity: 0.6;
+}
+
+.ar-export-icon {
+  font-size: 18px;
+}
+
+.ar-export-text {
+  font-size: 15px;
+}
+
+/* 导出用Canvas - 完全隐藏 */
+.ar-export-canvas {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+  z-index: -1;
 }

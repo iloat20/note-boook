@@ -1,5 +1,14 @@
-/* Minimal + Spatial UI - 详情页 */
+/* ═════════════════════════════════════════╗
+   小红书风格 - 详情页
+   ╚════════════════════════════════════════╝ */
 
+@import '../../../styles/common.wxss';
+
+page {
+  background: var(--xhs-bg);
+}
+
+/* === 返回按钮 === */
 .back-btn {
   min-height: 44px;
   min-width: 44px;
@@ -9,26 +18,120 @@
 }
 
 .back-icon-wrap {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.05);
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: var(--xhs-radius-round);
+  background: var(--xhs-surface);
+  box-shadow: var(--xhs-card-shadow);
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: var(--xhs-transition);
+}
+
+.back-icon-wrap:active {
+  transform: scale(0.9);
 }
 
 .back-icon {
-  font-size: 28px;
-  color: var(--color-title);
-  font-weight: 400;
+  font-size: 24px;
+  color: var(--xhs-title);
+  font-weight: var(--xhs-weight-semibold);
   line-height: 1;
-  margin-left: -2px;
+  margin-left: -1px;
 }
 
+/* === 导航栏 === */
+.nav-bar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: var(--xhs-bg);
+  padding-bottom: var(--xhs-space-sm);
+}
+
+/* === 股票概要卡片 === */
+.stock-header-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--xhs-space-sm);
+  margin-bottom: var(--xhs-space-lg);
+  padding: var(--xhs-space-lg);
+  background: var(--xhs-surface);
+  border-radius: var(--xhs-radius-lg);
+  box-shadow: var(--xhs-card-shadow);
+}
+
+.stock-header-box .title {
+  font-size: var(--xhs-font-xl);
+  font-weight: var(--xhs-weight-semibold);
+  color: var(--xhs-title);
+  letter-spacing: -0.01em;
+}
+
+.stock-header-box .body {
+  font-size: var(--xhs-font-md);
+  color: var(--xhs-caption);
+}
+
+/* === 卡片容器 === */
+.card {
+  background: var(--xhs-surface);
+  border-radius: var(--xhs-radius-lg);
+  box-shadow: var(--xhs-card-shadow);
+  padding: var(--space-card-pad, var(--xhs-space-lg));
+  position: relative;
+  overflow: hidden;
+  transition: var(--xhs-transition-slow);
+}
+
+.card:active {
+  transform: scale(0.98);
+}
+
+.card-sm {
+  padding: var(--xhs-space-md);
+}
+
+/* === 信息字段 === */
+.card .caption {
+  font-size: var(--xhs-font-sm);
+  color: var(--xhs-caption);
+  letter-spacing: 0.02em;
+  font-weight: var(--xhs-weight-medium);
+  display: block;
+  margin-bottom: var(--xhs-space-xs);
+}
+
+.card .body {
+  font-size: var(--xhs-font-lg);
+  font-weight: var(--xhs-weight-medium);
+  color: var(--xhs-title);
+}
+
+.card .mono-num {
+  font-size: var(--xhs-font-lg);
+  font-weight: var(--xhs-weight-semibold);
+  letter-spacing: 0.01em;
+}
+
+.card .title {
+  font-size: var(--xhs-font-xl);
+  font-weight: var(--xhs-weight-semibold);
+  color: var(--xhs-title);
+}
+
+/* === 交易记录卡片 === */
 .record-item-card {
   min-height: 44px;
+  margin-bottom: 8px;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.record-item-card:active {
+  transform: scale(0.98);
+  box-shadow: none;
 }
 
 .record-item-card.dissolving {
@@ -41,11 +144,186 @@
   overflow: hidden;
 }
 
+.record-item-card .tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 12px;
+  border-radius: var(--xhs-radius-pill);
+  font-size: var(--xhs-font-xs);
+  font-weight: var(--xhs-weight-medium);
+  letter-spacing: 0.01em;
+}
+
+.type-tag {
+  display: inline-block;
+}
+
+.tag-buy {
+  background: var(--xhs-loss-bg);
+  color: var(--xhs-loss);
+}
+
+.tag-sell {
+  background: var(--xhs-profit-bg);
+  color: var(--xhs-profit);
+}
+
+.tag-dividend {
+  background: var(--xhs-dividend-bg);
+  color: var(--xhs-dividend);
+}
+
+/* === 市场标签 === */
+.market-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: var(--xhs-radius-pill);
+  font-size: var(--xhs-font-xs);
+  font-weight: var(--xhs-weight-medium);
+  letter-spacing: 0.02em;
+}
+
+.market-a {
+  background: var(--xhs-market-a-bg);
+  color: var(--xhs-market-a);
+}
+
+.market-hk {
+  background: var(--xhs-market-hk-bg);
+  color: var(--xhs-market-hk);
+}
+
+.market-us {
+  background: var(--xhs-market-us-bg);
+  color: var(--xhs-market-us);
+}
+
+/* === 策略标签 === */
 .strategy-tag {
   display: inline-block;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 11px;
-  background: rgba(255, 59, 48, 0.08);
-  color: var(--color-accent);
+  padding: 3px 10px;
+  border-radius: var(--xhs-radius-pill);
+  font-size: var(--xhs-font-xs);
+  background: var(--xhs-primary-bg);
+  color: var(--xhs-primary);
+  font-weight: var(--xhs-weight-medium);
+  margin-right: var(--xhs-space-xs);
+}
+
+/* === Section Header 组件 === */
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--xhs-space-md);
+}
+
+.section-header .title {
+  font-size: var(--xhs-font-xl);
+  font-weight: var(--xhs-weight-semibold);
+  color: var(--xhs-title);
+}
+
+/* === Input (价格编辑) === */
+.input {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  height: 24px;
+  font-size: var(--xhs-font-md);
+  color: var(--xhs-title);
+  padding: 0;
+}
+
+/* === 交易记录卡片 === */
+.record-item-card {
+  padding: 12px 14px;
+}
+
+/* 第一行：标签+日期时间 | 价格 */
+.record-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.record-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.record-datetime {
+  font-size: 12px;
+  color: var(--xhs-caption);
+}
+
+/* 价格 */
+.record-price {
+  font-weight: var(--xhs-weight-bold);
+  font-size: 17px;
+  letter-spacing: 0.01em;
+  font-family: -apple-system, 'Helvetica Neue', sans-serif;
+}
+
+.record-price--buy {
+  color: var(--xhs-profit);
+}
+
+.record-price--sell {
+  color: var(--xhs-loss);
+}
+
+/* 第二行：股数 | 手续费+总金额 */
+.record-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-separator);
+}
+
+.record-qty {
+  font-weight: var(--xhs-weight-semibold);
+  font-size: 14px;
+  color: var(--xhs-title);
+}
+
+.record-body-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.record-fee {
+  font-size: 12px;
+  color: var(--xhs-caption);
+}
+
+.record-amount {
+  font-size: 13px;
+  font-weight: var(--xhs-weight-semibold);
+  color: var(--xhs-title);
+}
+
+/* 第三行：笔记 */
+.record-journal {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-separator);
+}
+
+.record-reason {
+  font-size: 13px;
+  color: var(--xhs-body);
+  line-height: 1.5;
+  margin-top: 6px;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }

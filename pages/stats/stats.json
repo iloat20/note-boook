@@ -1,7 +1,6 @@
 {
   "navigationBarTitleText": "统计",
   "usingComponents": {
-    "ec-canvas": "/components/ec-canvas/ec-canvas",
     "annual-report": "/components/annual-report/annual-report"
   }
 }

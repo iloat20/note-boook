@@ -1,268 +1,270 @@
-/* iOS 26.5 Frosted Glass Design System */
+/* ═════════════════════════════════════════╗
+   小红书风格设计系统 v2 (Xiaohongshu Design)
+   ╚════════════════════════════════════════╝ */
 
 /* === Design Tokens === */
 page {
-  --color-bg: #F2F2F7;
-  --color-surface: rgba(255, 255, 255, 0.65);
-  --color-title: #1C1C1E;
-  --color-body: #3C3C43;
-  --color-caption: #8E8E93;
-  --color-separator: rgba(60, 60, 67, 0.08);
-  --color-accent: #FF3B30;
-  --color-profit: #FF6B6B;
-  --color-loss: #34C759;
-  --color-market-a: #007AFF;
-  --color-market-hk: #FF9500;
-  --color-market-us: #AF52DE;
+  --xhs-primary: #FF2442;
+  --xhs-primary-light: #FF6B7A;
+  --xhs-primary-bg: rgba(255, 36, 66, 0.06);
+  --xhs-primary-bg-2: rgba(255, 36, 66, 0.12);
+  --xhs-primary-tag: rgba(255, 36, 66, 0.1);
 
-  --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
-  --shadow-md: 0 2px 8px rgba(0,0,0,0.06);
-  --shadow-lg: 0 8px 32px rgba(0,0,0,0.08);
+  --xhs-bg: #FFFFFF;
+  --xhs-bg-secondary: #F5F5F5;
+  --xhs-surface: #FFFFFF;
+  --xhs-surface-hover: #FAFAFA;
 
-  --radius-card: 14px;
-  --radius-btn: 12px;
-  --radius-tag: 8px;
-  --radius-input: 10px;
+  --xhs-title: #1C1C1E;
+  --xhs-body: #555555;
+  --xhs-caption: #999999;
+  --xhs-caption-light: #C7C7CC;
+  --xhs-divider: rgba(0, 0, 0, 0.04);
+  --xhs-divider-strong: rgba(0, 0, 0, 0.08);
 
-  --space-page: 16px;
-  --space-module: 12px;
-  --space-card-pad: 16px;
-  --space-item: 12px;
-  --space-inner: 8px;
+  --xhs-profit: #FF6B6B;
+  --xhs-profit-bg: rgba(255, 107, 107, 0.1);
+  --xhs-loss: #34C759;
+  --xhs-loss-bg: rgba(52, 199, 89, 0.1);
+  --xhs-dividend: #FF9500;
+  --xhs-dividend-bg: rgba(255, 149, 0, 0.1);
 
-  --font-large-title: 34px;
-  --font-display: 28px;
-  --font-title: 20px;
-  --font-headline: 17px;
-  --font-body: 17px;
-  --font-callout: 16px;
-  --font-subhead: 15px;
-  --font-footnote: 13px;
-  --font-caption: 12px;
+  --xhs-market-a: #007AFF;
+  --xhs-market-a-bg: rgba(0, 122, 255, 0.08);
+  --xhs-market-hk: #FF9500;
+  --xhs-market-hk-bg: rgba(255, 149, 0, 0.08);
+  --xhs-market-us: #AF52DE;
+  --xhs-market-us-bg: rgba(175, 82, 222, 0.08);
 
-  --weight-display: 700;
-  --weight-title: 600;
-  --weight-body: 400;
-  --weight-caption: 400;
+  --xhs-card-shadow: 0 1px 4px rgba(0, 0, 0, 0.04), 0 2px 12px rgba(0, 0, 0, 0.06);
+  --xhs-card-shadow-hover: 0 2px 8px rgba(0, 0, 0, 0.06), 0 4px 20px rgba(0, 0, 0, 0.08);
+  --xhs-card-shadow-deep: 0 4px 12px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.08);
+  --xhs-btn-shadow: 0 4px 12px rgba(255, 36, 66, 0.3);
+  --xhs-btn-shadow-hover: 0 6px 20px rgba(255, 36, 66, 0.4);
 
-  --transition-page: opacity 200ms ease-out, transform 200ms ease-out;
+  --xhs-radius-sm: 16rpx;
+  --xhs-radius-md: 24rpx;
+  --xhs-radius-lg: 32rpx;
+  --xhs-radius-xl: 40rpx;
+  --xhs-radius-pill: 999rpx;
+  --xhs-radius-round: 50%;
 
-  /* === iOS 26.5 Glass Tokens === */
-  --glass-bg: #FFFFFF;
-  --glass-bg-hover: rgba(255, 255, 255, 0.95);
-  --glass-border: rgba(0, 0, 0, 0.06);
-  --glass-blur: blur(20px) saturate(1.8);
-  --glass-shadow-out: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.06);
-  --glass-shadow-in: inset 0 0.5px 0 rgba(255, 255, 255, 1);
-  --glass-radius: 16px;
+  --xhs-space-xs: 8rpx;
+  --xhs-space-sm: 16rpx;
+  --xhs-space-md: 24rpx;
+  --xhs-space-lg: 32rpx;
+  --xhs-space-xl: 48rpx;
+  --xhs-space-2xl: 64rpx;
 
-  background-color: var(--color-bg);
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
-  font-size: var(--font-body);
-  font-weight: var(--weight-body);
-  color: var(--color-body);
+  --xhs-font-xs: 20rpx;
+  --xhs-font-sm: 22rpx;
+  --xhs-font-md: 26rpx;
+  --xhs-font-lg: 30rpx;
+  --xhs-font-xl: 36rpx;
+  --xhs-font-2xl: 44rpx;
+  --xhs-font-3xl: 52rpx;
+  --xhs-font-4xl: 64rpx;
+
+  --xhs-weight-regular: 400;
+  --xhs-weight-medium: 500;
+  --xhs-weight-semibold: 600;
+  --xhs-weight-bold: 700;
+
+  --xhs-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", "PingFang SC", sans-serif;
+
+  --xhs-transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --xhs-transition-slow: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  background-color: var(--xhs-bg);
+  font-family: var(--xhs-sans);
+  font-size: var(--xhs-font-md);
+  font-weight: var(--xhs-weight-regular);
+  color: var(--xhs-body);
   line-height: 1.6;
 }
 
-/* === Page Enter/Leave Transition === */
-.page-enter {
-  opacity: 0;
-  transform: translateY(8px);
-}
-.page-enter-active {
-  opacity: 1;
-  transform: translateY(0);
-  transition: var(--transition-page);
-}
-
-/* === Typography === */
-.large-title {
-  font-size: var(--font-large-title);
-  font-weight: var(--weight-display);
-  color: var(--color-title);
-  letter-spacing: 0.01em;
+/* === Typography (XHS 风格) === */
+.xhs-large-title {
+  font-size: var(--xhs-font-4xl);
+  font-weight: var(--xhs-weight-bold);
+  color: var(--xhs-title);
+  letter-spacing: -0.02em;
   line-height: 1.15;
 }
-.display {
-  font-size: var(--font-display);
-  font-weight: var(--weight-display);
-  color: var(--color-title);
-  letter-spacing: 0.01em;
+.xhs-display {
+  font-size: var(--xhs-font-3xl);
+  font-weight: var(--xhs-weight-bold);
+  color: var(--xhs-title);
+  letter-spacing: -0.02em;
   line-height: 1.2;
 }
-.title {
-  font-size: var(--font-title);
-  font-weight: var(--weight-title);
-  color: var(--color-title);
-  letter-spacing: 0.01em;
-}
-.headline {
-  font-size: var(--font-headline);
-  font-weight: 600;
-  color: var(--color-title);
-}
-.body {
-  font-size: var(--font-body);
-  font-weight: var(--weight-body);
-  color: var(--color-body);
+.xhs-title {
+  font-size: var(--xhs-font-xl);
+  font-weight: var(--xhs-weight-semibold);
+  color: var(--xhs-title);
   letter-spacing: -0.01em;
 }
-.footnote {
-  font-size: var(--font-footnote);
-  font-weight: var(--weight-body);
-  color: var(--color-caption);
+.xhs-headline {
+  font-size: var(--xhs-font-lg);
+  font-weight: var(--xhs-weight-semibold);
+  color: var(--xhs-title);
 }
-.caption {
-  font-size: var(--font-caption);
-  font-weight: var(--weight-caption);
-  color: var(--color-caption);
+.xhs-body {
+  font-size: var(--xhs-font-md);
+  font-weight: var(--xhs-weight-regular);
+  color: var(--xhs-body);
 }
-
-/* === Surface Card (iOS Frosted Glass) === */
-.card {
-  background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border-radius: var(--radius-card);
-  border: 0.5px solid var(--glass-border);
-  box-shadow: var(--glass-shadow-out), var(--glass-shadow-in);
-  padding: var(--space-card-pad);
-  position: relative;
-  overflow: hidden;
+.xhs-footnote {
+  font-size: var(--xhs-font-sm);
+  font-weight: var(--xhs-weight-regular);
+  color: var(--xhs-caption);
 }
-.card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.9), transparent);
-  pointer-events: none;
-}
-.card-sm {
-  background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border-radius: var(--radius-card);
-  border: 0.5px solid var(--glass-border);
-  box-shadow: var(--glass-shadow-out), var(--glass-shadow-in);
-  padding: var(--space-card-pad);
-  position: relative;
-  overflow: hidden;
-}
-.card-sm::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.9), transparent);
-  pointer-events: none;
-}
-.card-lg {
-  background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border-radius: var(--radius-card);
-  border: 0.5px solid var(--glass-border);
-  box-shadow: var(--glass-shadow-out), var(--glass-shadow-in);
-  padding: var(--space-card-pad);
-  position: relative;
-  overflow: hidden;
-}
-.card-lg::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.9), transparent);
-  pointer-events: none;
+.xhs-caption {
+  font-size: var(--xhs-font-xs);
+  font-weight: var(--xhs-weight-medium);
+  color: var(--xhs-caption);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
 }
 
-/* === CTA Button (Frosted Glass) === */
-.cta-btn {
-  background: linear-gradient(135deg, rgba(255, 59, 48, 0.92), rgba(255, 59, 48, 0.98));
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  box-shadow: 0 4px 16px rgba(255, 59, 48, 0.3), inset 0 0.5px 0 rgba(255, 255, 255, 0.3);
+/* === Card (XHS 笔记卡片 — 纯白+中性灰阴影) === */
+.xhs-card {
+  background: var(--xhs-surface);
+  border-radius: var(--xhs-radius-md);
+  box-shadow: var(--xhs-card-shadow);
+  padding: var(--_card-pad, var(--xhs-space-lg));
+  position: relative;
+  overflow: hidden;
+  transition: var(--xhs-transition-slow);
+}
+.xhs-card:active {
+  transform: scale(0.98);
+  box-shadow: var(--xhs-card-shadow-hover);
+}
+.xhs-card-sm { --_card-pad: var(--xhs-space-md); }
+.xhs-card-lg { --_card-pad: var(--xhs-space-xl); }
+
+/* === CTA Button (XHS 纯红按钮) === */
+.xhs-btn-primary {
+  background: var(--xhs-primary);
   color: #FFFFFF;
-  border-radius: var(--radius-btn);
-  font-size: var(--font-body);
-  font-weight: var(--weight-title);
-  height: 44px;
-  line-height: 44px;
+  border-radius: var(--xhs-radius-pill);
+  font-size: var(--xhs-font-lg);
+  font-weight: var(--xhs-weight-semibold);
+  height: 96rpx;
+  line-height: 96rpx;
   text-align: center;
-  transition: opacity 100ms;
+  transition: var(--xhs-transition);
+}
+.xhs-btn-primary:active {
+  opacity: 0.85;
+}
+
+/* === Ghost Button === */
+.xhs-btn-ghost {
+  background: transparent;
+  border: 1px solid var(--xhs-divider-strong);
+  border-radius: var(--xhs-radius-pill);
+  color: var(--xhs-title);
+  font-size: var(--xhs-font-md);
+  font-weight: var(--xhs-weight-medium);
+  height: 80rpx;
+  line-height: 78rpx;
+  text-align: center;
+  transition: var(--xhs-transition);
+}
+.xhs-btn-ghost:active {
+  background: var(--xhs-hover, #F5F5F5);
 }
 
 /* === Text Button === */
-.text-btn {
-  color: var(--color-accent);
-  font-size: var(--font-body);
-  font-weight: var(--weight-title);
-  padding: 8px 0;
-  min-height: 44px;
+.xhs-text-btn {
+  color: var(--xhs-primary);
+  font-size: var(--xhs-font-md);
+  font-weight: var(--xhs-weight-semibold);
+  min-height: 88rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: opacity 100ms;
+  transition: var(--xhs-transition);
 }
 
-/* === Tag Badge (Frosted Glass) === */
-.tag {
-  display: inline-block;
-  padding: 3px 10px;
-  border-radius: var(--radius-tag);
-  font-size: var(--font-caption);
-  font-weight: 500;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+/* === Tag / Badge (Pill Style) === */
+.xhs-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: var(--xhs-radius-pill);
+  font-size: var(--xhs-font-xs);
+  font-weight: var(--xhs-weight-medium);
+  letter-spacing: 0.01em;
+  transition: var(--xhs-transition);
 }
 
 /* === Profit / Loss Colors === */
-.profit { color: var(--color-profit) !important; }
-.loss { color: var(--color-loss) !important; }
+.xhs-profit { color: var(--xhs-profit) !important; }
+.xhs-loss { color: var(--xhs-loss) !important; }
 
-/* === Transaction Type Tags (Frosted Glass) === */
-.type-tag { margin-left: auto; }
-.tag-buy { background: rgba(52, 199, 89, 0.12); color: #34C759; border: 0.5px solid rgba(52, 199, 89, 0.2); }
-.tag-sell { background: rgba(255, 59, 48, 0.1); color: #FF3B30; border: 0.5px solid rgba(255, 59, 48, 0.18); }
-.tag-dividend { background: rgba(255, 149, 0, 0.1); color: #FF9500; border: 0.5px solid rgba(255, 149, 0, 0.18); }
-
-/* === Market Colors (Frosted Glass) === */
-.market-a { background: rgba(0, 122, 255, 0.12); color: #007AFF; border: 0.5px solid rgba(0, 122, 255, 0.2); }
-.market-hk { background: rgba(255, 149, 0, 0.12); color: #FF9500; border: 0.5px solid rgba(255, 149, 0, 0.2); }
-.market-us { background: rgba(175, 82, 222, 0.12); color: #AF52DE; border: 0.5px solid rgba(175, 82, 222, 0.2); }
-
-/* === Divider === */
-.divider {
-  height: 0.5px;
-  background: rgba(60, 60, 67, 0.08);
-  margin: var(--space-module) 0;
+/* === Transaction Type Tags === */
+.xhs-type-buy {
+  background: var(--xhs-loss-bg);
+  color: var(--xhs-loss);
+}
+.xhs-type-sell {
+  background: var(--xhs-profit-bg);
+  color: var(--xhs-profit);
+}
+.xhs-type-dividend {
+  background: var(--xhs-dividend-bg);
+  color: var(--xhs-dividend);
 }
 
-/* === Input (Frosted Glass) === */
-.input {
-  background: rgba(0, 0, 0, 0.04);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 0.5px solid rgba(0, 0, 0, 0.06);
-  border-radius: var(--radius-input);
-  height: 44px;
-  padding: 0 12px;
-  font-size: var(--font-body);
-  color: var(--color-title);
-  transition: opacity 100ms;
+/* === Market Tags === */
+.xhs-market-a {
+  background: var(--xhs-market-a-bg);
+  color: var(--xhs-market-a);
+}
+.xhs-market-hk {
+  background: var(--xhs-market-hk-bg);
+  color: var(--xhs-market-hk);
+}
+.xhs-market-us {
+  background: var(--xhs-market-us-bg);
+  color: var(--xhs-market-us);
+}
+
+/* === Divider === */
+.xhs-divider {
+  height: 1px;
+  background: var(--xhs-divider);
+  margin: var(--xhs-space-md) 0;
+}
+.xhs-divider-strong {
+  height: 1px;
+  background: var(--xhs-divider-strong);
+  margin: var(--xhs-space-md) 0;
+}
+
+/* === Input (XHS 搜索框风格) === */
+.xhs-input {
+  background: var(--xhs-bg-secondary);
+  border: 1px solid transparent;
+  border-radius: var(--xhs-radius-pill);
+  height: 80rpx;
+  padding: 0 var(--xhs-space-md);
+  font-size: var(--xhs-font-md);
+  color: var(--xhs-title);
+  transition: var(--xhs-transition);
+}
+.xhs-input:focus {
+  border-color: var(--xhs-primary);
+  background: var(--xhs-surface);
 }
 
 /* === Page Container === */
-.page-container {
+.xhs-page {
   min-height: 100vh;
-  padding: var(--space-page);
+  padding: var(--xhs-space-lg);
   padding-bottom: calc(80px + env(safe-area-inset-bottom));
   box-sizing: border-box;
   display: flex;
@@ -270,223 +272,178 @@ page {
 }
 
 /* === Section Spacing === */
-.section {
-  margin-bottom: var(--space-module);
+.xhs-section {
+  margin-bottom: var(--xhs-space-lg);
 }
-.section-header {
+.xhs-section-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: var(--xhs-space-md);
 }
 
-/* === Chip / Pill (Frosted Glass) === */
-.chip {
+/* === Chip / Filter Pill === */
+.xhs-chip {
   display: inline-flex;
   align-items: center;
   padding: 6px 14px;
-  border-radius: 20px;
-  background: var(--glass-bg);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 0.5px solid var(--glass-border);
-  font-size: var(--font-caption);
-  color: var(--color-body);
+  border-radius: var(--xhs-radius-pill);
+  background: var(--xhs-bg-secondary);
+  font-size: var(--xhs-font-sm);
+  color: var(--xhs-body);
   min-height: 32px;
-  transition: opacity 100ms;
+  transition: var(--xhs-transition);
+  border: 1px solid transparent;
 }
-.chip-active {
-  background: rgba(255, 59, 48, 0.15);
-  color: #FF3B30;
-  border-color: rgba(255, 59, 48, 0.25);
+.xhs-chip:active {
+  transform: scale(0.95);
+}
+.xhs-chip-active {
+  background: var(--xhs-primary-bg);
+  color: var(--xhs-primary);
+  border-color: var(--xhs-primary);
+  font-weight: var(--xhs-weight-semibold);
 }
 
 /* === Empty State === */
-.empty-state {
+.xhs-empty {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 60px 40px;
+  padding: 120rpx 80rpx;
+  text-align: center;
 }
-.empty-title {
-  font-size: var(--font-title);
-  font-weight: var(--weight-title);
-  color: var(--color-title);
-  margin-top: 16px;
+.xhs-empty-icon {
+  font-size: 112rpx;
+  margin-bottom: var(--xhs-space-lg);
+  opacity: 0.8;
 }
-.empty-desc {
-  font-size: var(--font-body);
-  color: var(--color-caption);
-  margin-top: 8px;
+.xhs-empty-title {
+  font-size: var(--xhs-font-xl);
+  font-weight: var(--xhs-weight-semibold);
+  color: var(--xhs-title);
+  margin-bottom: var(--xhs-space-sm);
 }
-
-/* === Header Bar (Frosted Glass) === */
-.nav-bar {
-  position: sticky;
-  top: 0;
-  z-index: 50;
-  background: rgba(242, 242, 247, 0.6);
-  backdrop-filter: saturate(180%) blur(40px);
-  -webkit-backdrop-filter: saturate(180%) blur(40px);
-  padding-top: 0;
-  padding-bottom: 8px;
-  border-bottom: 0.5px solid rgba(255, 255, 255, 0.5);
-}
-.nav-header {
-  display: flex;
-  align-items: flex-end;
-  padding: 0 var(--space-page);
-  height: 100%;
-}
-.nav-header-title {
-  font-size: var(--font-large-title);
-  font-weight: var(--weight-display);
-  color: var(--color-title);
-  letter-spacing: 0.01em;
-  line-height: 1.15;
-  padding-bottom: 4px;
+.xhs-empty-desc {
+  font-size: var(--xhs-font-md);
+  color: var(--xhs-caption);
+  line-height: 1.5;
 }
 
-/* === Liquid Slider (Frosted Glass) === */
-.liquid-slider {
+/* === Slider Tab (分段选择器) === */
+.xhs-slider {
   display: flex;
-  background: rgba(0, 0, 0, 0.04);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 0.5px solid rgba(0, 0, 0, 0.06);
-  border-radius: 12px;
+  background: var(--xhs-bg-secondary);
+  border-radius: var(--xhs-radius-pill);
   padding: 3px;
   position: relative;
-  margin-bottom: var(--space-module);
+  margin-bottom: var(--xhs-space-lg);
 }
-.liquid-slider-bg {
+.xhs-slider-bg {
   position: absolute;
-  height: calc(100% - 6px);
-  background: var(--glass-bg);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 0.5px solid var(--glass-border);
+  top: 3px;
+  bottom: 3px;
+  background: var(--xhs-surface);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
-  border-radius: 10px;
+  border-radius: var(--xhs-radius-pill);
   transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 1;
 }
-.liquid-slider-item {
+.xhs-slider-item {
   flex: 1;
   text-align: center;
-  padding: 8px 0;
-  border-radius: 10px;
-  font-size: var(--font-caption);
-  color: var(--color-caption);
+  padding: 7px 0;
+  font-size: var(--xhs-font-sm);
+  font-weight: var(--xhs-weight-medium);
+  color: var(--xhs-caption);
   position: relative;
-  z-index: 1;
-  transition: color 300ms;
+  z-index: 2;
+  transition: var(--xhs-transition);
 }
-.liquid-slider-item.active {
-  color: var(--color-accent);
-  font-weight: var(--weight-title);
+.xhs-slider-item.active {
+  color: var(--xhs-primary);
+  font-weight: var(--xhs-weight-semibold);
 }
 
 /* === Scroll Container === */
-.scroll-container {
+.xhs-scroll {
   flex: 1;
   height: 0;
   min-height: 0;
 }
 
-/* === Liquid Dissolve Animation === */
-@keyframes dissolve-out {
-  0% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(0.8);
-    opacity: 0;
-  }
+/* === FAB === */
+.xhs-fab {
+  position: fixed;
+  right: var(--xhs-space-lg);
+  bottom: calc(200rpx + env(safe-area-inset-bottom));
+  width: 104rpx;
+  height: 104rpx;
+  border-radius: var(--xhs-radius-round);
+  background: var(--xhs-primary);
+  color: #FFFFFF;
+  font-size: 52rpx;
+  font-weight: var(--xhs-weight-bold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--xhs-btn-shadow);
+  z-index: 100;
+  transition: var(--xhs-transition);
 }
-.dissolving {
-  animation: dissolve-out 400ms ease-in forwards;
+.xhs-fab:active {
+  transform: scale(0.9);
+  box-shadow: var(--xhs-btn-shadow-hover);
+}
+.xhs-fab-hidden {
+  opacity: 0;
   pointer-events: none;
-}
-
-/* === Visual Feedback === */
-.parallax-container {
-  /* container */
-}
-.parallax-card {
-  transition: transform 100ms ease-out, box-shadow 100ms ease-out;
-}
-.parallax-near {
-  transform: scale(1.02);
-}
-.parallax-mid {
-  transform: scale(1);
-}
-.parallax-far {
-  transform: scale(0.98);
+  transform: scale(0.8) rotate(90deg);
 }
 
 /* === Skeleton Screen === */
-.skeleton-container {
-  padding: var(--space-page);
+.xhs-skeleton {
+  padding: var(--xhs-space-lg);
 }
-
-.skeleton-card {
-  background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 0.5px solid var(--glass-border);
-  border-radius: var(--radius-card);
-  padding: var(--space-card-pad);
-  margin-bottom: var(--space-module);
+.xhs-skeleton-card {
+  background: var(--xhs-surface);
+  border-radius: var(--xhs-radius-md);
+  box-shadow: var(--xhs-card-shadow);
+  padding: var(--xhs-space-lg);
+  margin-bottom: var(--xhs-space-md);
 }
-
-.skeleton-header {
+.xhs-skeleton-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: var(--xhs-space-sm);
+  margin-bottom: var(--xhs-space-md);
 }
-
-.skeleton-tag {
-  width: 48px;
-  height: 24px;
-  border-radius: var(--radius-tag);
-  background: rgba(0, 0, 0, 0.06);
+.xhs-skeleton-tag {
+  width: 96rpx;
+  height: 48rpx;
+  border-radius: var(--xhs-radius-pill);
+  background: var(--xhs-divider);
 }
-
-.skeleton-text {
-  height: 20px;
-  border-radius: 4px;
-  background: rgba(0, 0, 0, 0.06);
+.xhs-skeleton-text {
+  height: 32rpx;
+  border-radius: 8rpx;
+  background: var(--xhs-divider);
 }
-
-.skeleton-header .skeleton-text:first-child {
-  width: 80px;
-}
-
-.skeleton-header .skeleton-text:last-child {
-  width: 100px;
-}
-
-.skeleton-body {
+.xhs-skeleton-body {
   display: flex;
-  gap: 12px;
+  gap: var(--xhs-space-md);
 }
-.skeleton-body .skeleton-item {
+.xhs-skeleton-item {
   flex: 1;
-}
-
-.skeleton-item {
-  height: 40px;
-  border-radius: 8px;
-  background: rgba(0, 0, 0, 0.06);
+  height: 72rpx;
+  border-radius: 8rpx;
+  background: var(--xhs-divider);
 }
 
 /* === Shimmer Animation === */
-.shimmer {
-  background: linear-gradient(90deg, rgba(0,0,0,0.04) 25%, rgba(0,0,0,0.08) 50%, rgba(0,0,0,0.04) 75%);
+.xhs-shimmer {
+  background: linear-gradient(90deg, var(--xhs-divider) 25%, rgba(0,0,0,0.06) 50%, var(--xhs-divider) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
@@ -494,4 +451,20 @@ page {
 @keyframes shimmer {
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
+}
+
+/* === Monospace Numbers === */
+.xhs-mono {
+  letter-spacing: 0.01em;
+  font-weight: var(--xhs-weight-semibold);
+}
+
+/* === Dissolve Animation === */
+@keyframes dissolve-out {
+  0% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(0.85); opacity: 0; }
+}
+.dissolving {
+  animation: dissolve-out 350ms ease-in forwards;
+  pointer-events: none;
 }

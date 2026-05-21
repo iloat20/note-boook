@@ -20,7 +20,9 @@ Component({
         iconPath: "/images/tab-stats.svg",
         selectedIconPath: "/images/tab-stats-active.svg"
       }
-    ]
+    ],
+    // 小红书风格 tab 图标 tint 参数
+    activeColor: '--xhs-primary'
   },
   methods: {
     switchTab(e) {

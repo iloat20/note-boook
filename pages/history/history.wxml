@@ -1,21 +1,45 @@
 <view class="page-container" style="padding-top: {{statusBarHeight}}px;">
-  <view style="margin-bottom: 12px;">
-    <view style="display: flex; align-items: center; gap: 8px; background: var(--color-bg); border-radius: var(--radius-input); padding: 0 12px; height: 44px;">
-      <image src="/images/search.svg" mode="aspectFit" style="width: 16px; height: 16px; opacity: 0.4;"/>
-      <input class="input" placeholder="搜索代码/名称..." value="{{searchKeyword}}" bindinput="onSearchInput" style="flex: 1; background: transparent; height: 44px; padding: 0;" />
-      <view wx:if="{{searchKeyword}}" bindtap="clearSearch" style="padding: 8px; margin: -8px;">
-        <text style="font-size: 16px; opacity: 0.4;">✕</text>
+  <!-- 标题栏（仅间距） -->
+  <view class="page-title"></view>
+
+  <!-- 搜索栏 (小红书风格圆角) -->
+  <view class="search-bar-wrap">
+    <view class="search-bar">
+      <image src="/images/search.svg" mode="aspectFit" class="search-icon" />
+      <input class="search-input" placeholder="搜索股票代码/名称..." value="{{searchKeyword}}" bindinput="onSearchInput" />
+      <view wx:if="{{searchKeyword}}" class="search-clear" bindtap="clearSearch">
+        <text>✕</text>
       </view>
     </view>
   </view>
 
-  <view class="liquid-slider" style="margin-bottom: 16px; position: relative;">
-    <view class="liquid-slider-bg" style="left: {{sliderLeft}}px; width: {{sliderWidth}}px;"></view>
-    <view wx:for="{{filterTabs}}" wx:key="key" class="liquid-slider-item {{currentFilter === item.key ? 'active' : ''}}" bindtap="switchFilter" data-filter="{{item.key}}">{{item.label}}</view>
+  <!-- 骨架屏 -->
+  <view wx:if="{{loading}}" class="skeleton-container">
+    <view class="xhs-skeleton-card" wx:for="{{[1,2,3,4]}}" wx:key="*this">
+      <view class="xhs-skeleton-header">
+        <view class="xhs-skeleton-tag xhs-shimmer"></view>
+        <view class="xhs-skeleton-text xhs-shimmer"></view>
+        <view class="xhs-skeleton-text xhs-shimmer"></view>
+      </view>
+      <view class="xhs-skeleton-body">
+        <view class="xhs-skeleton-item xhs-shimmer"></view>
+        <view class="xhs-skeleton-item xhs-shimmer"></view>
+      </view>
+    </view>
   </view>
 
-  <scroll-view scroll-x class="market-chips">
-    <view style="display: flex; gap: 8px; padding-bottom: 12px; white-space: nowrap;">
+  <!-- 类型筛选 (买入/卖出/分红) -->
+  <liquid-slider
+    tabs="{{filterTabs}}"
+    currentKey="{{currentFilter}}"
+    bind:change="onFilterTabChange"
+    style="margin-bottom: 24rpx;"
+  />
+
+  <!-- 市场和策略筛选 (合并为一行滑动) -->
+  <scroll-view scroll-x class="filter-chips" enhanced show-scrollbar="{{false}}">
+    <view class="chip-row">
+      <!-- 市场筛选 -->
       <view
         wx:for="{{marketTabs}}"
         wx:key="key"
@@ -23,55 +47,92 @@
         bindtap="switchMarket"
         data-market="{{item.key}}"
       >{{item.label}}</view>
-    </view>
-  </scroll-view>
 
-  <scroll-view wx:if="{{activeStrategies.length > 0}}" scroll-x class="market-chips">
-    <view style="display: flex; gap: 8px; padding-bottom: 12px; white-space: nowrap;">
-      <view class="chip {{currentStrategy === null ? 'chip-active' : ''}}" bindtap="switchStrategy" data-strategy="">全部策略</view>
+      <!-- 策略筛选分隔 -->
+      <view wx:if="{{activeStrategies.length > 0}}" class="chip-divider"></view>
+
+      <!-- 策略筛选 -->
       <view wx:for="{{activeStrategies}}" wx:key="tag"
             class="chip {{currentStrategy === item.tag ? 'chip-active' : ''}}"
             bindtap="switchStrategy" data-strategy="{{item.tag}}">
-        {{item.tag}} ({{item.count}})
+        {{item.tag}}
       </view>
+
+      <!-- 批量选择 -->
+      <view class="chip-divider"></view>
+      <view class="chip {{selectMode ? 'chip-active' : ''}}" bindtap="toggleSelectMode">☐ 批量</view>
     </view>
   </scroll-view>
 
-  <scroll-view wx:if="{{groupedHistory.length > 0}}" class="scroll-container" scroll-y bindscrolltolower="loadMore">
+  <!-- 批量选择工具栏 -->
+  <view wx:if="{{selectMode}}" class="batch-bar">
+    <view class="batch-select-all" bindtap="toggleSelectAll">
+      <view class="checkbox {{selectAll ? 'checkbox-checked' : ''}}"></view>
+      <text>全选</text>
+    </view>
+    <view class="batch-delete-btn" bindtap="batchDelete">
+      删除 ({{selectedIds.length}})
+    </view>
+    <view class="batch-cancel-btn" bindtap="toggleSelectMode">取消</view>
+  </view>
+
+  <!-- 记录列表 -->
+  <scroll-view wx:if="{{groupedHistory.length > 0}}" class="scroll-container" scroll-y bindscrolltolower="loadMore" enhanced show-scrollbar="{{false}}">
     <view wx:for="{{groupedHistory}}" wx:key="date" class="section">
-      <text class="caption" style="display: block; margin-bottom: 12px;">{{item.date}}</text>
+      <!-- 日期标题 (更突出) -->
+      <view class="date-header">
+        <view class="date-dot"></view>
+        <text class="date-text">{{item.date}}</text>
+      </view>
 
-      <view wx:for="{{item.items}}" wx:key="id" wx:for-item="record" wx:for-index="index"
-        class="card-sm {{dissolvingId === record.id ? 'dissolving' : ''}}"
-        style="margin-bottom: 8px;"
+      <!-- 交易卡片 (XHS feed 风格) -->
+      <view wx:for="{{item.items}}" wx:key="id" wx:for-item="record"
+        class="record-card {{dissolvingId === record.id ? 'dissolving' : ''}} {{selectMode ? 'record-card-selectable' : ''}}"
         data-record="{{record}}"
+        data-id="{{record.id}}"
         data-index="{{index}}"
-        bindlongpress="showActions"
+        bindlongpress="{{selectMode ? '' : 'showActions'}}"
+        bindtap="{{selectMode ? 'onRecordTap' : ''}}"
       >
-        <view style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-          <view class="tag market-{{record.market === 'A_SHARE' ? 'a' : record.market === 'HK_SHARE' ? 'hk' : 'us'}}">{{record.marketLabel}}</view>
-          <text class="body" style="color: var(--color-title); font-weight: var(--weight-title);">{{record.code}}</text>
-          <text class="caption">{{record.name}}</text>
-          <view class="tag type-tag {{record.type === 'BUY' ? 'tag-buy' : record.type === 'SELL' ? 'tag-sell' : 'tag-dividend'}}">
-            {{record.typeText}}
-          </view>
+        <!-- 批量选择复选框 -->
+        <view wx:if="{{selectMode}}" class="record-checkbox" catchtap="toggleSelectItem" data-id="{{record.id}}">
+          <view class="checkbox {{selectedIds.indexOf(record.id) >= 0 ? 'checkbox-checked' : ''}}"></view>
         </view>
 
-        <view style="display: flex; justify-content: space-between; align-items: center;">
-          <text class="caption">{{record.time}}</text>
-          <text class="body {{record.type === 'BUY' ? 'loss' : 'profit'}}" style="font-weight: var(--weight-title);">
-            {{record.type === 'BUY' ? '-' : '+'}}{{record.amountText}}
-          </text>
-        </view>
-        <view wx:if="{{record.strategies.length > 0}}" style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px;">
-          <view wx:for="{{record.strategies}}" wx:for-item="tag" class="strategy-tag-mini">{{tag}}</view>
+        <!-- 左侧: 类型色条 -->
+        <view class="record-type-bar {{record.type === 'BUY' ? 'bar-buy' : record.type === 'SELL' ? 'bar-sell' : 'bar-dividend'}}"></view>
+
+        <!-- 主内容 -->
+        <view class="record-main">
+          <!-- 第一行: 代码 + 名称 + 类型标签 -->
+          <view class="record-top">
+            <view class="record-info">
+              <market-tag market="{{record.market}}" label="{{record.marketLabel}}" />
+              <text class="record-code">{{record.code}}</text>
+              <text class="record-name">{{record.name}}</text>
+            </view>
+            <view class="tag type-tag {{record.type === 'BUY' ? 'tag-buy' : record.type === 'SELL' ? 'tag-sell' : 'tag-dividend'}}">
+              {{record.typeText}}
+            </view>
+          </view>
+
+          <!-- 第二行: 时间 + 金额 -->
+          <view class="record-bottom">
+            <text class="record-time">{{record.time}}</text>
+            <text class="record-amount mono-num {{record.type === 'BUY' ? 'loss' : 'profit'}}">
+              {{record.type === 'BUY' ? '-' : '+'}}{{record.amountText}}
+            </text>
+          </view>
+
+          <!-- 策略标签 -->
+          <strategy-tags wx:if="{{record.strategies.length > 0}}" tags="{{record.strategies}}" size="mini" />
         </view>
       </view>
     </view>
-    
+
     <!-- 加载更多 -->
     <view wx:if="{{hasMore}}" class="load-more" bindtap="loadMore">
-      <text wx:if="{{!loadingMore}}" class="caption">加载更多</text>
+      <text wx:if="{{!loadingMore}}" class="load-more-text">展开更多记录</text>
       <view wx:else class="loading-dots">
         <view class="dot"></view>
         <view class="dot"></view>
@@ -79,22 +140,16 @@
       </view>
     </view>
     <view wx:else class="no-more">
-      <text class="caption" style="color: var(--color-caption);">— 已经到底了 —</text>
+      <text>— 已经到底了 —</text>
     </view>
-    <view style="height: 100px;"></view>
+    <view style="height: 160rpx;"></view>
   </scroll-view>
 
-  <view wx:else class="empty-state">
-    <view style="font-size: 64px; margin-bottom: 16px; opacity: 0.6;">📝</view>
-    <text class="empty-title">暂无记录</text>
-    <text class="empty-desc">开始记录您的每一笔交易</text>
-    <view style="margin-top: 24px; display: flex; gap: 12px;">
-      <view class="text-btn" bindtap="goToRecord" style="padding: 8px 20px; background: var(--color-surface); border-radius: 8px; box-shadow: var(--shadow-sm);">
-        <text>✏️ 添加交易</text>
-      </view>
-      <view class="text-btn" bindtap="goToDividend" style="padding: 8px 20px; background: var(--color-surface); border-radius: 8px; box-shadow: var(--shadow-sm);">
-        <text>💰 添加分红</text>
-      </view>
+  <!-- 空状态 -->
+  <empty-state wx:else icon="📝" title="暂无记录" desc="开始记录您的每一笔交易吧" showSlot="{{true}}">
+    <view slot="actions" class="empty-actions">
+      <view class="empty-btn" bindtap="goToRecord">✏️ 添加交易</view>
+      <view class="empty-btn" bindtap="goToDividend">💰 添加分红</view>
     </view>
-  </view>
+  </empty-state>
 </view>

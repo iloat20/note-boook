@@ -62,7 +62,10 @@
     <view class="ar-section">
       <text class="ar-section-title">月度盈亏</text>
       <view class="ar-chart-box">
-        <canvas type="2d" id="monthlyCanvas" class="ar-monthly-canvas"></canvas>
+        <canvas type="2d" id="monthlyCanvas" class="ar-monthly-canvas" wx:if="{{data.monthlyPnL && data.monthlyPnL.length > 0}}"></canvas>
+        <view class="ar-chart-empty" wx:if="{{!data.monthlyPnL || data.monthlyPnL.length === 0}}">
+          <text class="ar-chart-empty-text">暂无数据</text>
+        </view>
       </view>
     </view>
 
@@ -117,4 +120,16 @@
 
     <view style="height: 80px;"></view>
   </scroll-view>
+
+  <!-- 导出按钮 -->
+  <view class="ar-export-btn" bindtap="onExportImage" wx:if="{{!exporting}}">
+    <text class="ar-export-icon">📷</text>
+    <text class="ar-export-text">保存为图片</text>
+  </view>
+  <view class="ar-export-btn ar-exporting" wx:if="{{exporting}}">
+    <text class="ar-export-text">生成中...</text>
+  </view>
+
+  <!-- 用于导出的离屏Canvas -->
+  <canvas type="2d" id="exportCanvas" class="ar-export-canvas"></canvas>
 </view>

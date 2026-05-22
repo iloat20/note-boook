@@ -41,13 +41,12 @@ page {
   margin-left: -1px;
 }
 
-/* === 导航栏 === */
+/* === 导航栏（小红书风格） === */
 .nav-bar {
-  position: sticky;
-  top: 0;
-  z-index: 50;
+  display: flex;
+  align-items: flex-end;
   background: var(--xhs-bg);
-  padding-bottom: var(--xhs-space-sm);
+  padding: 0 16px 12px;
 }
 
 /* === 股票概要卡片 === */
@@ -159,13 +158,13 @@ page {
 }
 
 .tag-buy {
-  background: var(--xhs-loss-bg);
-  color: var(--xhs-loss);
+  background: var(--xhs-profit-bg);
+  color: var(--xhs-profit);
 }
 
 .tag-sell {
-  background: var(--xhs-profit-bg);
-  color: var(--xhs-profit);
+  background: var(--xhs-loss-bg);
+  color: var(--xhs-loss);
 }
 
 .tag-dividend {
@@ -282,7 +281,7 @@ page {
   align-items: center;
   justify-content: space-between;
   padding-top: 10px;
-  border-top: 1px solid var(--color-separator);
+  border-top: 1px solid var(--xhs-divider);
 }
 
 .record-qty {
@@ -312,7 +311,7 @@ page {
 .record-journal {
   margin-top: 10px;
   padding-top: 10px;
-  border-top: 1px solid var(--color-separator);
+  border-top: 1px solid var(--xhs-divider);
 }
 
 .record-reason {

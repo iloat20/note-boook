@@ -48,7 +48,8 @@ Page({
   },
 
   switchPeriod: function (e) {
-    this.setData({ currentPeriod: e.currentTarget.dataset.period }, () => {
+    const period = e.currentTarget.dataset.period
+    this.setData({ currentPeriod: period }, () => {
       this.loadStats()
     })
   },

@@ -77,13 +77,13 @@ Page({ ...touchGestureMixin,
   },
   
   // ========== 生命周期 ==========
-  onLoad() {
+  async onLoad() {
     // 使用 mixin 初始化
     pageMixin.onLoadMixin(this)
-    
+
     // 更新日期
     this.updateDate()
-    
+
     // 计算虚拟列表高度
     const systemInfo = getApp().globalData.systemInfo || wx.getWindowInfo() || {}
     const windowHeight = systemInfo.windowHeight || 667
@@ -91,14 +91,17 @@ Page({ ...touchGestureMixin,
     const fixedHeight = statusBarHeight + 180
     const scrollHeight = windowHeight - fixedHeight
     this.setData({ scrollHeight: Math.max(scrollHeight, 300) })
-    
+
     // 订阅状态变化
     this._unsubscribePositions = positionStore.subscribe('positions', (newPositions) => {
       this.setData({ positions: newPositions })
     })
-    
-    // 加载数据
-    this._loadData()
+
+    // 等待数据加载完成后再获取现价
+    await this._loadData()
+
+    // 刚进入页面获取一次现价
+    this._fetchPrices()
   },
   
   onShow() {
@@ -135,18 +138,14 @@ Page({ ...touchGestureMixin,
   // ========== 数据加载 ==========
   async _loadData(forceRefresh = false) {
     if (this.data.loading) return
-    
+
     try {
       this.setData({ loading: true })
-      
-      // 使用 positionService 获取数据
-      let results = await Promise.all([
-        positionService.getAllPositions(forceRefresh),
-        positionService.getPositionSummary()
-      ])
-      let positions = results[0]
-      let summary = results[1]
-      
+
+      // 使用 positionService 获取数据（已封装缓存逻辑）
+      // 注意：getAllPositions 内部使用同步 storage 操作，无需 Promise
+      let positions = positionService.getAllPositions(forceRefresh)
+
       // 更新 Store（会触发订阅回调）
       positionStore.commit('SET_POSITIONS', positions)
       
@@ -337,24 +336,29 @@ Page({ ...touchGestureMixin,
   async _fetchPrices() {
     const positions = this.data.positions
     if (!positions || positions.length === 0) return
-    
+
+    // 跳过 TTL 未过期的股票，只请求需要更新的
+    const needFetch = positions.filter(p => !PriceCache.has(p.id))
+    if (needFetch.length === 0) {
+      wx.showToast({ title: '行情已是最新', icon: 'none' })
+      return
+    }
+
     wx.showLoading({ title: '获取行情中...' })
-    
+
     try {
-      const results = await fetchAllPrices(positions)
-      let updated = 0
-      
-      results.forEach(r => {
-        if (r.price !== null) {
-          PriceCache.set(r.stockId, r.price)
-          updated++
-        }
-      })
-      
+      const results = await fetchAllPrices(needFetch)
+      const validResults = results.filter(r => r.price !== null)
+
+      if (validResults.length > 0) {
+        // 批量写入，一次 saveData 完成
+        PriceCache.setBatch(validResults)
+      }
+
       wx.hideLoading()
       this._loadData()
-      
-      if (updated > 0) {
+
+      if (validResults.length > 0) {
         wx.showToast({ title: '行情已更新', icon: 'success' })
       } else {
         wx.showToast({ title: '获取失败', icon: 'none' })
@@ -400,16 +404,16 @@ Page({ ...touchGestureMixin,
   
   onSwipeEdit(e) {
     let stockId = e.currentTarget.dataset.stockId
-    let transactions = Transaction.getAll().filter(function(t) { return t.stockId === stockId })
-    
-    if (transactions.length > 0) {
-      wx.navigateTo({ url: '/packageRecord/pages/record/record?id=' + transactions[0].id })
-    }
+    wx.navigateTo({
+      url: '/packageRecord/pages/record/record?stockId=' + stockId
+    })
   },
   
   onSwipeSell(e) {
-    let item = e.currentTarget.dataset.item
-    wx.navigateTo({ url: '/packageRecord/pages/record/record?stockId=' + item.id + '&type=SELL' })
+    let stockId = e.currentTarget.dataset.stockId
+    let position = this.data.positions.find(function (p) { return p.id === stockId })
+    if (!position) { wx.showToast({ title: '未找到持仓', icon: 'none' }); return }
+    wx.navigateTo({ url: '/packageRecord/pages/record/record?stockId=' + stockId + '&type=SELL' })
   },
   
   onSwipeDelete(e) {

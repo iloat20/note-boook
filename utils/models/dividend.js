@@ -63,7 +63,7 @@ const Dividend = {
   deleteByStockId(stockId) {
     const dividends = this.getAll().filter(d => d.stockId !== stockId)
     saveData(DIVIDEND_KEY, dividends)
-    markDataDirty(['position', 'heatmap', 'periodStats'])
+    markDataDirty(['position', 'heatmap', 'periodStats'], stockId)
   },
 
   /**

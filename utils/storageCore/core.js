@@ -113,7 +113,12 @@ function upsertAndSave(key, item, dirtyTags) {
     list.push(item)
   }
   saveData(key, list)
-  if (dirtyTags) markDataDirty(dirtyTags)
+  if (dirtyTags) {
+    // 提取 stockId 用于按股票粒度清除缓存
+    // Transaction/Dividend 有 stockId 字段，Stock 用 id 作为 stockId
+    const stockId = item.stockId != null ? item.stockId : item.id
+    markDataDirty(dirtyTags, stockId)
+  }
   return item
 }
 
@@ -122,11 +127,20 @@ function upsertAndSave(key, item, dirtyTags) {
  * @param {string} key - 存储键
  * @param {number} id - 要删除的对象 ID
  * @param {string|Array} dirtyTags - dirty 标记
+ * @param {number} [stockId] - 可选的 stockId，用于按股票粒度清除缓存。
+ *   不传时自动从被删除项目中检测。
  */
-function deleteAndSave(key, id, dirtyTags) {
-  const list = getData(key).filter(function (x) { return x.id !== id })
+function deleteAndSave(key, id, dirtyTags, stockId) {
+  let foundStockId = stockId
+  const list = getData(key).filter(function (x) {
+    // 检测被删除项目的 stockId（用于按粒度清除缓存）
+    if (x.id === id && foundStockId == null) {
+      foundStockId = x.stockId != null ? x.stockId : x.id
+    }
+    return x.id !== id
+  })
   saveData(key, list)
-  if (dirtyTags) markDataDirty(dirtyTags)
+  if (dirtyTags) markDataDirty(dirtyTags, foundStockId)
 }
 
 module.exports = {

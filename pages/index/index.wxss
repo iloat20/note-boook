@@ -193,6 +193,10 @@ page {
   background: var(--xhs-bg);
 }
 
+.swipe-actions-open {
+  z-index: 3;
+}
+
 .swipe-action-btn {
   width: 128rpx;
   height: calc(100% - 48rpx);
@@ -211,7 +215,7 @@ page {
 }
 
 .swipe-action-sell {
-  background: #FF6B6B;
+  background: var(--xhs-loss);
 }
 
 .swipe-action-delete {
@@ -335,74 +339,7 @@ page {
   transform: scale(0.8) rotate(90deg);
 }
 
-/* === 骨架屏 === */
-.skeleton-container {
-  padding: 0;
-}
-
-.skeleton-card {
-  background: var(--xhs-surface);
-  border-radius: var(--xhs-radius-md);
-  box-shadow: var(--xhs-card-shadow);
-  padding: var(--xhs-space-lg);
-  margin-bottom: var(--xhs-space-md);
-}
-
-.skeleton-header {
-  display: flex;
-  align-items: center;
-  gap: var(--xhs-space-sm);
-  margin-bottom: var(--xhs-space-md);
-}
-
-.skeleton-tag {
-  width: 48px;
-  height: 24px;
-  border-radius: var(--xhs-radius-pill);
-  background: var(--xhs-divider);
-}
-
-.skeleton-text {
-  height: 16px;
-  border-radius: 4px;
-  background: var(--xhs-divider);
-}
-
-.skeleton-header .skeleton-text:first-child {
-  width: 80px;
-}
-
-.skeleton-header .skeleton-text:last-child {
-  width: 100px;
-}
-
-.skeleton-body {
-  display: flex;
-  gap: var(--xhs-space-md);
-}
-
-.skeleton-body .skeleton-item {
-  flex: 1;
-}
-
-.skeleton-item {
-  height: 36px;
-  border-radius: 4px;
-  background: var(--xhs-divider);
-}
-
-.shimmer {
-  background: linear-gradient(90deg, var(--xhs-divider) 25%, rgba(0,0,0,0.06) 50%, var(--xhs-divider) 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-}
-
-@keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-
-/* === Stat Item === */
+/* === FAB === */
 .stat-item {
   flex: 1;
 }

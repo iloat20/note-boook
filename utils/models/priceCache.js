@@ -23,8 +23,28 @@ const PriceCache = {
       timestamp: Date.now()
     }
     saveData(PRICE_KEY, prices)
-    // 价格变化只影响浮动盈亏，不需要清除 heatmap / periodStats 缓存
     markDataDirty(['position'])
+  },
+
+  /**
+   * 批量设置股票价格缓存（只写一次 storage）
+   * @param {Array<{stockId: number, price: number}>} entries
+   */
+  setBatch(entries) {
+    if (!entries || entries.length === 0) return
+    const prices = this.getAll()
+    const now = Date.now()
+    const updatedIds = []
+    entries.forEach(function (item) {
+      prices[item.stockId] = {
+        price: parseFloat(item.price),
+        timestamp: now
+      }
+      updatedIds.push(item.stockId)
+    })
+    saveData(PRICE_KEY, prices)
+    // 批量传递所有更新的股票 ID，按粒度清除
+    markDataDirty(['position'], updatedIds)
   },
 
   /**

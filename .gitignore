@@ -30,3 +30,6 @@ Thumbs.db
 
 # WorkBuddy 工作区数据
 .workbuddy/
+
+# Claude 工作区数据
+.claude/

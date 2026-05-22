@@ -1,4 +1,4 @@
-<view class="page-container" style="padding-top: {{statusBarHeight}}px;">
+<view class="page-container" style="padding-top: {{statusBarHeight + navBarHeight}}px;">
   <!-- 标题栏（仅间距） -->
   <view class="page-title"></view>
 
@@ -8,7 +8,7 @@
       <image src="/images/search.svg" mode="aspectFit" class="search-icon" />
       <input class="search-input" placeholder="搜索股票代码/名称..." value="{{searchKeyword}}" bindinput="onSearchInput" />
       <view wx:if="{{searchKeyword}}" class="search-clear" bindtap="clearSearch">
-        <text>✕</text>
+        <text class="search-clear-icon">✕</text>
       </view>
     </view>
   </view>
@@ -33,7 +33,6 @@
     tabs="{{filterTabs}}"
     currentKey="{{currentFilter}}"
     bind:change="onFilterTabChange"
-    style="margin-bottom: 24rpx;"
   />
 
   <!-- 市场和策略筛选 (合并为一行滑动) -->
@@ -60,21 +59,9 @@
 
       <!-- 批量选择 -->
       <view class="chip-divider"></view>
-      <view class="chip {{selectMode ? 'chip-active' : ''}}" bindtap="toggleSelectMode">☐ 批量</view>
+      <view class="chip {{selectMode ? 'chip-active chip-batch' : ''}}" bindtap="toggleSelectMode"><view class="batch-icon"></view> 批量</view>
     </view>
   </scroll-view>
-
-  <!-- 批量选择工具栏 -->
-  <view wx:if="{{selectMode}}" class="batch-bar">
-    <view class="batch-select-all" bindtap="toggleSelectAll">
-      <view class="checkbox {{selectAll ? 'checkbox-checked' : ''}}"></view>
-      <text>全选</text>
-    </view>
-    <view class="batch-delete-btn" bindtap="batchDelete">
-      删除 ({{selectedIds.length}})
-    </view>
-    <view class="batch-cancel-btn" bindtap="toggleSelectMode">取消</view>
-  </view>
 
   <!-- 记录列表 -->
   <scroll-view wx:if="{{groupedHistory.length > 0}}" class="scroll-container" scroll-y bindscrolltolower="loadMore" enhanced show-scrollbar="{{false}}">
@@ -87,7 +74,7 @@
 
       <!-- 交易卡片 (XHS feed 风格) -->
       <view wx:for="{{item.items}}" wx:key="id" wx:for-item="record"
-        class="record-card {{dissolvingId === record.id ? 'dissolving' : ''}} {{selectMode ? 'record-card-selectable' : ''}}"
+        class="record-card {{dissolvingId === record.id ? 'dissolving' : ''}} {{selectMode ? 'record-card-selectable' : ''}} {{selectMode && selectedMap[record.id] ? 'record-card-selected' : ''}}"
         data-record="{{record}}"
         data-id="{{record.id}}"
         data-index="{{index}}"
@@ -96,7 +83,7 @@
       >
         <!-- 批量选择复选框 -->
         <view wx:if="{{selectMode}}" class="record-checkbox" catchtap="toggleSelectItem" data-id="{{record.id}}">
-          <view class="checkbox {{selectedIds.indexOf(record.id) >= 0 ? 'checkbox-checked' : ''}}"></view>
+          <view class="xhs-checkbox {{selectedMap[record.id] ? 'xhs-checkbox-checked' : ''}}"></view>
         </view>
 
         <!-- 左侧: 类型色条 -->
@@ -119,7 +106,7 @@
           <!-- 第二行: 时间 + 金额 -->
           <view class="record-bottom">
             <text class="record-time">{{record.time}}</text>
-            <text class="record-amount mono-num {{record.type === 'BUY' ? 'loss' : 'profit'}}">
+            <text class="record-amount mono-num {{record.type === 'BUY' ? 'profit' : 'loss'}}">
               {{record.type === 'BUY' ? '-' : '+'}}{{record.amountText}}
             </text>
           </view>
@@ -140,10 +127,29 @@
       </view>
     </view>
     <view wx:else class="no-more">
-      <text>— 已经到底了 —</text>
+      <text class="no-more-text">— 已经到底了 —</text>
     </view>
-    <view style="height: 160rpx;"></view>
+    <view style="height: {{selectMode ? '300rpx' : '160rpx'}};"></view>
   </scroll-view>
+
+  <!-- 批量选择底部工具栏 -->
+  <view wx:if="{{selectMode}}" class="batch-bar">
+    <view class="batch-bar-inner">
+      <view class="batch-left" bindtap="toggleSelectAll">
+        <view class="xhs-checkbox {{selectAll ? 'xhs-checkbox-checked' : ''}}"></view>
+        <text class="batch-label">全选</text>
+      </view>
+      <view class="batch-center">
+        <text class="batch-count">已选 {{selectedIds.length}} 项</text>
+      </view>
+      <view class="batch-right">
+        <view class="batch-btn-cancel" bindtap="toggleSelectMode">取消</view>
+        <view class="batch-btn-delete {{selectedIds.length === 0 ? 'batch-btn-disabled' : ''}}" bindtap="batchDelete">
+          删除 ({{selectedIds.length}})
+        </view>
+      </view>
+    </view>
+  </view>
 
   <!-- 空状态 -->
   <empty-state wx:else icon="📝" title="暂无记录" desc="开始记录您的每一笔交易吧" showSlot="{{true}}">

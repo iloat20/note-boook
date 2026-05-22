@@ -38,6 +38,7 @@ Page({
     // 批量选择
     selectMode: false,
     selectedIds: [],
+    selectedMap: {},
     selectAll: false
   },
 
@@ -230,6 +231,7 @@ Page({
     this.setData({
       selectMode: !this.data.selectMode,
       selectedIds: [],
+      selectedMap: {},
       selectAll: false
     })
   },
@@ -243,13 +245,17 @@ Page({
     } else {
       selectedIds.push(id)
     }
-    this.setData({ selectedIds })
+    const selectedMap = {}
+    selectedIds.forEach(function (sid) { selectedMap[sid] = true })
+    this.setData({ selectedIds, selectedMap })
   },
 
   toggleSelectAll() {
     const selectAll = !this.data.selectAll
     const selectedIds = selectAll ? this._getDisplayIds() : []
-    this.setData({ selectAll, selectedIds })
+    const selectedMap = {}
+    selectedIds.forEach(function (sid) { selectedMap[sid] = true })
+    this.setData({ selectAll, selectedIds, selectedMap })
   },
 
   onRecordTap(e) {
@@ -282,7 +288,7 @@ Page({
           })
           wx.hideLoading()
           wx.showToast({ title: `已删除 ${count} 条`, icon: 'success' })
-          this.setData({ selectMode: false, selectedIds: [] })
+          this.setData({ selectMode: false, selectedIds: [], selectedMap: {} })
           this.loadHistory()
         }
       }

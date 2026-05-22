@@ -100,3 +100,24 @@ The `ec-canvas` component uses Canvas 2D (`type="2d"`) by default. The echarts.j
 - Import helpers from `utils/helpers/` for pure functions
 - `request.js` is a placeholder pointing at `api.example.com` — not connected to any real backend
 - Tests exist in `tests/` (memory, portfolio, stockPrice) but coverage is limited
+
+## Available Skills
+
+The following skills are available for use via `/skill-name`:
+
+| Skill | Purpose |
+|-------|---------|
+| `frontend-design` | Create distinctive, production-grade frontend interfaces |
+| `superpowers:brainstorming` | Explore requirements before creative/feature work |
+| `superpowers:dispatching-parallel-agents` | Run independent tasks in parallel |
+| `superpowers:executing-plans` | Execute multi-step implementation plans |
+| `superpowers:receiving-code-review` | Process code review feedback with rigor |
+| `superpowers:requesting-code-review` | Verify work before merging |
+| `superpowers:finishing-a-development-branch` | Guide completion and integration of dev work |
+| `superpowers:subagent-driven-development` | Execute independent tasks in current session |
+| `superpowers:systematic-debugging` | Debug bugs/test failures before proposing fixes |
+| `superpowers:verification-before-completion` | Verify work before claiming completion |
+| `superpowers:writing-skills` | Create/edit/verify skills |
+| `superpowers:writing-plans` | Plan multi-step tasks before coding |
+| `superpowers:using-git-worktrees` | Create isolated worktrees for feature work |
+| `superpowers:test-driven-development` | TDD before implementation |

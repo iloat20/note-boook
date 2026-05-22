@@ -114,7 +114,7 @@
         <view class="qr-preview-divider"></view>
         <view class="qr-preview-row">
           <text class="qr-preview-label qr-preview-label-bold">实际{{qrType === 'BUY' ? '支出' : '收入'}}</text>
-          <text class="qr-preview-value qr-preview-value-bold">{{qrActualText}}</text>
+          <text class="qr-preview-value qr-preview-value-bold {{qrType === 'BUY' ? 'qr-preview-value-buy' : 'qr-preview-value-sell'}}">{{qrActualText}}</text>
         </view>
       </view>
 
@@ -123,7 +123,7 @@
 
     <!-- 提交按钮 -->
     <view class="qr-submit-bar">
-      <view class="qr-submit" catchtap="submitQuickRecord">
+      <view class="qr-submit {{qrType === 'BUY' ? 'qr-submit-buy' : 'qr-submit-sell'}}" catchtap="submitQuickRecord">
         <text class="qr-submit-text">{{qrType === 'BUY' ? '确认买入' : '确认卖出'}}</text>
         <text class="qr-submit-amount">{{qrActualText}}</text>
       </view>

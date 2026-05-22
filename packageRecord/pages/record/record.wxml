@@ -1,4 +1,4 @@
-<view class="page-container" style="padding-top: {{statusBarHeight}}px;">
+<view class="page-container" style="padding-top: {{statusBarHeight + navBarHeight}}px;">
   <!-- 导航栏 -->
   <view class="nav-bar" style="height: {{navBarHeight}}px;">
     <view class="nav-back" bindtap="goBack">
@@ -6,13 +6,13 @@
         <text class="nav-back-arrow">‹</text>
       </view>
     </view>
-    <text class="nav-title">{{isEdit ? (type === 'SELL' ? '编辑卖出交易' : '编辑买入交易') : (type === 'SELL' ? '编辑卖出交易' : '编辑交易')}}</text>
+    <text class="nav-title">{{isEdit ? '编辑交易' : '新增交易'}}</text>
   </view>
 
   <scroll-view class="scroll-container" scroll-y="true">
     <!-- 基本信息 -->
     <view class="record-section">
-      <text class="section-title">基本信息</text>
+      <text class="section-title">📋 基本信息</text>
       <view class="record-card">
         <!-- 市场选择 -->
         <view class="segmented-control">
@@ -23,14 +23,17 @@
           </view>
         </view>
 
-        <!-- 股票代码 -->
+        <!-- 股票代码 + 名称 -->
         <view class="field-group">
           <text class="field-label">股票代码</text>
-          <input class="record-input"
-            placeholder="请输入股票代码"
-            value="{{code}}"
-            bindinput="onCodeInput"
-            bindblur="hideSuggestions"/>
+          <view class="code-input-wrap">
+            <input class="record-input code-input"
+              placeholder="输入代码自动识别"
+              value="{{code}}"
+              bindinput="onCodeInput"
+              bindblur="hideSuggestions"/>
+            <view wx:if="{{marketLabel}}" class="code-market-badge">{{marketLabel}}</view>
+          </view>
           <text wx:if="{{codeError}}" class="field-error">{{codeError}}</text>
           <!-- 搜索建议 -->
           <view wx:if="{{showSuggestions}}" class="suggestions-dropdown">
@@ -39,30 +42,44 @@
               bindtap="onSelectSuggestion" data-item="{{item}}">
               <text class="suggestion-code">{{item.code}}</text>
               <text class="suggestion-name">{{item.name}}</text>
+              <text class="suggestion-market-tag">{{item.market === 'A_SHARE' ? 'A股' : item.market === 'HK_SHARE' ? '港股' : '美股'}}</text>
             </view>
           </view>
         </view>
 
-        <!-- 股票名称 -->
-        <view class="field-group">
+        <view class="field-group field-last">
           <text class="field-label">股票名称</text>
           <input class="record-input"
-            placeholder="请输入股票名称"
+            placeholder="自动识别或手动输入"
             value="{{name}}"
             bindinput="onNameInput"/>
         </view>
+      </view>
+    </view>
 
-        <!-- 买卖切换 -->
-        <view class="segmented-control">
-          <view class="segment-item {{type === 'BUY' ? 'segment-active' : ''}}" bindtap="selectType" data-type="BUY">买入</view>
-          <view class="segment-item {{type === 'SELL' ? 'segment-active' : ''}}" bindtap="selectType" data-type="SELL">卖出</view>
+    <!-- 买卖方向 -->
+    <view class="record-section">
+      <text class="section-title">🔄 买卖方向</text>
+      <view class="record-card">
+        <view class="type-selector">
+          <view class="type-option {{type === 'BUY' ? 'type-active type-buy-active' : ''}}" bindtap="selectType" data-type="BUY">
+            <text class="type-emoji">📈</text>
+            <text class="type-label">买入</text>
+            <text class="type-desc">开仓做多</text>
+          </view>
+          <view class="type-divider"></view>
+          <view class="type-option {{type === 'SELL' ? 'type-active type-sell-active' : ''}}" bindtap="selectType" data-type="SELL">
+            <text class="type-emoji">📉</text>
+            <text class="type-label">卖出</text>
+            <text class="type-desc">平仓止盈</text>
+          </view>
         </view>
       </view>
     </view>
 
     <!-- 交易详情 -->
     <view class="record-section">
-      <text class="section-title">交易详情</text>
+      <text class="section-title">💰 交易详情</text>
       <view class="record-card">
         <view class="field-group">
           <text class="field-label">成交价格</text>
@@ -76,7 +93,7 @@
 
         <view class="field-group">
           <text class="field-label">手续费</text>
-          <input class="record-input" type="digit" placeholder="0.00" value="{{fee}}" bindinput="onFeeInput"/>
+          <input class="record-input" type="digit" placeholder="自动计算" value="{{fee}}" bindinput="onFeeInput"/>
           <view wx:if="{{feePreview.length}}" class="fee-breakdown">
             <view wx:for="{{feePreview}}" wx:key="name" class="fee-item">
               <text class="fee-name">{{item.name}}</text>
@@ -107,7 +124,7 @@
         </view>
 
         <view class="field-group field-last">
-          <text class="field-label">备注（选填）</text>
+          <text class="field-label">备注</text>
           <textarea class="record-input record-textarea"
             placeholder="添加备注..."
             value="{{note}}"
@@ -118,9 +135,10 @@
 
     <!-- 交易笔记 -->
     <view class="record-section">
+      <text class="section-title">📝 交易笔记</text>
       <view class="record-card">
         <view class="journal-toggle" bindtap="toggleJournal">
-          <text class="journal-title">交易笔记</text>
+          <text class="journal-title">笔记与策略</text>
           <text class="journal-optional">选填</text>
           <view class="journal-spacer"></view>
           <view wx:if="{{strategies.length > 0 || reason}}" class="journal-badges">
@@ -139,7 +157,7 @@
                 <text>{{item}}</text>
                 <text class="tag-remove">×</text>
               </view>
-              <view class="tag-item tag-add" bindtap="openStrategyPicker">+ 添加标签</view>
+              <view class="tag-item tag-add" bindtap="openStrategyPicker">+ 添加</view>
             </view>
           </view>
           <view class="field-group field-last">
@@ -181,16 +199,20 @@
 
     <!-- 预览 -->
     <view class="record-section">
-      <text class="section-title">预览</text>
+      <text class="section-title">🧾 交易预览</text>
       <view class="record-card preview-card">
         <view class="preview-row">
           <text class="preview-label">交易金额</text>
           <text class="preview-value">{{amountText}}</text>
         </view>
+        <view class="preview-row">
+          <text class="preview-label">手续费</text>
+          <text class="preview-value">{{fee || '0.00'}}</text>
+        </view>
         <view class="preview-divider"></view>
         <view class="preview-row">
           <text class="preview-label preview-label-bold">实际{{type === 'BUY' ? '支出' : '收入'}}</text>
-          <text class="preview-value preview-value-bold">{{actualText}}</text>
+          <text class="preview-value preview-value-bold {{type === 'BUY' ? 'preview-amount-buy' : 'preview-amount-sell'}}">{{actualText}}</text>
         </view>
       </view>
     </view>
@@ -200,8 +222,8 @@
 
   <!-- 底部确认按钮 -->
   <view class="submit-bar">
-    <view class="submit-btn" bindtap="submit">
-      {{isEdit ? (type === 'SELL' ? '保存卖出修改' : '保存买入修改') : (type === 'SELL' ? '确认卖出' : '确认保存')}}
+    <view class="submit-btn {{type === 'BUY' ? 'submit-btn-buy' : 'submit-btn-sell'}}" bindtap="submit">
+      {{isEdit ? '保存修改' : '确认添加'}}
     </view>
   </view>
 </view>

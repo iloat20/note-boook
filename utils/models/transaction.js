@@ -65,7 +65,7 @@ const Transaction = {
   deleteByStockId(stockId) {
     const transactions = this.getAll().filter(t => t.stockId !== stockId)
     saveData(TRANSACTION_KEY, transactions)
-    markDataDirty(['position', 'heatmap', 'periodStats'])
+    markDataDirty(['position', 'heatmap', 'periodStats'], stockId)
   },
 
   /**

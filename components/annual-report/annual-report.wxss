@@ -1,11 +1,15 @@
-/* 年度投资报告 */
+/* ═════════════════════════════════════════╗
+   小红书风格 - 年度投资报告
+   ╚════════════════════════════════════════╝ */
+
+/* === Overlay === */
 .ar-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: #0D1117;
+  background: var(--xhs-bg);
   z-index: 9999;
   isolation: isolate;
   animation: arFadeIn 0.3s ease;
@@ -18,32 +22,38 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--xhs-bg-secondary);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 16px;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--xhs-caption);
   z-index: 2010;
+  transition: var(--xhs-transition);
+}
+
+.ar-close:active {
+  transform: scale(0.9);
+  background: var(--xhs-divider-strong);
 }
 
 .ar-scroll {
   width: 100%;
   height: 100%;
-  background: #0D1117;
+  background: var(--xhs-bg);
 }
 
-/* Hero */
+/* === Hero === */
 .ar-hero {
   padding: 80px 32px 48px;
   text-align: center;
-  background: linear-gradient(180deg, rgba(255, 59, 48, 0.1) 0%, transparent 100%);
+  background: linear-gradient(180deg, var(--xhs-primary-bg) 0%, transparent 100%);
 }
 
 .ar-year {
   font-size: 72px;
   font-weight: 800;
-  color: rgba(255, 255, 255, 0.06);
+  color: var(--xhs-divider-strong);
   display: block;
   line-height: 1;
   letter-spacing: -4px;
@@ -51,7 +61,7 @@
 
 .ar-title {
   font-size: 15px;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--xhs-caption);
   display: block;
   margin-top: -12px;
   margin-bottom: 24px;
@@ -68,23 +78,23 @@
 .ar-hero-sign {
   font-size: 28px;
   font-weight: 700;
-  color: #FF6B6B;
+  color: var(--xhs-profit);
   margin-right: 4px;
 }
 
 .ar-hero-value {
   font-size: 48px;
   font-weight: 800;
-  color: #fff;
+  color: var(--xhs-title);
   letter-spacing: -2px;
 }
 
 .ar-hero-pct {
   font-size: 16px;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--xhs-caption);
 }
 
-/* Sections */
+/* === Sections === */
 .ar-section {
   padding: 0 24px;
   margin-bottom: 36px;
@@ -93,14 +103,14 @@
 .ar-section-title {
   font-size: 13px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--xhs-caption);
   text-transform: uppercase;
   letter-spacing: 2px;
   display: block;
   margin-bottom: 16px;
 }
 
-/* Grid */
+/* === Grid === */
 .ar-grid {
   display: flex;
   flex-wrap: wrap;
@@ -110,34 +120,36 @@
 .ar-grid-item {
   box-sizing: border-box;
   width: calc(50% - 6px);
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 12px;
+  background: var(--xhs-surface);
+  border: 1px solid var(--xhs-divider);
+  border-radius: var(--xhs-radius-md);
   padding: 16px;
   text-align: center;
+  box-shadow: var(--xhs-card-shadow);
 }
 
 .ar-grid-value {
   font-size: 28px;
   font-weight: 700;
-  color: #fff;
+  color: var(--xhs-title);
   display: block;
   margin-bottom: 4px;
 }
 
 .ar-grid-label {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--xhs-caption);
 }
 
-/* Flow */
+/* === Flow === */
 .ar-flow {
   display: flex;
   align-items: center;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 12px;
+  background: var(--xhs-surface);
+  border: 1px solid var(--xhs-divider);
+  border-radius: var(--xhs-radius-md);
   padding: 16px 0;
+  box-shadow: var(--xhs-card-shadow);
 }
 
 .ar-flow-item {
@@ -147,7 +159,7 @@
 
 .ar-flow-label {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--xhs-caption);
   display: block;
   margin-bottom: 6px;
 }
@@ -155,22 +167,23 @@
 .ar-flow-value {
   font-size: 16px;
   font-weight: 700;
-  color: #fff;
+  color: var(--xhs-title);
 }
 
 .ar-flow-divider {
   width: 1px;
   height: 32px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--xhs-divider-strong);
 }
 
-/* Chart */
+/* === Chart === */
 .ar-chart-box {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 12px;
+  background: var(--xhs-surface);
+  border: 1px solid var(--xhs-divider);
+  border-radius: var(--xhs-radius-md);
   padding: 16px;
   height: 180px;
+  box-shadow: var(--xhs-card-shadow);
 }
 
 .ar-monthly-canvas {
@@ -188,16 +201,16 @@
 
 .ar-chart-empty-text {
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.3);
+  color: var(--xhs-caption-light);
 }
 
-/* Rank */
+/* === Rank === */
 .ar-rank-item {
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 12px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--xhs-divider);
 }
 
 .ar-rank-item:last-child {
@@ -230,8 +243,8 @@
 }
 
 .ar-rank-other {
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.5);
+  background: var(--xhs-divider-strong);
+  color: var(--xhs-caption);
 }
 
 .ar-rank-info {
@@ -242,13 +255,13 @@
 .ar-rank-name {
   font-size: 15px;
   font-weight: 600;
-  color: #fff;
+  color: var(--xhs-title);
   display: block;
 }
 
 .ar-rank-code {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.35);
+  color: var(--xhs-caption-light);
 }
 
 .ar-rank-pnl {
@@ -258,14 +271,14 @@
 }
 
 .ar-profit {
-  color: #FF6B6B;
+  color: var(--xhs-profit);
 }
 
 .ar-loss {
-  color: #51CF66;
+  color: var(--xhs-loss);
 }
 
-/* Strategy */
+/* === Strategy === */
 .ar-strategy-item {
   margin-bottom: 14px;
 }
@@ -280,29 +293,29 @@
 .ar-strategy-tag {
   font-size: 14px;
   font-weight: 500;
-  color: #fff;
+  color: var(--xhs-title);
 }
 
 .ar-strategy-count {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--xhs-caption);
 }
 
 .ar-strategy-bar-bg {
   height: 6px;
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--xhs-divider);
   overflow: hidden;
 }
 
 .ar-strategy-bar {
   height: 100%;
   border-radius: 3px;
-  background: linear-gradient(90deg, #FF3B30, #FF6B6B);
+  background: linear-gradient(90deg, var(--xhs-primary-light), var(--xhs-primary));
   transition: width 0.6s ease;
 }
 
-/* Footer */
+/* === Footer === */
 .ar-footer {
   text-align: center;
   padding: 32px 24px 16px;
@@ -310,7 +323,7 @@
 
 .ar-footer-text {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.2);
+  color: var(--xhs-caption-light);
 }
 
 @keyframes arFadeIn {
@@ -318,13 +331,13 @@
   to { opacity: 1; }
 }
 
-/* 导出按钮 */
+/* === Export Button === */
 .ar-export-btn {
   position: fixed;
   bottom: 120px;
   left: 50%;
   transform: translateX(-50%);
-  background: linear-gradient(135deg, #FF6B6B, #FF3B30);
+  background: var(--xhs-primary);
   color: #fff;
   font-size: 15px;
   font-weight: 600;
@@ -333,7 +346,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  box-shadow: 0 8px 32px rgba(255, 59, 48, 0.35);
+  box-shadow: var(--xhs-btn-shadow);
   z-index: 2010;
 }
 
@@ -349,7 +362,7 @@
   font-size: 15px;
 }
 
-/* 导出用Canvas - 完全隐藏 */
+/* === Export Canvas (hidden) === */
 .ar-export-canvas {
   position: fixed;
   left: 0;

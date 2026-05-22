@@ -1,5 +1,5 @@
-<view class="page-container" style="padding-top: {{statusBarHeight}}px;">
-  <view class="nav-bar" style="height: {{navBarHeight}}px; display: flex; align-items: flex-end; padding: 0 16px;">
+<view class="page-container" style="padding-top: {{statusBarHeight + navBarHeight}}px;">
+  <view class="nav-bar" style="height: {{navBarHeight}}px;">
     <view bindtap="goBack" class="back-btn">
       <view class="back-icon-wrap">
         <text class="back-icon">‹</text>
@@ -56,9 +56,9 @@
           <view class="body profit" style="font-weight: var(--xhs-weight-semibold); margin-top: 2px;">+{{formatDividendIncome}}</view>
         </view>
       </view>
-      <view style="display: flex; justify-content: space-between; padding-top: 16px; margin-top: 12px; border-top: 1px solid var(--color-separator);">
-        <text class="body" style="font-weight: var(--weight-title); color: var(--color-title);">总盈亏</text>
-        <text class="body {{totalPnLClass}}" style="font-weight: var(--weight-display);">{{totalPnLText}}</text>
+      <view style="display: flex; justify-content: space-between; padding-top: 16px; margin-top: 12px; border-top: 1px solid var(--xhs-divider);">
+        <text class="body" style="font-weight: var(--xhs-weight-semibold); color: var(--xhs-title);">总盈亏</text>
+        <text class="body {{totalPnLClass}}" style="font-weight: var(--xhs-weight-bold);">{{totalPnLText}}</text>
       </view>
     </view>
 
@@ -122,13 +122,13 @@ bindtap="showDividendActions" data-id="{{item.id}}" data-type="dividend">
     <view wx:if="{{strategySummary.length > 0}}" class="section">
       <text class="title" style="display: block; margin-bottom: 12px;">策略复盘</text>
       <view class="card section">
-        <view wx:for="{{strategySummary}}" wx:key="tag" style="padding: 8px 0; {{index > 0 ? 'border-top: 1px solid var(--color-separator);' : ''}}">
+        <view wx:for="{{strategySummary}}" wx:key="tag" style="padding: 8px 0; {{index > 0 ? 'border-top: 1px solid var(--xhs-divider);' : ''}}">
           <view style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
             <view style="display: flex; align-items: center; gap: 8px;">
               <view class="strategy-tag">{{item.tag}}</view>
               <text class="caption">{{item.count}}笔</text>
             </view>
-            <text class="caption" style="color: {{item.netPnL >= 0 ? 'var(--color-profit)' : 'var(--color-loss)'}};">{{item.netPnL >= 0 ? '+' : ''}}{{item.netPnL}}</text>
+            <text class="caption" style="color: {{item.netPnL >= 0 ? 'var(--xhs-profit)' : 'var(--xhs-loss)'}};">{{item.netPnL >= 0 ? '+' : ''}}{{item.netPnL}}</text>
           </view>
         </view>
       </view>

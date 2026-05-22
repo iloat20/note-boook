@@ -1,16 +1,16 @@
-<view class="page-container" style="padding-top: {{statusBarHeight}}px;">
+<view class="page-container" style="padding-top: {{statusBarHeight + navBarHeight}}px;">
   <!-- 骨架屏 -->
-  <view wx:if="{{loading}}" class="skeleton-container">
-    <view class="skeleton-card" wx:for="{{[1,2,3]}}" wx:key="*this">
-      <view class="skeleton-header">
-        <view class="skeleton-tag shimmer"></view>
-        <view class="skeleton-text shimmer"></view>
-        <view class="skeleton-text shimmer"></view>
+  <view wx:if="{{loading}}" class="xhs-skeleton">
+    <view class="xhs-skeleton-card" wx:for="{{[1,2,3]}}" wx:key="*this">
+      <view class="xhs-skeleton-header">
+        <view class="xhs-skeleton-tag xhs-shimmer"></view>
+        <view class="xhs-skeleton-text xhs-shimmer"></view>
+        <view class="xhs-skeleton-text xhs-shimmer"></view>
       </view>
-      <view class="skeleton-body">
-        <view class="skeleton-item shimmer"></view>
-        <view class="skeleton-item shimmer"></view>
-        <view class="skeleton-item shimmer"></view>
+      <view class="xhs-skeleton-body">
+        <view class="xhs-skeleton-item xhs-shimmer"></view>
+        <view class="xhs-skeleton-item xhs-shimmer"></view>
+        <view class="xhs-skeleton-item xhs-shimmer"></view>
       </view>
     </view>
   </view>
@@ -43,20 +43,20 @@
     <!-- 持仓列表 -->
     <scroll-view wx:if="{{positions.length > 0}}" class="scroll-container" scroll-y style="height: {{scrollHeight}}px;">
       <view wx:for="{{positions}}" wx:key="id" class="swipe-container">
-        <view class="swipe-actions">
-          <view class="swipe-action-btn swipe-action-edit" data-stock-id="{{item.id}}" bindtap="onSwipeEdit">
+        <view class="swipe-actions {{item.swipeOpen ? 'swipe-actions-open' : ''}}">
+          <view class="swipe-action-btn swipe-action-edit" data-stock-id="{{item.id}}" catchtap="onSwipeEdit">
             <view style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
               <text>编辑</text>
               <text style="font-size: 18rpx; opacity: 0.8;">{{item.quantityText}}股</text>
             </view>
           </view>
-          <view class="swipe-action-btn swipe-action-sell" data-stock-id="{{item.id}}" data-item="{{item}}" bindtap="onSwipeSell">
+          <view class="swipe-action-btn swipe-action-sell" data-stock-id="{{item.id}}" catchtap="onSwipeSell">
             <view style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
               <text>卖出</text>
               <text wx:if="{{item.quantity > 0}}" style="font-size: 18rpx; opacity: 0.8;">可卖{{item.quantityText}}</text>
             </view>
           </view>
-          <view class="swipe-action-btn swipe-action-delete" data-stock-id="{{item.id}}" bindtap="onSwipeDelete">删除</view>
+          <view class="swipe-action-btn swipe-action-delete" data-stock-id="{{item.id}}" catchtap="onSwipeDelete">删除</view>
         </view>
         <view class="position-card {{item.swipeOpen ? 'swipe-card-open' : ''}}"
           style="transform: translateX({{item.swipeOffset || 0}}px);"

@@ -1,154 +1,181 @@
 /* ═════════════════════════════════════════╗
-   小红书风格 - 统计页 v2
+   小红书首页风格 - 统计页 v3
    ╚════════════════════════════════════════╝ */
 
 @import '../../styles/common.wxss';
 
-page {
-  background: var(--xhs-bg);
-}
-
-/* === 骨架屏 === */
+/* === 骨架屏间距 === */
 .skeleton-container {
   padding-top: var(--xhs-space-lg);
 }
 
-.page-title {
-  margin-bottom: var(--xhs-space-lg);
-}
-
-.page-title-text {
-  font-size: var(--xhs-font-4xl);
-  font-weight: var(--xhs-weight-bold);
-  color: var(--xhs-title);
-  letter-spacing: -0.02em;
-  line-height: 1.15;
-}
-
-/* === 时段选择 (pill 风格) === */
+/* === 时段 Tab (选中黑色 + 红色下划线) === */
 .period-tabs {
   display: flex;
-  justify-content: center;
-  gap: var(--xhs-space-sm);
-  padding: var(--xhs-space-md) 0;
-  margin-bottom: var(--xhs-space-sm);
+  margin-bottom: var(--xhs-space-lg);
 }
 
 .period-tab {
   flex: 1;
-  max-width: 120rpx;
-  height: 72rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  text-align: center;
+  padding: 20rpx 0 24rpx;
   font-size: var(--xhs-font-md);
   color: var(--xhs-caption);
   font-weight: var(--xhs-weight-medium);
-  border-radius: var(--xhs-radius-pill);
+  position: relative;
   transition: var(--xhs-transition);
 }
 
-.period-active {
-  color: #1C1C1E;
-  font-weight: var(--xhs-weight-semibold);
-  position: relative;
-  background: transparent;
-  border: none;
+.period-tab:active {
+  opacity: 0.7;
 }
 
-.period-active::after {
+.period-tab.active {
+  color: var(--xhs-title);
+  font-weight: var(--xhs-weight-semibold);
+}
+
+.period-tab.active::after {
   content: '';
   position: absolute;
   bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 24rpx;
+  left: 36%;
+  right: 36%;
   height: 4rpx;
-  background: #FF2442;
+  background: var(--xhs-primary);
   border-radius: 2rpx;
 }
 
-/* === 统计卡片网格 === */
-.stats-grid {
+/* === 双列统计卡片 (小红书笔记风格) === */
+.xhs-feed-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--xhs-space-sm);
-  margin-bottom: var(--xhs-space-xl);
+  margin: 0 -8rpx;
+  margin-bottom: var(--xhs-space-lg);
 }
 
-.stat-card {
-  background: var(--xhs-surface);
-  border-radius: var(--xhs-radius-md);
-  box-shadow: var(--xhs-card-shadow);
-  padding: var(--xhs-space-md);
-  transition: var(--xhs-transition-slow);
-  width: calc(50% - 6px);
+.xhs-feed-card {
+  width: 50%;
+  padding: 0 8rpx;
   box-sizing: border-box;
+  margin-bottom: 16rpx;
 }
 
-.stat-card:active {
-  transform: scale(0.97);
-}
-
-/* 统计卡片顶部色条 */
-.stat-card:nth-child(1) { border-top: 4rpx solid var(--xhs-primary); }
-.stat-card:nth-child(2) { border-top: 4rpx solid var(--xhs-market-a); }
-.stat-card:nth-child(3) { border-top: 4rpx solid var(--xhs-market-hk); }
-.stat-card:nth-child(4) { border-top: 4rpx solid var(--xhs-market-us); }
-
-.stat-label {
-  font-size: var(--xhs-font-sm);
-  color: var(--xhs-caption);
-  font-weight: var(--xhs-weight-medium);
-  display: block;
-  margin-bottom: var(--xhs-space-xs);
-  letter-spacing: 0.02em;
-}
-
-.stat-value {
-  font-size: var(--xhs-font-2xl);
-  color: var(--xhs-title);
-  font-weight: var(--xhs-weight-bold);
-  display: block;
-  letter-spacing: 0.01em;
-}
-
-.stat-profit { color: var(--xhs-profit); }
-.stat-loss { color: var(--xhs-loss); }
-
-/* === Section 通用 === */
-.section {
-  margin-bottom: var(--xhs-space-xl);
-}
-
-.section-title {
-  font-size: var(--xhs-font-2xl);
-  font-weight: var(--xhs-weight-semibold);
-  color: var(--xhs-title);
-  display: block;
-  letter-spacing: -0.01em;
-}
-
-.section-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--xhs-space-md);
-}
-
-/* === XHS Card (替代旧的 card-glass) === */
-.xhs-card {
+.xhs-feed-card-inner {
   background: var(--xhs-surface);
   border-radius: var(--xhs-radius-md);
   box-shadow: var(--xhs-card-shadow);
-  padding: var(--xhs-space-lg);
-  position: relative;
   overflow: hidden;
   transition: var(--xhs-transition-slow);
 }
 
-/* === 热力图 === */
-/* === 明细列表 === */
+.xhs-feed-card-inner:active {
+  transform: scale(0.97);
+}
+
+/* 封面图区域 (模仿小红书笔记封面) */
+.xhs-feed-card-cover {
+  height: 120rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.xhs-feed-card-emoji {
+  font-size: 48rpx;
+  opacity: 0.9;
+}
+
+/* 四色封面渐变 */
+.cover-invest {
+  background: linear-gradient(135deg, #667EEA 0%, #764BA2 100%);
+}
+
+.cover-recover {
+  background: linear-gradient(135deg, #F093FB 0%, #F5576C 100%);
+}
+
+.cover-pnl {
+  background: linear-gradient(135deg, #4FACFE 0%, #00F2FE 100%);
+}
+
+.cover-rate {
+  background: linear-gradient(135deg, #43E97B 0%, #38F9D7 100%);
+}
+
+/* 卡片内容区 */
+.xhs-feed-card-body {
+  padding: 16rpx 20rpx 20rpx;
+  text-align: center;
+}
+
+.xhs-feed-card-value {
+  display: block;
+  font-size: 40rpx;
+  font-weight: var(--xhs-weight-bold);
+  color: var(--xhs-title);
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  margin-bottom: 4rpx;
+  word-break: break-all;
+}
+
+.xhs-feed-card-label {
+  display: block;
+  font-size: var(--xhs-font-sm);
+  color: var(--xhs-caption);
+  font-weight: var(--xhs-weight-medium);
+}
+
+/* === 全宽内容卡片 (小红书长笔记风格) === */
+.xhs-feed-card-full {
+  background: var(--xhs-surface);
+  border-radius: var(--xhs-radius-md);
+  box-shadow: var(--xhs-card-shadow);
+  margin-bottom: var(--xhs-space-md);
+  overflow: hidden;
+  transition: var(--xhs-transition-slow);
+}
+
+.xhs-feed-card-full-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--xhs-space-md) var(--xhs-space-md) 0;
+}
+
+.xhs-feed-card-full-title {
+  font-size: var(--xhs-font-lg);
+  font-weight: var(--xhs-weight-semibold);
+  color: var(--xhs-title);
+}
+
+.xhs-feed-card-full-action {
+  display: flex;
+  align-items: center;
+  padding: 6rpx 18rpx;
+  border: 1px solid var(--xhs-divider-strong);
+  border-radius: var(--xhs-radius-pill);
+  transition: var(--xhs-transition);
+}
+
+.xhs-feed-card-full-action:active {
+  background: var(--xhs-bg-secondary);
+  transform: scale(0.95);
+}
+
+.xhs-feed-card-full-action-text {
+  font-size: var(--xhs-font-sm);
+  color: var(--xhs-title);
+  font-weight: var(--xhs-weight-medium);
+}
+
+.xhs-feed-card-full-body {
+  padding: var(--xhs-space-sm) var(--xhs-space-md) var(--xhs-space-md);
+}
+
+/* === 交易明细列表 (卡片内) === */
 .detail-list {
   max-height: 800rpx;
   overflow-y: auto;
@@ -157,7 +184,6 @@ page {
 .detail-item {
   padding: var(--xhs-space-md) 0;
   border-bottom: 1px solid var(--xhs-divider);
-  transition: var(--xhs-transition);
 }
 
 .detail-item:last-child {
@@ -193,7 +219,6 @@ page {
 .detail-amount {
   font-size: var(--xhs-font-lg);
   font-weight: var(--xhs-weight-semibold);
-  letter-spacing: 0.01em;
   color: var(--xhs-title);
   flex-shrink: 0;
 }
@@ -209,7 +234,7 @@ page {
   margin-top: var(--xhs-space-xs);
 }
 
-.detail-meta text {
+.detail-meta-text {
   font-size: var(--xhs-font-sm);
   color: var(--xhs-caption);
 }
@@ -242,111 +267,33 @@ page {
 .detail-row-value {
   font-size: var(--xhs-font-lg);
   font-weight: var(--xhs-weight-semibold);
-  letter-spacing: 0.01em;
 }
 
-/* === 按钮 === */
-.btn-icon {
+/* === 底部年度报告 CTA (小红书发布按钮风格) === */
+.xhs-feed-footer {
+  padding: var(--xhs-space-lg) 0;
+  text-align: center;
+}
+
+.xhs-feed-cta {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 24rpx;
-  height: 24rpx;
-  flex-shrink: 0;
-}
-
-/* 下载图标：向下箭头 + 底部横线 */
-.icon-download {
-  position: relative;
-  width: 24rpx;
-  height: 24rpx;
-}
-.icon-download::before {
-  content: '';
-  position: absolute;
-  bottom: 2rpx;
-  left: 2rpx;
-  right: 2rpx;
-  height: 2rpx;
-  background: currentColor;
-  border-radius: 1rpx;
-}
-.icon-download::after {
-  content: '';
-  position: absolute;
-  top: 4rpx;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 0;
-  height: 0;
-  border-left: 6rpx solid transparent;
-  border-right: 6rpx solid transparent;
-  border-top: 8rpx solid currentColor;
-}
-
-/* 报告图标：文档 + 折角 */
-.icon-report {
-  position: relative;
-  width: 24rpx;
-  height: 24rpx;
-}
-.icon-report::before {
-  content: '';
-  position: absolute;
-  top: 2rpx;
-  left: 2rpx;
-  right: 2rpx;
-  bottom: 2rpx;
-  border: 2rpx solid currentColor;
-  border-radius: 3rpx;
-}
-.icon-report::after {
-  content: '';
-  position: absolute;
-  top: 8rpx;
-  left: 8rpx;
-  right: 2rpx;
-  height: 2rpx;
-  background: currentColor;
-  border-radius: 1rpx;
-  box-shadow: 0 6rpx 0 currentColor;
-}
-
-.export-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4rpx;
-  padding: 4rpx 16rpx;
-  border: 1px solid var(--xhs-divider-strong);
-  border-radius: var(--xhs-radius-pill);
-  font-size: var(--xhs-font-sm);
-  color: var(--xhs-title);
-  font-weight: var(--xhs-weight-medium);
-  transition: var(--xhs-transition);
-  min-height: 48rpx;
-}
-
-.export-btn:active {
-  background: var(--xhs-bg-secondary);
-  transform: scale(0.96);
-}
-
-.annual-btn {
-  display: inline-flex;
-  align-items: center;
-  padding: 4rpx 16rpx;
+  gap: var(--xhs-space-sm);
   background: var(--xhs-primary);
-  border-radius: var(--xhs-radius-pill);
-  font-size: var(--xhs-font-sm);
   color: #FFFFFF;
-  font-weight: var(--xhs-weight-medium);
+  font-size: var(--xhs-font-lg);
+  font-weight: var(--xhs-weight-semibold);
+  padding: 0 56rpx;
+  height: 96rpx;
+  line-height: 96rpx;
+  border-radius: var(--xhs-radius-pill);
+  box-shadow: var(--xhs-btn-shadow);
   transition: var(--xhs-transition);
-  min-height: 48rpx;
 }
 
-.annual-btn:active {
-  opacity: 0.85;
+.xhs-feed-cta:active {
   transform: scale(0.96);
+  box-shadow: var(--xhs-btn-shadow-hover);
 }
 
 /* === 类型标签 === */
@@ -361,18 +308,16 @@ page {
   flex-shrink: 0;
 }
 
-.type-tag {
-  margin: 0;
-}
+.type-tag { margin: 0; }
 
 .tag-buy {
-  background: var(--xhs-loss-bg);
-  color: var(--xhs-loss);
+  background: var(--xhs-profit-bg);
+  color: var(--xhs-profit);
 }
 
 .tag-sell {
-  background: var(--xhs-profit-bg);
-  color: var(--xhs-profit);
+  background: var(--xhs-loss-bg);
+  color: var(--xhs-loss);
 }
 
 .tag-dividend {
@@ -380,6 +325,6 @@ page {
   color: var(--xhs-dividend);
 }
 
-/* === Profit/Loss colors for detail rows === */
+/* === Profit/Loss === */
 .profit { color: var(--xhs-profit); }
 .loss { color: var(--xhs-loss); }

@@ -1,91 +1,104 @@
-<view class="page-container" style="padding-top: {{statusBarHeight}}px;">
-  <view class="nav-bar" style="height: {{navBarHeight}}px; display: flex; align-items: flex-end; padding: 0 16px;">
-    <view bindtap="goBack" style="min-height: 44px; min-width: 44px; display: flex; align-items: center; justify-content: flex-start;">
-      <text style="font-size: 44rpx; color: var(--xhs-primary); font-weight: 300;">‹</text>
+<view class="page-container" style="padding-top: {{statusBarHeight + navBarHeight}}px;">
+  <!-- 导航栏 -->
+  <view class="nav-bar" style="height: {{navBarHeight}}px;">
+    <view class="nav-back" bindtap="goBack">
+      <view class="nav-back-circle">
+        <text class="nav-back-arrow">‹</text>
+      </view>
     </view>
-    <text class="nav-header-title" style="flex: 1;">{{isEdit ? '编辑分红' : '添加分红'}}</text>
+    <text class="nav-title">{{isEdit ? '编辑分红' : '添加分红'}}</text>
   </view>
 
   <scroll-view class="scroll-container" scroll-y>
-    <text class="title" style="display: block; margin-bottom: 12px;">分红信息</text>
-    <view class="card section">
-      <view style="margin-bottom: 12px;">
-        <text class="caption" style="display: block; margin-bottom: 4px;">选择股票</text>
-        <picker mode="selector" :range="stockOptions" range-key="label" bindchange="selStock">
-          <view class="input" style="display: flex; align-items: center; justify-content: space-between;">
-            <text>{{stockText}}</text>
-            <text class="caption">›</text>
+    <text class="section-title">分红信息</text>
+    <view class="record-card">
+      <view class="field-group">
+        <text class="field-label">选择股票</text>
+        <picker mode="selector" range="{{stockOptions}}" range-key="label" bindchange="selStock">
+          <view class="record-input picker-input">
+            <text class="{{stockText !== '请选择股票' ? '' : 'picker-placeholder'}}">{{stockText}}</text>
+            <text class="picker-arrow">›</text>
           </view>
         </picker>
       </view>
 
       <!-- 分红类型选择 -->
-      <view style="margin-bottom: 12px;">
-        <text class="caption" style="display: block; margin-bottom: 8px;">分红类型</text>
-        <view style="display: flex; gap: 8px;">
-          <view class="tab-line-item {{divType === 'CASH' ? 'tab-line-active' : ''}}" bindtap="selectDivType" data-type="CASH">现金分红</view>
-          <view class="tab-line-item {{divType === 'SHARE' ? 'tab-line-active' : ''}}" bindtap="selectDivType" data-type="SHARE">送股</view>
+      <view class="field-group">
+        <text class="field-label">分红类型</text>
+        <view class="segmented-control">
+          <view class="segment-item {{divType === 'CASH' ? 'segment-active' : ''}}" bindtap="selectDivType" data-type="CASH">现金分红</view>
+          <view class="segment-item {{divType === 'SHARE' ? 'segment-active' : ''}}" bindtap="selectDivType" data-type="SHARE">送股</view>
         </view>
       </view>
 
       <!-- 现金分红字段 -->
       <block wx:if="{{divType === 'CASH'}}">
-        <view style="margin-bottom: 12px;">
-          <text class="caption" style="display: block; margin-bottom: 4px;">每股分红金额</text>
-          <input class="input" style="width: 100%;" type="digit" placeholder="0.00" value="{{perShare}}" bindinput="onPS"/>
+        <view class="field-group">
+          <text class="field-label">每股分红金额</text>
+          <input class="record-input" type="digit" placeholder="0.00" value="{{perShare}}" bindinput="onPS"/>
         </view>
       </block>
 
       <!-- 送股字段 -->
       <block wx:if="{{divType === 'SHARE'}}">
-        <view style="margin-bottom: 12px;">
-          <text class="caption" style="display: block; margin-bottom: 4px;">送股数量（股）</text>
-          <input class="input" style="width: 100%;" type="digit" placeholder="0" value="{{shareQty}}" bindinput="onShareQty"/>
+        <view class="field-group">
+          <text class="field-label">送股数量（股）</text>
+          <input class="record-input" type="digit" placeholder="0" value="{{shareQty}}" bindinput="onShareQty"/>
         </view>
       </block>
 
-      <view style="margin-bottom: 12px;">
-        <text class="caption" style="display: block; margin-bottom: 4px;">持股数量（股）</text>
-        <input class="input" style="width: 100%;" type="digit" placeholder="0" value="{{qty}}" bindinput="onQty"/>
+      <view class="field-group">
+        <text class="field-label">持股数量（股）</text>
+        <input class="record-input" type="digit" placeholder="0" value="{{qty}}" bindinput="onQty"/>
       </view>
-      <view style="margin-bottom: 12px;">
-        <text class="caption" style="display: block; margin-bottom: 4px;">分红日期</text>
-        <picker mode="date" value="{{date}}" bindchange="onDate">
-          <view class="input" style="display: flex; align-items: center; justify-content: space-between;">
-            <text>{{date || '选择日期'}}</text>
-            <text class="caption">›</text>
-          </view>
-        </picker>
+      <view class="field-row">
+        <view class="field-group field-half">
+          <text class="field-label">分红日期</text>
+          <picker mode="date" value="{{date}}" bindchange="onDate">
+            <view class="record-input picker-input">
+              <text class="{{date ? '' : 'picker-placeholder'}}">{{date || '选择日期'}}</text>
+              <text class="picker-arrow">›</text>
+            </view>
+          </picker>
+        </view>
       </view>
-      <view>
-        <text class="caption" style="display: block; margin-bottom: 4px;">备注（选填）</text>
-        <textarea class="input" style="width: 100%; height: 80px; padding: 12px;" placeholder="添加备注..." value="{{note}}" bindinput="onNote"/>
+      <view class="field-group field-last">
+        <text class="field-label">备注（选填）</text>
+        <textarea class="record-input record-textarea"
+          placeholder="添加备注..."
+          value="{{note}}"
+          bindinput="onNote"/>
       </view>
     </view>
 
-    <view class="section">
-      <text class="title" style="display: block; margin-bottom: 12px;">预览</text>
-      <view class="card card-sm">
-        <view wx:if="{{divType === 'CASH'}}" style="display: flex; justify-content: space-between; padding: 8px 0;">
-          <text class="body">每股分红</text>
-          <text class="body" style="color: var(--xhs-title);">{{perShareText}}</text>
+    <view class="record-section">
+      <text class="section-title">预览</text>
+      <view class="record-card preview-card">
+        <view wx:if="{{divType === 'CASH'}}" class="preview-row">
+          <text class="preview-label">每股分红</text>
+          <text class="preview-value">{{perShareText}}</text>
         </view>
-        <view wx:if="{{divType === 'SHARE'}}" style="display: flex; justify-content: space-between; padding: 8px 0;">
-          <text class="body">送股数量</text>
-          <text class="body" style="color: var(--xhs-title);">{{shareQty || 0}}股</text>
+        <view wx:if="{{divType === 'SHARE'}}" class="preview-row">
+          <text class="preview-label">送股数量</text>
+          <text class="preview-value">{{shareQty || 0}}股</text>
         </view>
-        <view style="display: flex; justify-content: space-between; padding: 8px 0;">
-          <text class="body">持股数量</text>
-          <text class="body" style="color: var(--xhs-title);">{{qty}}股</text>
+        <view class="preview-row">
+          <text class="preview-label">持股数量</text>
+          <text class="preview-value">{{qty}}股</text>
         </view>
-        <view style="display: flex; justify-content: space-between; padding: 8px 0; border-top: 1px solid var(--xhs-divider);">
-          <text class="body" style="font-weight: var(--xhs-weight-semibold); color: var(--xhs-title);">{{divType === 'SHARE' ? '送股合计' : '分红总额'}}</text>
-          <text class="body {{divType === 'SHARE' ? 'body' : 'profit'}}" style="font-weight: var(--xhs-weight-semibold);">{{divType === 'SHARE' ? totalText : '+' + totalText}}</text>
+        <view class="preview-divider"></view>
+        <view class="preview-row">
+          <text class="preview-label preview-label-bold">{{divType === 'SHARE' ? '送股合计' : '分红总额'}}</text>
+          <text class="preview-value preview-value-bold">{{divType === 'SHARE' ? totalText : '+' + totalText}}</text>
         </view>
       </view>
     </view>
-    <view style="height: 100px;"></view>
+
+    <view class="bottom-spacer"></view>
   </scroll-view>
 
-  <view class="cta-btn" style="margin: 0 var(--xhs-space-lg); position: fixed; bottom: calc(40rpx + env(safe-area-inset-bottom)); left: 0; right: 0; z-index: 10;" bindtap="submit">{{isEdit ? '保存修改' : '确认添加'}}</view>
+  <!-- 底部确认按钮 -->
+  <view class="submit-bar">
+    <view class="submit-btn" bindtap="submit">{{isEdit ? '保存修改' : '确认添加'}}</view>
+  </view>
 </view>

@@ -1,5 +1,5 @@
 /* ═════════════════════════════════════════╗
-   交易编辑页 — 简洁专业风格
+   交易编辑页 — 小红书风格 v2
    ╚════════════════════════════════════════╝ */
 
 @import '../../../styles/common.wxss';
@@ -32,7 +32,8 @@ page {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: var(--xhs-bg-secondary);
+  background: var(--xhs-surface);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -40,8 +41,8 @@ page {
 }
 
 .nav-back-circle:active {
-  background: var(--xhs-divider-strong);
-  transform: scale(0.92);
+  transform: scale(0.9);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 .nav-back-arrow {
@@ -59,7 +60,7 @@ page {
   color: var(--xhs-title);
   text-align: center;
   letter-spacing: -0.01em;
-  padding-right: 44px; /* 居中对齐补偿 */
+  padding-right: 44px;
 }
 
 /* === 滚动区 === */
@@ -70,26 +71,25 @@ page {
   padding: 0 16px;
 }
 
-/* === 区块 === */
+/* === 区块标题 === */
 .record-section {
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
 
 .section-title {
   display: block;
-  font-size: var(--xhs-font-xs);
+  font-size: var(--xhs-font-sm);
   font-weight: var(--xhs-weight-semibold);
   color: var(--xhs-caption);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 12px 0 8px;
+  padding: 16px 4px 10px;
+  letter-spacing: 0.02em;
 }
 
 /* === 卡片 === */
 .record-card {
   background: var(--xhs-surface);
   border-radius: var(--xhs-radius-md);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--xhs-card-shadow);
   padding: 16px;
 }
 
@@ -100,11 +100,12 @@ page {
   border-radius: 10px;
   padding: 3px;
   margin-bottom: 12px;
+  position: relative;
 }
 
 .segment-item {
   flex: 1;
-  height: 34px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -112,19 +113,143 @@ page {
   font-weight: var(--xhs-weight-medium);
   color: var(--xhs-caption);
   border-radius: 8px;
-  transition: all 200ms ease;
+  transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  z-index: 1;
 }
 
 .segment-active {
   background: var(--xhs-surface);
-  color: var(--xhs-title);
   font-weight: var(--xhs-weight-semibold);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
-/* === 字段 === */
+.segment-buy {
+  color: var(--xhs-profit);
+}
+
+.segment-sell {
+  color: var(--xhs-loss);
+}
+
+/* === 买卖方向选择器（大卡片） === */
+.type-selector {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: var(--xhs-bg-secondary);
+  border-radius: 14px;
+  padding: 4px;
+}
+
+.type-option {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 8px 12px;
+  border-radius: 12px;
+  transition: all 250ms ease;
+  cursor: pointer;
+  gap: 2px;
+}
+
+.type-option:active {
+  transform: scale(0.97);
+}
+
+.type-active {
+  background: var(--xhs-surface);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.type-buy-active {
+  background: var(--xhs-profit-bg);
+  box-shadow: 0 2px 12px rgba(255, 107, 107, 0.15);
+}
+
+.type-buy-active .type-emoji { transform: scale(1.15); }
+
+.type-sell-active {
+  background: var(--xhs-loss-bg);
+  box-shadow: 0 2px 12px rgba(52, 199, 89, 0.15);
+}
+
+.type-sell-active .type-emoji { transform: scale(1.15); }
+
+.type-emoji {
+  font-size: 28px;
+  margin-bottom: 4px;
+  transition: transform 250ms ease;
+}
+
+.type-label {
+  font-size: var(--xhs-font-md);
+  font-weight: var(--xhs-weight-semibold);
+  color: var(--xhs-caption);
+  transition: color 200ms ease;
+}
+
+.type-buy-active .type-label { color: var(--xhs-profit); }
+.type-sell-active .type-label { color: var(--xhs-loss); }
+
+.type-desc {
+  font-size: var(--xhs-font-xs);
+  color: var(--xhs-caption-light);
+  margin-top: 1px;
+  transition: color 200ms ease;
+}
+
+.type-buy-active .type-desc { color: var(--xhs-profit); opacity: 0.7; }
+.type-sell-active .type-desc { color: var(--xhs-loss); opacity: 0.7; }
+
+.type-divider {
+  width: 1px;
+  height: 36px;
+  background: var(--xhs-divider);
+  flex-shrink: 0;
+}
+
+/* === 代码输入 + 市场徽章 === */
+.code-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.code-input {
+  padding-right: 56px;
+}
+
+.code-market-badge {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 11px;
+  padding: 2px 10px;
+  border-radius: 10px;
+  background: var(--xhs-primary-bg);
+  color: var(--xhs-primary);
+  font-weight: var(--xhs-weight-medium);
+  pointer-events: none;
+}
+
+/* === 搜索建议中的市场标签 === */
+.suggestion-market-tag {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--xhs-bg-secondary);
+  color: var(--xhs-caption-light);
+  font-weight: var(--xhs-weight-medium);
+  flex-shrink: 0;
+}
+
+/* === 表单字段 === */
 .field-group {
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .field-last {
@@ -137,20 +262,21 @@ page {
   font-weight: var(--xhs-weight-medium);
   color: var(--xhs-caption);
   margin-bottom: 6px;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.03em;
 }
 
 .field-error {
   font-size: var(--xhs-font-xs);
   color: var(--xhs-profit);
   margin-top: 4px;
+  padding-left: 2px;
 }
 
 /* 日期/时间 并排 */
 .field-row {
   display: flex;
   gap: 12px;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .field-half {
@@ -163,7 +289,7 @@ page {
   width: 100%;
   height: 44px;
   background: var(--xhs-bg-secondary);
-  border: 1px solid transparent;
+  border: 1.5px solid transparent;
   border-radius: 10px;
   padding: 0 12px;
   font-size: var(--xhs-font-md);
@@ -179,8 +305,8 @@ page {
 }
 
 .record-textarea {
-  height: 72px;
-  padding: 10px 12px;
+  height: 80px;
+  padding: 12px;
   line-height: 1.5;
   border-radius: 10px;
 }
@@ -203,21 +329,27 @@ page {
 
 /* === 搜索建议下拉 === */
 .suggestions-dropdown {
-  margin-top: 4px;
+  margin-top: 6px;
   background: var(--xhs-surface);
   border-radius: 12px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-  max-height: 200px;
+  max-height: 220px;
   overflow-y: auto;
   position: relative;
   z-index: 100;
+  border: 1px solid var(--xhs-divider);
 }
 
 .suggestion-item {
-  padding: 10px 14px;
+  padding: 12px 14px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  transition: background 150ms ease;
+}
+
+.suggestion-item:active {
+  background: var(--xhs-bg-secondary);
 }
 
 .suggestion-item:not(:last-child) {
@@ -227,7 +359,7 @@ page {
 .suggestion-code {
   font-size: var(--xhs-font-md);
   color: var(--xhs-title);
-  font-weight: var(--xhs-weight-medium);
+  font-weight: var(--xhs-weight-semibold);
 }
 
 .suggestion-name {
@@ -238,15 +370,19 @@ page {
 /* === 手续费明细 === */
 .fee-breakdown {
   margin-top: 8px;
-  padding: 8px 12px;
+  padding: 10px 12px;
   background: var(--xhs-bg-secondary);
-  border-radius: 8px;
+  border-radius: 10px;
 }
 
 .fee-item {
   display: flex;
   justify-content: space-between;
-  padding: 3px 0;
+  padding: 4px 0;
+}
+
+.fee-item:not(:last-child) {
+  border-bottom: 1px solid var(--xhs-divider);
 }
 
 .fee-name {
@@ -264,6 +400,7 @@ page {
 .journal-toggle {
   display: flex;
   align-items: center;
+  padding: 2px 0;
 }
 
 .journal-title {
@@ -275,7 +412,7 @@ page {
 .journal-optional {
   font-size: var(--xhs-font-xs);
   color: var(--xhs-caption-light);
-  margin-left: 4px;
+  margin-left: 6px;
 }
 
 .journal-spacer {
@@ -285,12 +422,12 @@ page {
 .journal-badges {
   display: flex;
   gap: 6px;
-  margin-right: 6px;
+  margin-right: 8px;
 }
 
 .journal-badge {
   font-size: 11px;
-  padding: 2px 8px;
+  padding: 3px 8px;
   border-radius: 20px;
   background: var(--xhs-primary-bg);
   color: var(--xhs-primary);
@@ -308,12 +445,12 @@ page {
 }
 
 .journal-body {
-  margin-top: 12px;
-  padding-top: 12px;
+  margin-top: 14px;
+  padding-top: 14px;
   border-top: 1px solid var(--xhs-divider);
 }
 
-/* === 标签 === */
+/* === 策略标签 === */
 .tag-list {
   display: flex;
   flex-wrap: wrap;
@@ -321,7 +458,7 @@ page {
 }
 
 .tag-item {
-  padding: 6px 14px;
+  padding: 7px 16px;
   border-radius: 20px;
   font-size: var(--xhs-font-sm);
   border: 1px solid var(--xhs-divider-strong);
@@ -345,7 +482,7 @@ page {
 }
 
 .tag-remove {
-  font-size: 11px;
+  font-size: 12px;
   opacity: 0.7;
 }
 
@@ -356,7 +493,7 @@ page {
   font-weight: var(--xhs-weight-medium);
 }
 
-/* === 策略选择弹窗 === */
+/* === 策略选择弹窗（小红书底部弹窗风格） === */
 .picker-overlay {
   position: fixed;
   top: 0;
@@ -397,16 +534,24 @@ page {
 }
 
 .picker-done {
-  padding: 4px 12px;
+  padding: 6px 16px;
   font-size: var(--xhs-font-md);
-  color: var(--xhs-primary);
+  color: #fff;
   font-weight: var(--xhs-weight-semibold);
+  background: var(--xhs-primary);
+  border-radius: 20px;
+  transition: all 150ms ease;
+}
+
+.picker-done:active {
+  opacity: 0.85;
+  transform: scale(0.95);
 }
 
 .picker-custom {
   display: flex;
   gap: 8px;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
 }
 
 .picker-custom-input {
@@ -426,24 +571,25 @@ page {
 
 /* === 预览卡片 === */
 .preview-card {
-  padding: 14px 16px;
+  padding: 16px;
 }
 
 .preview-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 6px 0;
+  padding: 8px 0;
 }
 
 .preview-label {
-  font-size: var(--xhs-font-md);
-  color: var(--xhs-body);
+  font-size: var(--xhs-font-sm);
+  color: var(--xhs-caption);
 }
 
 .preview-label-bold {
   font-weight: var(--xhs-weight-semibold);
   color: var(--xhs-title);
+  font-size: var(--xhs-font-md);
 }
 
 .preview-value {
@@ -453,13 +599,23 @@ page {
 }
 
 .preview-value-bold {
-  font-weight: var(--xhs-weight-semibold);
+  font-weight: var(--xhs-weight-bold);
+  font-size: var(--xhs-font-lg);
 }
 
 .preview-divider {
   height: 1px;
   background: var(--xhs-divider);
   margin: 6px 0;
+}
+
+/* 预览金额颜色跟随买卖类型 */
+.preview-amount-buy {
+  color: var(--xhs-profit);
+}
+
+.preview-amount-sell {
+  color: var(--xhs-loss);
 }
 
 /* === 底部间距 === */
@@ -476,20 +632,30 @@ page {
   z-index: 10;
   padding: 12px 16px;
   padding-bottom: calc(12px + env(safe-area-inset-bottom));
-  background: var(--xhs-bg);
+  background: linear-gradient(to top, var(--xhs-bg) 60%, transparent);
+  pointer-events: none;
 }
 
 .submit-btn {
   height: 48px;
   line-height: 48px;
   text-align: center;
-  background: var(--xhs-primary);
   color: #fff;
   font-size: 16px;
   font-weight: var(--xhs-weight-semibold);
   border-radius: 12px;
   transition: all 200ms ease;
-  box-shadow: 0 2px 8px rgba(255, 36, 66, 0.25);
+  pointer-events: auto;
+}
+
+.submit-btn-buy {
+  background: var(--xhs-profit);
+  box-shadow: 0 4px 16px rgba(255, 107, 107, 0.3);
+}
+
+.submit-btn-sell {
+  background: var(--xhs-loss);
+  box-shadow: 0 4px 16px rgba(52, 199, 89, 0.3);
 }
 
 .submit-btn:active {

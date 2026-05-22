@@ -1,14 +1,10 @@
-<view class="page-container" style="padding-top: {{statusBarHeight}}px;">
-  <!-- 页面标题 -->
-  <!-- 标题栏（仅间距） -->
-  <view class="page-title"></view>
-
+<view class="page-container" style="padding-top: {{statusBarHeight + navBarHeight}}px;">
   <!-- 骨架屏 -->
   <view wx:if="{{loading}}" class="skeleton-container">
-    <view class="xhs-skeleton-card" wx:for="{{[1,2,3]}}" wx:key="*this">
+    <view class="xhs-skeleton-card" wx:for="{{[1,2,3,4]}}" wx:key="*this">
       <view class="xhs-skeleton-header">
         <view class="xhs-skeleton-tag xhs-shimmer"></view>
-        <view class="xhs-skeleton-text xhs-shimmer"></view>
+        <view class="xhs-skeleton-text xhs-shimmer" style="width: 60%;"></view>
       </view>
       <view class="xhs-skeleton-body">
         <view class="xhs-skeleton-item xhs-shimmer"></view>
@@ -17,52 +13,86 @@
     </view>
   </view>
 
-  <scroll-view wx:else class="scroll-container" scroll-y>
-
-    <!-- 时段选择 (pill 风格) -->
+  <scroll-view wx:else class="xhs-scroll" scroll-y>
+    <!-- 时段选择 (黑色文字 + 红色下划线) -->
     <view class="period-tabs">
       <view
         wx:for="{{periodTabs}}"
         wx:key="key"
-        class="period-tab {{currentPeriod === item.key ? 'period-active' : ''}}"
-        bindtap="switchPeriod"
+        class="period-tab {{currentPeriod === item.key ? 'active' : ''}}"
         data-period="{{item.key}}"
+        bindtap="switchPeriod"
       >{{item.label}}</view>
     </view>
 
-    <!-- 统计卡片网格 (2x2) -->
-    <view class="stats-grid">
-      <view class="stat-card">
-        <text class="stat-label">投入</text>
-        <text class="stat-value">{{stats.totalInvestmentText}}</text>
+    <!-- 双列统计卡片 (小红书笔记风格) -->
+    <view class="xhs-feed-grid">
+      <!-- 投入 -->
+      <view class="xhs-feed-card">
+        <view class="xhs-feed-card-inner">
+          <view class="xhs-feed-card-cover cover-invest">
+            <text class="xhs-feed-card-emoji">💰</text>
+          </view>
+          <view class="xhs-feed-card-body">
+            <text class="xhs-feed-card-value">{{stats.totalInvestmentText}}</text>
+            <text class="xhs-feed-card-label">总投入</text>
+          </view>
+        </view>
       </view>
-      <view class="stat-card">
-        <text class="stat-label">回收</text>
-        <text class="stat-value">{{stats.totalRecoverText}}</text>
+
+      <!-- 回收 -->
+      <view class="xhs-feed-card">
+        <view class="xhs-feed-card-inner">
+          <view class="xhs-feed-card-cover cover-recover">
+            <text class="xhs-feed-card-emoji">💳</text>
+          </view>
+          <view class="xhs-feed-card-body">
+            <text class="xhs-feed-card-value">{{stats.totalRecoverText}}</text>
+            <text class="xhs-feed-card-label">总回收</text>
+          </view>
+        </view>
       </view>
-      <view class="stat-card">
-        <text class="stat-label">盈亏</text>
-        <text class="stat-value {{stats.totalPnL >= 0 ? 'stat-profit' : 'stat-loss'}}">
-          {{stats.totalPnL >= 0 ? '+' : ''}}{{stats.totalPnLText}}
-        </text>
+
+      <!-- 盈亏 -->
+      <view class="xhs-feed-card">
+        <view class="xhs-feed-card-inner">
+          <view class="xhs-feed-card-cover cover-pnl">
+            <text class="xhs-feed-card-emoji">📈</text>
+          </view>
+          <view class="xhs-feed-card-body">
+            <text class="xhs-feed-card-value {{stats.totalPnL >= 0 ? 'xhs-profit' : 'xhs-loss'}}">
+              {{stats.totalPnL >= 0 ? '+' : ''}}{{stats.totalPnLText}}
+            </text>
+            <text class="xhs-feed-card-label">总盈亏</text>
+          </view>
+        </view>
       </view>
-      <view class="stat-card">
-        <text class="stat-label">收益率</text>
-        <text class="stat-value {{stats.totalPnL >= 0 ? 'stat-profit' : 'stat-loss'}}">
-          {{stats.totalReturnRateText || '0.00%'}}
-        </text>
+
+      <!-- 收益率 -->
+      <view class="xhs-feed-card">
+        <view class="xhs-feed-card-inner">
+          <view class="xhs-feed-card-cover cover-rate">
+            <text class="xhs-feed-card-emoji">📊</text>
+          </view>
+          <view class="xhs-feed-card-body">
+            <text class="xhs-feed-card-value {{stats.totalPnL >= 0 ? 'xhs-profit' : 'xhs-loss'}}">
+              {{stats.totalReturnRateText || '0.00%'}}
+            </text>
+            <text class="xhs-feed-card-label">收益率</text>
+          </view>
+        </view>
       </view>
     </view>
 
-
-
-    <!-- 完整交易明细 -->
-    <view class="section">
-      <view class="section-header">
-        <text class="section-title">完整交易明细</text>
-        <view class="export-btn" bindtap="onExportMD"><text class="btn-icon icon-download"></text> 导出</view>
+    <!-- 完整交易明细 (小红书长笔记风格) -->
+    <view class="xhs-feed-card-full">
+      <view class="xhs-feed-card-full-header">
+        <text class="xhs-feed-card-full-title">📝 完整交易明细</text>
+        <view class="xhs-feed-card-full-action" bindtap="onExportMD">
+          <text class="xhs-feed-card-full-action-text">导出</text>
+        </view>
       </view>
-      <view class="xhs-card">
+      <view class="xhs-feed-card-full-body">
         <view wx:if="{{completeTrades.length > 0}}" class="detail-list">
           <view wx:for="{{completeTrades}}" wx:key="id" class="detail-item">
             <view class="detail-top">
@@ -81,12 +111,11 @@
     </view>
 
     <!-- 已清仓股票 -->
-    <view class="section">
-      <view class="section-header">
-        <text class="section-title">已清仓股票</text>
-        <view class="annual-btn" bindtap="onOpenAnnualReport"><text class="btn-icon icon-report"></text> 年度报告</view>
+    <view class="xhs-feed-card-full">
+      <view class="xhs-feed-card-full-header">
+        <text class="xhs-feed-card-full-title">💼 已清仓股票</text>
       </view>
-      <view class="xhs-card">
+      <view class="xhs-feed-card-full-body">
         <view wx:if="{{clearedPositions.length > 0}}" class="detail-list">
           <view wx:for="{{clearedPositions}}" wx:key="id" class="detail-item">
             <view class="detail-top">
@@ -99,8 +128,8 @@
               </text>
             </view>
             <view class="detail-meta">
-              <text>已实现: {{item.realizedPnLText}}</text>
-              <text>分红: +{{item.dividendIncomeText}}</text>
+              <text class="detail-meta-text">已实现: {{item.realizedPnLText}}</text>
+              <text class="detail-meta-text">分红: +{{item.dividendIncomeText}}</text>
             </view>
           </view>
         </view>
@@ -109,9 +138,11 @@
     </view>
 
     <!-- 综合明细 -->
-    <view class="section">
-      <text class="section-title">综合明细</text>
-      <view class="xhs-card">
+    <view class="xhs-feed-card-full">
+      <view class="xhs-feed-card-full-header">
+        <text class="xhs-feed-card-full-title">📋 综合明细</text>
+      </view>
+      <view class="xhs-feed-card-full-body">
         <view wx:for="{{detailItems}}" wx:key="label" class="detail-row">
           <text class="detail-row-label">{{item.label}}</text>
           <text class="detail-row-value {{item.colorClass}}">{{item.prefix}}{{item.value}}</text>
@@ -119,7 +150,14 @@
       </view>
     </view>
 
-    <view style="height: 160rpx;"></view>
+    <!-- 底部年度报告 CTA -->
+    <view class="xhs-feed-footer">
+      <view class="xhs-feed-cta" bindtap="onOpenAnnualReport">
+        <text>📊 查看年度报告</text>
+      </view>
+    </view>
+
+    <view style="height: 40rpx;"></view>
   </scroll-view>
 
   <annual-report wx:if="{{showAnnualReport}}" data="{{annualReportData}}" bind:close="onCloseAnnualReport" />

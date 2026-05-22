@@ -106,7 +106,7 @@ Component({
         ctx.scale(dpr, dpr)
 
         // 背景
-        ctx.fillStyle = '#0D1117'
+        ctx.fillStyle = '#FFFFFF'
         ctx.fillRect(0, 0, W, H)
 
         let y = 0
@@ -114,14 +114,14 @@ Component({
         // === Hero 区域 ===
         y = 60
         // 年份
-        ctx.fillStyle = 'rgba(255,255,255,0.06)'
+        ctx.fillStyle = 'rgba(0,0,0,0.04)'
         ctx.font = 'bold 120px -apple-system, sans-serif'
         ctx.textAlign = 'center'
         ctx.fillText(String(reportData.year), W / 2, y)
         y += 80
 
         // 标题
-        ctx.fillStyle = 'rgba(255,255,255,0.5)'
+        ctx.fillStyle = '#999999'
         ctx.font = '15px -apple-system, sans-serif'
         ctx.fillText('年度投资报告', W / 2, y)
         y += 50
@@ -135,20 +135,20 @@ Component({
         y += 40
 
         // 百分比
-        ctx.fillStyle = 'rgba(255,255,255,0.5)'
+        ctx.fillStyle = '#999999'
         ctx.font = '16px -apple-system, sans-serif'
         ctx.fillText((reportData.totalPnL >= 0 ? '+' : '') + reportData.totalPnLPercent + '%', W / 2, y)
         y += 80
 
         // === 交易概览 ===
-        ctx.fillStyle = 'rgba(255,255,255,0.4)'
+        ctx.fillStyle = '#999999'
         ctx.font = '13px -apple-system, sans-serif'
         ctx.textAlign = 'left'
         ctx.fillText('交易概览', 32, y)
         y += 30
 
         // 网格背景
-        ctx.fillStyle = 'rgba(255,255,255,0.04)'
+        ctx.fillStyle = '#F5F5F5'
         roundRect(ctx, 24, y, W - 48, 100, 12)
         ctx.fill()
 
@@ -164,10 +164,10 @@ Component({
         gridItems.forEach(function (item, i) {
           let x = 24 + i * (gridW + 12) + gridW / 2
           ctx.textAlign = 'center'
-          ctx.fillStyle = item.color || '#fff'
+          ctx.fillStyle = item.color || '#1C1C1E'
           ctx.font = 'bold 22px -apple-system, sans-serif'
           ctx.fillText(item.value, x, gridY + 20)
-          ctx.fillStyle = 'rgba(255,255,255,0.4)'
+          ctx.fillStyle = '#999999'
           ctx.font = '11px -apple-system, sans-serif'
           ctx.fillText(item.label, x, gridY + 42)
         })
@@ -176,12 +176,12 @@ Component({
 
         // === 资金流向 ===
         ctx.textAlign = 'left'
-        ctx.fillStyle = 'rgba(255,255,255,0.4)'
+        ctx.fillStyle = '#999999'
         ctx.font = '13px -apple-system, sans-serif'
         ctx.fillText('资金流向', 32, y)
         y += 30
 
-        ctx.fillStyle = 'rgba(255,255,255,0.04)'
+        ctx.fillStyle = '#F5F5F5'
         roundRect(ctx, 24, y, W - 48, 80, 12)
         ctx.fill()
 
@@ -196,10 +196,10 @@ Component({
         flowItems.forEach(function (item, i) {
           let x = 24 + i * flowW + flowW / 2
           ctx.textAlign = 'center'
-          ctx.fillStyle = 'rgba(255,255,255,0.4)'
+          ctx.fillStyle = '#999999'
           ctx.font = '11px -apple-system, sans-serif'
           ctx.fillText(item.label, x, flowY)
-          ctx.fillStyle = item.color || '#fff'
+          ctx.fillStyle = item.color || '#1C1C1E'
           ctx.font = 'bold 14px -apple-system, sans-serif'
           ctx.fillText(item.value, x, flowY + 22)
         })
@@ -208,7 +208,7 @@ Component({
 
         // === 月度盈亏 ===
         ctx.textAlign = 'left'
-        ctx.fillStyle = 'rgba(255,255,255,0.4)'
+        ctx.fillStyle = '#999999'
         ctx.font = '13px -apple-system, sans-serif'
         ctx.fillText('月度盈亏', 32, y)
         y += 30
@@ -220,17 +220,17 @@ Component({
         if (reportData.topStocks && reportData.topStocks.length > 0) {
           y += 30
           ctx.textAlign = 'left'
-          ctx.fillStyle = 'rgba(255,255,255,0.4)'
+          ctx.fillStyle = '#999999'
           ctx.font = '13px -apple-system, sans-serif'
           ctx.fillText('收益最高', 32, y)
           y += 30
 
           reportData.topStocks.forEach(function (stock, i) {
             let badgeColors = ['#FFD700', '#C0C0C0', '#CD7F32']
-            let badgeColor = badgeColors[i] || 'rgba(255,255,255,0.08)'
+            let badgeColor = badgeColors[i] || 'rgba(0,0,0,0.08)'
 
             // 背景
-            ctx.fillStyle = 'rgba(255,255,255,0.04)'
+            ctx.fillStyle = '#F5F5F5'
             roundRect(ctx, 24, y, W - 48, 56, 10)
             ctx.fill()
 
@@ -244,7 +244,7 @@ Component({
             ctx.fillText(String(i + 1), 48, y + 33)
 
             // 股票名称
-            ctx.fillStyle = '#fff'
+            ctx.fillStyle = '#1C1C1E'
             ctx.font = '15px -apple-system, sans-serif'
             ctx.textAlign = 'left'
             ctx.fillText(stock.name, 72, y + 28)
@@ -267,24 +267,24 @@ Component({
         if (reportData.strategyStats && reportData.strategyStats.length > 0) {
           y += 20
           ctx.textAlign = 'left'
-          ctx.fillStyle = 'rgba(255,255,255,0.4)'
+          ctx.fillStyle = '#999999'
           ctx.font = '13px -apple-system, sans-serif'
           ctx.fillText('策略分布', 32, y)
           y += 30
 
           reportData.strategyStats.forEach(function (s) {
-            ctx.fillStyle = '#fff'
+            ctx.fillStyle = '#1C1C1E'
             ctx.font = '14px -apple-system, sans-serif'
             ctx.textAlign = 'left'
             ctx.fillText(s.tag, 32, y)
             ctx.textAlign = 'right'
-            ctx.fillStyle = 'rgba(255,255,255,0.4)'
+            ctx.fillStyle = '#999999'
             ctx.font = '12px -apple-system, sans-serif'
             ctx.fillText(s.count + '次', W - 32, y)
             y += 24
 
             // 进度条背景
-            ctx.fillStyle = 'rgba(255,255,255,0.06)'
+            ctx.fillStyle = 'rgba(0,0,0,0.04)'
             roundRect(ctx, 32, y, W - 64, 6, 3)
             ctx.fill()
 
@@ -301,7 +301,7 @@ Component({
 
         // === Footer ===
         y += 40
-        ctx.fillStyle = 'rgba(255,255,255,0.2)'
+        ctx.fillStyle = '#C7C7CC'
         ctx.font = '12px -apple-system, sans-serif'
         ctx.textAlign = 'center'
         ctx.fillText('股票记账 · ' + reportData.year + '年度报告', W / 2, y)

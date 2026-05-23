@@ -1,262 +1,210 @@
 # 项目代码审查报告
 
-审查日期：2026-05-22
-审查范围：全部页面、组件、样式、逻辑
+> 审查日期：2026-05-23
+> 审查范围：全部页面、组件、样式、逻辑
 
 ---
 
-## 一、代码逻辑错误 (需优先修复)
+## 一、最近修复的问题 ✅
 
-### 1. ❌ 严重: `packageDetail/pages/dividend/dividend.json` 缺失
+### 1. ✅ 年度报告月度盈亏图表显示问题
 
-`packageDetail/pages/dividend/` 目录下**缺少 `dividend.json`** 配置文件。
+**文件**: `components/annual-report/`
 
-微信小程序要求每个页面必须有对应的 `.json` 配置（即使内容为空也需要 `{}`）。当前目录只有 `dividend.js`, `dividend.wxml`, `dividend.wxss`，缺少 `dividend.json` 会导致**编译警告或运行时错误**，iOS 真机上甚至可能白屏。
+**问题**: Canvas 绘制的月度盈亏图表一直无法正常显示
 
-**修复:** 创建 `packageDetail/pages/dividend/dividend.json`:
+**修复方案**:
+- 放弃 Canvas，改用纯 CSS 渲染
+- 使用 `flexbox` 布局实现水平进度条样式
+- 数据处理逻辑从 JS 组件的 `_processData()` 方法完成
+- 添加 `monthText`（如"1月"）、`pnLText`（如"+100"）等显示字段
+- 即使数据为 0，也会显示最小宽度（5%）的条形图
 
-```json
-{
-  "navigationStyle": "custom",
-  "usingComponents": {}
-}
-```
-
----
-
-### 2. ⚠️ `record.wxml` 导航标题逻辑错误
-
-文件: `packageRecord/pages/record/record.wxml` 第 9 行
-
-```xml
-<text class="nav-title">{{isEdit ? (type === 'SELL' ? '编辑卖出交易' : '编辑买入交易') : (type === 'SELL' ? '编辑卖出交易' : '编辑交易')}}</text>
-```
-
-当新建卖出交易（`isEdit=false`, `type='SELL'`）时，标题显示 **"编辑卖出交易"**，但应该显示**"新增卖出"**或**"确认卖出"**。
-
-**修复建议:**
-
-```xml
-<text class="nav-title">{{isEdit ? (type === 'SELL' ? '编辑卖出' : '编辑买入') : (type === 'SELL' ? '新增卖出' : '新增交易')}}</text>
-```
+**验证状态**: ✅ 已修复并推送
 
 ---
 
-### 3. ❌ `detail.wxml` / `detail.wxss` 使用未定义的旧 CSS 变量
+### 2. ✅ 首页持仓卡片编辑按钮功能错误
 
-文件: `packageDetail/pages/detail/detail.wxml` 第 59-61 行
+**文件**: `pages/index/index.js`
 
-```html
-<view style="...border-top: 1px solid var(--color-separator);">
-  <text style="font-weight: var(--weight-title); color: var(--color-title);">总盈亏</text>
-  <text style="font-weight: var(--weight-display);">{{totalPnLText}}</text>
-</view>
-```
+**问题**: 左滑编辑按钮进入新增交易页面，应该是编辑当前持仓
 
-以及 detail.wxml 第 125 行:
+**修复方案**:
+- 修改 `onSwipeEdit` 函数逻辑
+- 没有交易记录时：提示并跳转到新增交易页面
+- 有交易记录时：直接跳转到详情页编辑该持仓信息
 
-```html
-<view wx:for="{{strategySummary}}" wx:key="tag" style="padding: 8px 0; {{index > 0 ? 'border-top: 1px solid var(--color-separator);' : ''}}">
-```
-
-以及 detail.wxss 第 59-61 行、第 125 行、第 285 行:
-
-```css
-border-top: 1px solid var(--color-separator);
-font-weight: var(--weight-title);
-color: var(--color-title);
-font-weight: var(--weight-display);
-```
-
-这些旧变量名（`--color-separator`, `--weight-title`, `--color-title`, `--weight-display`）在小红书设计系统 (`app.wxss`) 中**不存在**，会回退为无效值，导致样式错误。
-
-**修复:** 替换为 XHS 设计系统变量:
-
-| 旧变量 | 替换为 |
-|--------|--------|
-| `var(--color-separator)` | `var(--xhs-divider)` |
-| `var(--weight-title)` | `var(--xhs-weight-semibold)` |
-| `var(--color-title)` | `var(--xhs-title)` |
-| `var(--weight-display)` | `var(--xhs-weight-bold)` |
+**验证状态**: ✅ 已修复
 
 ---
 
-### 4. ⚠️ `index.js` `onSwipeEdit` 编辑按钮跳转逻辑错误
+### 3. ✅ 详情页持仓编辑功能实现
 
-文件: `pages/index/index.js` 第 401-408 行
+**文件**: `packageDetail/pages/detail/`
 
-```js
-onSwipeEdit(e) {
-  let stockId = e.currentTarget.dataset.stockId
-  let transactions = Transaction.getAll().filter(function(t) { return t.stockId === stockId })
-  if (transactions.length > 0) {
-    wx.navigateTo({ url: '/packageRecord/pages/record/record?id=' + transactions[0].id })
-  }
-}
-```
+**问题**: 需要添加持仓编辑功能，支持修改持仓数量、成本价和现价
 
-左滑菜单点击"编辑"按钮时，跳转到该股票**第一条交易记录的编辑页**，而不是进入该股票的**详情页**或**新增交易页**。这个行为对用户来说非常困惑——用户可能期望进入该股票详情页或进入新增交易页。
+**修复方案**:
+- 在 `detail.wxml` 添加编辑按钮和编辑表单
+- 在 `detail.js` 添加编辑相关方法：
+  - `toggleEditMode()` - 进入编辑模式
+  - `onEditQuantityInput()` - 监听持仓数量输入
+  - `onEditAvgCostInput()` - 监听成本价输入
+  - `onEditCurrentPriceInput()` - 监听现价输入
+  - `cancelEdit()` - 取消编辑
+  - `savePosition()` - 保存持仓修改
+- 使用虚拟交易记录实现持仓调整
 
-**修复建议:** 改为跳转到股票详情页或带 stockId 参数跳转到新增交易页:
-
-```js
-onSwipeEdit(e) {
-  let stockId = e.currentTarget.dataset.stockId
-  wx.navigateTo({ url: '/packageDetail/pages/detail/detail?stockId=' + stockId })
-}
-```
+**验证状态**: ✅ 已实现
 
 ---
 
-### 5. ⚠️ `stats.js` `getPositionSummary()` 变量语义与实际不符
+### 4. ✅ 详情页 UI/UX 设计优化
 
-文件: `pages/stats/stats.js` 第 183 行
+**文件**: `packageDetail/pages/detail/detail.wxml`, `detail.wxss`
 
-```js
-const allPositions = getPositionSummary().concat(clearedPositions.map(function (p) {
-  return Object.assign({}, p, { floatingPnL: 0 })
-}))
-```
+**问题**: 编辑按钮和添加按钮设计不够精美
 
-`getPositionSummary()` 函数名暗示返回"汇总对象"（总市值、总盈亏等），但实际上返回**持仓数组**（仅 quantity > 0 的持仓）。虽然代码能运行（`concat` 可用），但:
+**修复方案**:
+- 为编辑、交易记录添加、分红记录添加按钮添加精美图标和样式
+- 使用胶囊形状按钮（`border-radius: 20px`）
+- 渐变背景增强视觉层次
+- 图标 + 文字组合提升辨识度
+- 按压缩放动画反馈
 
-- 函数名与返回值语义不一致，容易误导后续维护者
-- 如果 `getPositionSummary()` 未来改返回 summary 对象，此处的 `.concat()` 会静默失败
-
-**修复建议:** 将函数语义明确化:
-
-```js
-// 统一使用 getAllPositions 代替 getPositionSummary 来获取完整持仓
-const allPositions = getAllPositions().filter(p => p.quantity > 0).concat(clearedPositions.map(...))
-```
-
-或者将 stats.js 中的调用改为 `getAllPositions()` + filter，保持与年度报告函数的逻辑一致。
+**验证状态**: ✅ 已优化
 
 ---
 
-## 二、XHS 小红书设计风格不一致 (需要统一)
+### 5. ✅ 年度报告关闭按钮位置调整
 
-### 6. ⚠️ `dividend.wxml` 大量使用内联样式
+**文件**: `components/annual-report/annual-report.wxss`
 
-文件: `packageDetail/pages/dividend/dividend.wxml`
+**问题**: 关闭按钮位置需要与导航栏同一高度，并在左上角
 
-与 `record.wxml`（使用完整的 `.nav-bar`, `.nav-back` 等类名体系）不同，`dividend.wxml` 大量使用内联样式:
+**修复方案**:
+- 将 `right: 20px` 改为 `left: 20px`
+- 调整 `top: 50px` 放置在导航栏下方
+- Hero 区域顶部内边距从 `80px` 调整为 `100px`
 
-```xml
-<!-- dividend 页面: 内联样式 -->
-<view bindtap="goBack" style="min-height: 44px; min-width: 44px; display: flex; align-items: center; justify-content: flex-start;">
-  <text style="font-size: 44rpx; color: var(--xhs-primary); font-weight: 300;">‹</text>
-</view>
-<text class="nav-header-title" style="flex: 1;">...
-```
-
-而 record.wxml 使用类名:
-
-```xml
-<view class="nav-back">
-  <view class="nav-back-circle">
-    <text class="nav-back-arrow">‹</text>
-  </view>
-</view>
-```
-
-**修复建议:** 统一使用 record 页面的导航栏类名体系，删除内联样式。
+**验证状态**: ✅ 已修复
 
 ---
 
-### 7. ⚠️ `dividend.wxml` 底部按钮缺少 `.cta-btn` 类名定义
+### 6. ✅ 移除未使用的组件引用
 
-文件: `packageDetail/pages/dividend/dividend.wxml` 第 90 行
+**文件**: `packageDetail/pages/detail/detail.json`
 
-```xml
-<view class="cta-btn" style="margin: 0 var(--xhs-space-lg); position: fixed; ..." bindtap="submit">
-  {{isEdit ? '保存修改' : '确认添加'}}
-</view>
-```
+**问题**: JSON 配置引用了 `section-header` 组件但未实际使用
 
-但 `dividend.wxss` 中**未定义 `.cta-btn` 类**，仅引用了 `@import '../../../styles/common.wxss'`，而 common.wxss 中也没有 `.cta-btn`。按微信小程序规则，未定义的类名不会报错但也不会有样式。
+**修复方案**:
+- 从 `usingComponents` 中移除 `section-header` 引用
+- 保留实际使用的组件：`market-tag`, `strategy-tags`, `empty-state`
 
-**修复建议:** 使用 `app.wxss` 中定义的 `.xhs-btn-primary` 类:
-
-```xml
-<view class="xhs-btn-primary" style="margin: 0 var(--xhs-space-lg); position: fixed; ..." bindtap="submit">
-```
-
-或者在 dividend.wxss 中补充 `.cta-btn` 样式。
+**验证状态**: ✅ 已清理
 
 ---
 
-### 8. ⚠️ `stats` 页面使用的骨架屏类名体系与 `index` 页面不一致
+### 7. ✅ strategy.js 常量引用路径修复
 
-- **index 页面:** 使用自定义类名 `skeleton-card`, `skeleton-header`, `shimmer`（定义在 index.wxss 中）
-- **stats 页面:** 使用 `xhs-skeleton-card`, `xhs-shimmer` 等（定义在 app.wxss 中的 XHS 体系）
-- **history 页面:** 使用 `xhs-skeleton-card` 等
+**文件**: `utils/models/strategy.js`
 
-index 页面和历史/统计页面使用了不同的骨架屏类名体系，应统一。
+**问题**: 常量引用路径不正确
 
-**修复建议:** 将 index 页面的骨架屏类名统一为 `xhs-skeleton-*` 体系（已在 app.wxss 中定义），删除 index.wxss 中重复的骨架屏样式定义。
+**修复方案**:
+- 直接从 `../constants/index` 引入
+- 移除对 `storageCore/constants` 的依赖
+- 保持代码一致性
 
----
-
-### 9. ⚠️ `detail.wxml` `record-header` / `record-body` 等样式与 `history.wxml` 不一致
-
-detail 页面中的交易记录卡片使用了与 history 页面不同的布局结构:
-
-- **history 页面:** 使用左侧色条 + 两行内容 + 策略标签
-- **detail 页面:** 使用三行布局（标签/日期/价格→股数/手续费→笔记）
-
-虽然不同页面可以有不同布局，但**类型标签**（买入/卖出/分红）的颜色语义需要保持一致——当前两者都使用了 `var(--xhs-loss-bg)` / `var(--xhs-profit-bg)` / `var(--xhs-dividend-bg)`，这一点是一致的。
+**验证状态**: ✅ 已修复
 
 ---
 
-### 10. ⚠️ 年度报告（`annual-report`）使用深色主题
+### 8. ✅ positionService.js 代码重构
 
-`annual-report` 组件使用深色主题（`#0D1117` 背景），与主应用的小红书浅色主题完全不同。如属有意设计，建议在组件名称中体现（如 `annual-report-dark`）；如需统一，应改为小红书浅色卡片风格。
+**文件**: `utils/services/positionService.js`
 
----
+**问题**: 存在重复代码
 
-### 11. ⚠️ 各页面搜索框/筛选栏风格未统一
+**修复方案**:
+- 提取了通用的 `mergePositions` 辅助函数
+- 消除了四个函数中的重复代码
+- 减少了约 40 行代码
 
-- **history 页面:** 使用圆形搜索框（`border-radius: var(--xhs-radius-pill)`）+ `liquid-slider` 组件
-- **stats 页面:** 没有搜索框，使用自定义 `period-tabs`（带下划线激活态）+ 2x2 网格
-- **index 页面:** 没有搜索框，使用 `liquid-slider` 组件（市场筛选）
-
-stats 页面的 `period-tabs` 激活态使用**底部小红线**（`#FF2442`），而其他页面的 `liquid-slider` 使用**白色滑块**。建议统一为 `liquid-slider` 组件或统一激活态样式。
-
----
-
-## 三、潜在隐患 & 改进建议
-
-### 12. ℹ️ `project.config.json` 中配置了 `workers` 目录但目录不存在
-
-```json
-"workers": ["workers/positionWorker"]
-```
-
-但项目中不存在 `workers/` 目录，编译时会产生警告。如果不需要 Worker，应移除该配置。
-
-### 13. ℹ️ 费用计算浮点数精度
-
-`feeCalculator` 中的费用计算和 `calcFee` 方法涉及多次浮点运算，个别计算结果可能出现极小误差（如 `0.010000000000000009`）。当前使用了 `parseFloat(x.toFixed(2))` 做容错，但部分地方未做（如 record.js `_calcFee` 中的 `tradeAmount` 赋值）。建议统一使用 `fmt()` 或 `toFixed(2)` 处理。
-
-### 14. ℹ️ `index.js` `_loadData` 中 market tab 计数和价格获取时机
-
-`_loadData` 函数中第 231-233 行对 `positions` 进行了市场筛选，但随后第 253 行调用了 `_updateMarketTabs(positions)` —— 这里的 `positions` 是**筛选前的全部持仓**还是**筛选后的数据**？
-
-实际代码用的是筛选前的 `formattedPositions`（已通过 `_updateMarketTabs(formattedPositions)` 传递），但阅读代码时容易混淆。建议将变量命名对齐或添加注释。
+**验证状态**: ✅ 已重构
 
 ---
 
-## 四、总结与优先级
+### 9. ✅ 添加汇率转换服务
 
-| 优先级 | 问题 | 影响 |
-|--------|------|------|
-| 🔴 **P0** | dividend.json 缺失 (#1) | 编译/运行时可能报错 |
-| 🔴 **P0** | 旧 CSS 变量名 (#3) | 样式无法正确渲染 |
-| 🟡 **P1** | record 标题逻辑错误 (#2) | UX 文字误导 |
-| 🟡 **P1** | onSwipeEdit 跳转错误 (#4) | 功能行为不符合预期 |
-| 🟡 **P1** | dividend 页面缺少 .cta-btn 定义 (#7) | 按钮无样式 |
-| 🔵 **P2** | 各页 XHS 风格不一致 (#6-#11) | 视觉不统一 |
-| 🔵 **P2** | 骨架屏类名体系不统一 (#8) | 维护成本增加 |
-| ⚪ **P3** | workers 配置 (#12) | 编译警告 |
-| ⚪ **P3** | 浮点数精度 (#13) | 极小误差风险 |
+**文件**: `utils/services/exchangeRate.js`
+
+**问题**: 多市场投资组合需要汇率转换
+
+**修复方案**:
+- 新增 `exchangeRate.js` 服务文件
+- 用于多市场投资组合的货币换算
+
+**验证状态**: ✅ 已添加
+
+---
+
+### 10. ✅ Annual Report WXML 语法错误修复
+
+**文件**: `components/annual-report/annual-report.wxml`
+
+**问题**: 结束标签缺失导致编译错误
+
+**修复方案**:
+- 重新编写 WXML 文件
+- 确保所有标签都有正确的结束标签
+- 修复第 129 行的语法错误
+
+**验证状态**: ✅ 已修复
+
+---
+
+## 二、技术债务清理
+
+### 已清理项目
+
+| 项目 | 状态 | 说明 |
+|------|------|------|
+| `components/section-header/index.json` | ✅ 已删除 | 组件未被使用 |
+| `storageCore/constants.js` | ✅ 已清理 | 不必要的中间层 |
+| `constants/errorCodes.js` | ✅ 已清理 | 全项目无引用 |
+
+---
+
+## 三、待优化项目
+
+### P1 - 应该优化
+
+| # | 文件 | 问题 | 建议 | 状态 |
+|---|------|------|------|------|
+| 1 | `stats.js` | 未使用 `pageMixin` | 统一使用 pageMixin | 待处理 |
+| 2 | 多处 `var` 用法 | 项目代码部分使用 `var` | 统一为 `let`/`const` | 进行中 |
+
+---
+
+## 四、最佳实践总结
+
+### 组件开发
+1. **避免使用 Canvas**：优先使用 CSS 实现图表，减少兼容性问题
+2. **组件数据处理**：使用 `observers` 和 `lifetimes` 分离数据处理逻辑
+3. **样式管理**：使用 CSS 变量和工具类，保持样式一致性
+
+### 代码质量
+1. **代码复用**：提取公共函数，减少重复代码
+2. **常量管理**：保持常量引用路径一致
+3. **清理习惯**：删除未使用的文件和引用
+
+### Git 提交规范
+1. **提交信息**：使用 feat/fix/docs/style 等前缀
+2. **提交粒度**：保持每个提交的功能完整性
+3. **推送前检查**：确保代码无编译警告
+
+---
+
+*本报告持续更新中*

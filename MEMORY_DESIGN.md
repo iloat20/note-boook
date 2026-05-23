@@ -1,6 +1,9 @@
 # Memory Design & Robustness Guide
 
+> Last Updated: 2026-05-23
+
 ## Overview
+
 This document describes the memory management strategy, budget thresholds, and robustness patterns used in the stock trading mini program.
 
 ## Memory Budgets
@@ -11,6 +14,8 @@ This document describes the memory management strategy, budget thresholds, and r
 | `_memCache` | 50 entries | LRU eviction (Map insertion-order) | Avoid repeated `wx.getStorageSync` calls |
 | `_periodStatsCache` | 50 entries | LRU eviction (`utils/cache/lruCache`) | Cache period statistics in statsService |
 | `gradientCache` | per-session | Reuse objects | Reuse ECharts gradient objects |
+| `positionCache` | 50 entries | LRU eviction | Cache position calculations |
+| `heatmapCache` | 20 entries | LRU eviction | Cache heatmap data |
 
 ### Network Layer (`utils/services/stockPrice.js`)
 | Resource | Limit | Behavior |
@@ -24,6 +29,7 @@ This document describes the memory management strategy, budget thresholds, and r
 | `pages/history/history.js` | `_cachedAllRecords` | Build once, filter from cache |
 | `pages/stats/stats.js` | `gradientCache` | Reuse ECharts gradient objects |
 | `pages/index/index.js` | `_animTimer` | Cleanup on `onUnload` |
+| `components/annual-report/` | `processedMonthlyData` | Computed property, cached after data processing |
 
 ## Lifecycle Cleanup
 | Page | Cleanup Actions |
@@ -31,6 +37,7 @@ This document describes the memory management strategy, budget thresholds, and r
 | `pages/index/index.js` | `onUnload`: `clearTimeout(_animTimer)` |
 | `pages/stats/stats.js` | `onUnload`: `dispose()` both ECharts instances |
 | `pages/history/history.js` | `onUnload`: `clearTimeout(_searchTimer)` |
+| `components/annual-report/` | `onClose`: Triggered via event, no persistent resources |
 
 ## Key Storage Keys
 | Key Pattern | Type | Description |
@@ -40,11 +47,38 @@ This document describes the memory management strategy, budget thresholds, and r
 | `stock_trade_dividends` | Array | All dividend records |
 | `stock_trade_prices` | Object | Price cache by stock ID |
 
+## Annual Report Component Memory Management
+
+The annual report component (`components/annual-report/`) uses CSS-based rendering instead of Canvas:
+
+### Data Processing Flow
+1. **Input**: `data.monthlyPnL` array from parent page
+2. **Processing**: `_processData()` method computes:
+   - `maxVal`: Maximum absolute P&L value for scaling
+   - `heightPercent`: Percentage-based bar heights
+   - `monthText`: Formatted month labels (e.g., "1月")
+   - `pnLText`: Formatted P&L values with sign
+3. **Output**: `processedMonthlyData` stored in component state
+4. **Rendering**: Pure CSS flexbox layout for bars
+
+### Memory Benefits
+- No Canvas context caching needed
+- No gradient object reuse required
+- Simpler lifecycle management
+- Better cross-platform consistency
+
+### Performance Characteristics
+- Data processed once on component attach/ready
+- Observer pattern triggers reprocessing only when `data` changes
+- CSS transitions handle animations (GPU-accelerated)
+- No manual draw cycles or RAF callbacks
+
 ## Robustness Patterns
 1. **LRU Cache Eviction**: `_memCache` uses `Map` with insertion-order eviction when exceeding 50 entries
 2. **Request Throttling**: `fetchAllPrices()` limits concurrent network requests to 5
 3. **Data Copy**: `getDataCopy()` returns shallow copies to prevent cache pollution
 4. **Dirty Flag**: `markDataDirty()` notifies appStore via `appStore.commit('MARK_DIRTY')`. Pages check via `pageMixin.onShowMixin()` or `appStore.getState('dataDirty')` to decide whether to reload data.
+5. **CSS Fallbacks**: Annual report uses CSS charts with graceful degradation if data unavailable
 
 ## Testing
 - `tests/memory.test.js` validates LRU eviction, cache size limits, and data isolation
@@ -54,3 +88,4 @@ This document describes the memory management strategy, budget thresholds, and r
 - Add storage quota monitoring via `wx.getStorageInfo`
 - Add request retry with exponential backoff in `stockPrice.js`
 - Expand test coverage for storage layer edge cases
+- Consider WebGL rendering for future chart enhancements

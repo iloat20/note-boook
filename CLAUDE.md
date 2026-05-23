@@ -22,9 +22,9 @@ No CLI build tooling. Open the project root in **WeChat DevTools** to build, pre
 |-----|------|------|
 | 0 | `pages/index/index` | Portfolio positions, market tabs, swipe actions, live price fetch |
 | 1 | `pages/history/history` | Transaction log, filters, search, pagination |
-| 2 | `pages/stats/stats` | ECharts charts, heatmap, virtual list, MD export |
+| 2 | `pages/stats/stats` | ECharts charts, heatmap, virtual list, MD export, annual report |
 | sub | `packageRecord/pages/record/record` | Add/edit BUY/SELL transaction form (subpackaged) |
-| sub | `packageDetail/pages/detail/detail` | Single stock detail (subpackaged) |
+| sub | `packageDetail/pages/detail/detail` | Single stock detail, position editing, dividend management (subpackaged) |
 | sub | `packageDetail/pages/dividend/dividend` | Add/edit dividend (subpackaged) |
 
 ### Subpackages
@@ -48,7 +48,7 @@ Modular architecture (`utils/storageCore/` + `utils/models/` + `utils/helpers/`)
 1. **`utils/storageCore/core.js`** — Low-level `getData()/saveData()/getNextId()/markDataDirty()` with LRU memory cache
 2. **`utils/models/`** — Active Record models (`Stock`, `Transaction`, `Dividend`, `PriceCache`, `Strategy`) each wrapping one storage key
 3. **`utils/helpers/`** — Pure function helpers (`positionCalculator`, `feeCalculator`, `entityFactory`, `sortHelpers`)
-4. **`utils/services/`** — Higher-level services (`positionService`, `statsService`, `stockPrice`, `chartService`) composing models + helpers
+4. **`utils/services/`** — Higher-level services (`positionService`, `statsService`, `stockPrice`, `chartService`, `exchangeRate`) composing models + helpers
 5. **`utils/ui/`** — UI utilities (`pageMixin`, `feedback`)
 
 Key patterns:
@@ -70,6 +70,7 @@ Key patterns:
 | `stockDatabase.js` | Built-in stock code database (~130 stocks) with pre-built search pools for fast fuzzy search |
 | `export.js` | Markdown export (`exportMD()`) via `wx.shareFileMessage` — generates tables for all transactions and dividends |
 | `backup.js` | JSON backup/import (merge or overwrite modes) |
+| `exchangeRate.js` | Currency exchange rate service for multi-market portfolio valuation |
 
 ### Data Flow
 
@@ -81,6 +82,20 @@ User action → Page calls Stock/Transaction.save()
   → target page onShow() checks dataDirty
   → loadData() → getPositionSummary() → calculatePosition() (cached)
 ```
+
+### Annual Report Component (`components/annual-report/`)
+
+The annual report component displays yearly investment statistics:
+- Total P&L, win rate, trade counts
+- Monthly P&L visualization (CSS-based horizontal bar chart)
+- Top performing stocks
+- Strategy distribution
+- Fund flow overview
+
+Key features:
+- Position editing from swipe action → navigates to detail page
+- Monthly P&L data processed in component's `_processData()` method
+- CSS rendering for better performance and reliability
 
 ### Charts (Stats Page)
 
@@ -100,6 +115,7 @@ The `ec-canvas` component uses Canvas 2D (`type="2d"`) by default. The echarts.j
 - Import helpers from `utils/helpers/` for pure functions
 - `request.js` is a placeholder pointing at `api.example.com` — not connected to any real backend
 - Tests exist in `tests/` (memory, portfolio, stockPrice) but coverage is limited
+- Annual report component uses CSS-based charts for better cross-platform compatibility
 
 ## Available Skills
 

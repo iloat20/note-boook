@@ -1,5 +1,5 @@
 /* ═════════════════════════════════════════╗
-   交易编辑页 — 小红书风格 v2
+   交易编辑页 — 小红书风格 v3
    ╚════════════════════════════════════════╝ */
 
 @import '../../../styles/common.wxss';
@@ -12,11 +12,11 @@ page {
 .nav-bar {
   position: sticky;
   top: 0;
-  z-index: 50;
+  z-index: var(--xhs-z-sticky);
   display: flex;
   align-items: flex-end;
   background: var(--xhs-bg);
-  padding: 0 16px 12px;
+  padding: 0 var(--xhs-space-md) var(--xhs-space-sm);
 }
 
 .nav-back {
@@ -33,11 +33,11 @@ page {
   height: 36px;
   border-radius: 50%;
   background: var(--xhs-surface);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--xhs-elevation-1);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 200ms ease;
+  transition: var(--xhs-transition);
 }
 
 .nav-back-circle:active {
@@ -68,12 +68,12 @@ page {
   flex: 1;
   height: 0;
   min-height: 0;
-  padding: 0 16px;
+  padding: 0 var(--xhs-space-md);
 }
 
 /* === 区块标题 === */
 .record-section {
-  margin-bottom: 12px;
+  margin-bottom: var(--xhs-space-sm);
 }
 
 .section-title {
@@ -81,7 +81,7 @@ page {
   font-size: var(--xhs-font-sm);
   font-weight: var(--xhs-weight-semibold);
   color: var(--xhs-caption);
-  padding: 16px 4px 10px;
+  padding: var(--xhs-space-md) var(--xhs-space-xxs) var(--xhs-space-xs);
   letter-spacing: 0.02em;
 }
 
@@ -89,8 +89,8 @@ page {
 .record-card {
   background: var(--xhs-surface);
   border-radius: var(--xhs-radius-md);
-  box-shadow: var(--xhs-card-shadow);
-  padding: 16px;
+  box-shadow: var(--xhs-elevation-2);
+  padding: var(--xhs-space-md);
 }
 
 /* === 分段控制器（市场 / 买卖） === */
@@ -99,7 +99,7 @@ page {
   background: var(--xhs-bg-secondary);
   border-radius: 10px;
   padding: 3px;
-  margin-bottom: 12px;
+  margin-bottom: var(--xhs-space-sm);
   position: relative;
 }
 
@@ -113,7 +113,7 @@ page {
   font-weight: var(--xhs-weight-medium);
   color: var(--xhs-caption);
   border-radius: 8px;
-  transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  transition: var(--xhs-transition);
   position: relative;
   z-index: 1;
 }
@@ -121,7 +121,7 @@ page {
 .segment-active {
   background: var(--xhs-surface);
   font-weight: var(--xhs-weight-semibold);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--xhs-elevation-1);
 }
 
 .segment-buy {
@@ -139,7 +139,7 @@ page {
   gap: 0;
   background: var(--xhs-bg-secondary);
   border-radius: 14px;
-  padding: 4px;
+  padding: var(--xhs-space-xxs);
 }
 
 .type-option {
@@ -150,7 +150,7 @@ page {
   justify-content: center;
   padding: 14px 8px 12px;
   border-radius: 12px;
-  transition: all 250ms ease;
+  transition: var(--xhs-transition);
   cursor: pointer;
   gap: 2px;
 }
@@ -161,7 +161,7 @@ page {
 
 .type-active {
   background: var(--xhs-surface);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--xhs-elevation-1);
 }
 
 .type-buy-active {
@@ -180,7 +180,7 @@ page {
 
 .type-emoji {
   font-size: 28px;
-  margin-bottom: 4px;
+  margin-bottom: var(--xhs-space-xxs);
   transition: transform 250ms ease;
 }
 
@@ -227,7 +227,7 @@ page {
   right: 10px;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 11px;
+  font-size: var(--xhs-font-xs);
   padding: 2px 10px;
   border-radius: 10px;
   background: var(--xhs-primary-bg);
@@ -238,7 +238,7 @@ page {
 
 /* === 搜索建议中的市场标签 === */
 .suggestion-market-tag {
-  font-size: 11px;
+  font-size: var(--xhs-font-xs);
   padding: 2px 8px;
   border-radius: 10px;
   background: var(--xhs-bg-secondary);
@@ -249,7 +249,7 @@ page {
 
 /* === 表单字段 === */
 .field-group {
-  margin-bottom: 14px;
+  margin-bottom: var(--xhs-space-md);
 }
 
 .field-last {
@@ -268,15 +268,15 @@ page {
 .field-error {
   font-size: var(--xhs-font-xs);
   color: var(--xhs-profit);
-  margin-top: 4px;
+  margin-top: var(--xhs-space-xxs);
   padding-left: 2px;
 }
 
 /* 日期/时间 并排 */
 .field-row {
   display: flex;
-  gap: 12px;
-  margin-bottom: 14px;
+  gap: var(--xhs-space-sm);
+  margin-bottom: var(--xhs-space-md);
 }
 
 .field-half {
@@ -291,11 +291,11 @@ page {
   background: var(--xhs-bg-secondary);
   border: 1.5px solid transparent;
   border-radius: 10px;
-  padding: 0 12px;
+  padding: 0 var(--xhs-space-sm);
   font-size: var(--xhs-font-md);
   color: var(--xhs-title);
   box-sizing: border-box;
-  transition: all 200ms ease;
+  transition: var(--xhs-transition);
 }
 
 .record-input:focus {
@@ -306,7 +306,7 @@ page {
 
 .record-textarea {
   height: 80px;
-  padding: 12px;
+  padding: var(--xhs-space-sm);
   line-height: 1.5;
   border-radius: 10px;
 }
@@ -329,14 +329,14 @@ page {
 
 /* === 搜索建议下拉 === */
 .suggestions-dropdown {
-  margin-top: 6px;
+  margin-top: var(--xhs-space-xs);
   background: var(--xhs-surface);
-  border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  border-radius: var(--xhs-radius-sm);
+  box-shadow: var(--xhs-elevation-4);
   max-height: 220px;
   overflow-y: auto;
   position: relative;
-  z-index: 100;
+  z-index: var(--xhs-z-modal);
   border: 1px solid var(--xhs-divider);
 }
 

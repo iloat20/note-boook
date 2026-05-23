@@ -14,26 +14,51 @@
       <text class="body">{{stock.name}}</text>
     </view>
 
-    <text class="title" style="display: block; margin-bottom: 12px;">持仓信息</text>
-    <view class="card section">
+    <view class="section-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+      <text class="title">持仓信息</text>
+      <view wx:if="{{!editMode}}" class="icon-btn" bindtap="toggleEditMode">
+        <text class="icon-btn-icon">✏️</text>
+        <text class="icon-btn-text">编辑</text>
+      </view>
+    </view>
+    <view class="card">
       <view style="display: flex; flex-wrap: wrap; gap: 12px;">
         <view style="width: calc(50% - 6px);">
           <text class="caption">持仓数量</text>
-          <view class="body" style="color: var(--xhs-title); margin-top: 2px;">{{position.quantity}}股</view>
+          <view wx:if="{{!editMode}}" class="body" style="color: var(--xhs-title); margin-top: 2px;">{{position.quantity}}股</view>
+          <view wx:else style="margin-top: 2px;">
+            <input class="edit-input" type="digit" placeholder="0" value="{{editQuantity}}" bindinput="onEditQuantityInput"/>
+            <text class="caption" style="margin-top: 2px;">股</text>
+          </view>
         </view>
         <view style="width: calc(50% - 6px);">
           <text class="caption">成本价</text>
-          <view class="body" style="color: var(--xhs-title); margin-top: 2px;">{{formatAvgCost}}</view>
+          <view wx:if="{{!editMode}}" class="body" style="color: var(--xhs-title); margin-top: 2px;">{{formatAvgCost}}</view>
+          <view wx:else style="margin-top: 2px; display: flex; align-items: center;">
+            <text class="caption">{{marketLabel === 'A股' ? '¥' : marketLabel === '港股' ? 'HK$' : '$'}}</text>
+            <input class="edit-input" type="digit" placeholder="0.00" value="{{editAvgCost}}" bindinput="onEditAvgCostInput" style="margin-left: 4px;"/>
+          </view>
         </view>
         <view style="width: calc(50% - 6px);">
           <text class="caption">现价</text>
-          <input type="digit" placeholder="--" value="{{position.currentPrice || ''}}" bindblur="updatePrice" style="margin-top: 2px; height: 48rpx; font-size: var(--xhs-font-md); color: var(--xhs-title); background: transparent; border: none; padding: 0;"/>
+          <view wx:if="{{!editMode}}" class="body" style="color: var(--xhs-title); margin-top: 2px;">{{position.currentPrice ? position.currentPrice : '--'}}</view>
+          <view wx:else style="margin-top: 2px; display: flex; align-items: center;">
+            <text class="caption">{{marketLabel === 'A股' ? '¥' : marketLabel === '港股' ? 'HK$' : '$'}}</text>
+            <input class="edit-input" type="digit" placeholder="0.00" value="{{editCurrentPrice}}" bindinput="onEditCurrentPriceInput" style="margin-left: 4px;"/>
+          </view>
         </view>
         <view style="width: calc(50% - 6px);">
           <text class="caption">市值</text>
           <view class="body" style="color: var(--xhs-title); margin-top: 2px;">{{formatMarketValue}}</view>
         </view>
       </view>
+      <block wx:if="{{editMode}}">
+        <view style="height: 1px; background: var(--xhs-divider); margin: 16px 0;"></view>
+        <view style="display: flex; gap: 12px;">
+          <view class="btn-cancel" bindtap="cancelEdit">取消</view>
+          <view class="btn-save" bindtap="savePosition">保存修改</view>
+        </view>
+      </block>
     </view>
 
     <text class="title" style="display: block; margin-bottom: 12px;">盈亏统计</text>
@@ -62,10 +87,14 @@
       </view>
     </view>
 
-    <view class="section">
-      <section-header title="交易记录">
-      <view slot="actions" class="text-btn" bindtap="goToRecord" style="font-size: var(--xhs-font-sm);">+ 添加</view>
-    </section-header>
+    <view class="section" style="margin-bottom: var(--xhs-space-lg);">
+      <view class="section-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <text class="title">交易记录</text>
+        <view class="icon-btn icon-btn-add" bindtap="goToRecord">
+          <text class="icon-btn-icon">➕</text>
+          <text class="icon-btn-text">添加</text>
+        </view>
+      </view>
       <view wx:if="{{transactions.length > 0}}">
         <view wx:for="{{transactions}}" wx:key="id" class="card card-sm record-item-card {{disTransId === item.id ? 'dissolving' : ''}}" bindtap="showTransactionActions" data-id="{{item.id}}" data-type="transaction">
           <!-- 第一行：标签+日期时间 | 价格 -->
@@ -96,10 +125,14 @@
       </view>
     </view>
 
-    <view class="section">
-      <section-header title="分红记录">
-        <view slot="actions" class="text-btn" bindtap="goToDividend" style="font-size: var(--xhs-font-sm);">+ 添加</view>
-      </section-header>
+    <view class="section" style="margin-bottom: var(--xhs-space-lg);">
+      <view class="section-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <text class="title">分红记录</text>
+        <view class="icon-btn icon-btn-add" bindtap="goToDividend">
+          <text class="icon-btn-icon">💰</text>
+          <text class="icon-btn-text">添加</text>
+        </view>
+      </view>
       <view wx:if="{{dividends.length > 0}}">
         <view wx:for="{{dividends}}" wx:key="id" class="card card-sm record-item-card {{disDivId === item.id ? 'dissolving' : ''}}" style="margin-bottom: 8px;"
 bindtap="showDividendActions" data-id="{{item.id}}" data-type="dividend">

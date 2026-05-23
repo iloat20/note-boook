@@ -1,9 +1,7 @@
-<view wx:if="{{data}}" class="ar-overlay" catchtouchmove="true">
-  <!-- 关闭按钮 -->
+<view wx:if="{{data}}" class="ar-overlay" catchtouchmove>
   <view class="ar-close" bindtap="onClose">✕</view>
 
   <scroll-view scroll-y class="ar-scroll">
-    <!-- Hero -->
     <view class="ar-hero">
       <text class="ar-year">{{data.year}}</text>
       <text class="ar-title">年度投资报告</text>
@@ -14,7 +12,6 @@
       <text class="ar-hero-pct">{{data.totalPnL >= 0 ? '+' : ''}}{{data.totalPnLPercent}}%</text>
     </view>
 
-    <!-- 交易概览 -->
     <view class="ar-section">
       <text class="ar-section-title">交易概览</text>
       <view class="ar-grid">
@@ -23,7 +20,7 @@
           <text class="ar-grid-label">交易笔数</text>
         </view>
         <view class="ar-grid-item">
-          <text class="ar-grid-value" style="color: {{data.winRate >= 50 ? '#FF6B6B' : '#51CF66'}};">{{data.winRate}}%</text>
+          <text class="ar-grid-value" style="color: {{data.winRate >= 50 ? '#FF6B6B' : '#34C759'}};">{{data.winRate}}%</text>
           <text class="ar-grid-label">胜率</text>
         </view>
         <view class="ar-grid-item">
@@ -37,7 +34,6 @@
       </view>
     </view>
 
-    <!-- 资金流向 -->
     <view class="ar-section">
       <text class="ar-section-title">资金流向</text>
       <view class="ar-flow">
@@ -58,19 +54,27 @@
       </view>
     </view>
 
-    <!-- 月度盈亏 -->
     <view class="ar-section">
       <text class="ar-section-title">月度盈亏</text>
       <view class="ar-chart-box">
-        <canvas type="2d" id="monthlyCanvas" class="ar-monthly-canvas" wx:if="{{data.monthlyPnL && data.monthlyPnL.length > 0}}"></canvas>
-        <view class="ar-chart-empty" wx:if="{{!data.monthlyPnL || data.monthlyPnL.length === 0}}">
+        <view class="ar-chart-css" wx:if="{{processedMonthlyData && processedMonthlyData.length > 0}}">
+          <view class="ar-chart-css-row" wx:for="{{processedMonthlyData}}" wx:key="month">
+            <view class="ar-chart-css-label">{{item.monthText}}</view>
+            <view class="ar-chart-css-bar-wrap">
+              <view class="ar-chart-css-bar {{item.isProfit ? 'ar-chart-css-profit' : 'ar-chart-css-loss'}}"
+                style="width: {{item.heightPercent}}%;"
+              ></view>
+            </view>
+            <view class="ar-chart-css-value {{item.isProfit ? 'ar-profit' : 'ar-loss'}}">{{item.pnLText}}</view>
+          </view>
+        </view>
+        <view wx:else class="ar-chart-empty">
           <text class="ar-chart-empty-text">暂无数据</text>
         </view>
       </view>
     </view>
 
-    <!-- 收益最高 Top5 -->
-    <view class="ar-section" wx:if="{{data.topStocks.length > 0}}">
+    <view class="ar-section" wx:if="{{data.topStocks && data.topStocks.length > 0}}">
       <text class="ar-section-title">收益最高</text>
       <view wx:for="{{data.topStocks}}" wx:key="code" class="ar-rank-item">
         <view class="ar-rank-badge ar-rank-{{index < 3 ? index : 'other'}}">{{index + 1}}</view>
@@ -84,8 +88,7 @@
       </view>
     </view>
 
-    <!-- 需要关注 Bottom5 -->
-    <view class="ar-section" wx:if="{{data.bottomStocks.length > 0}}">
+    <view class="ar-section" wx:if="{{data.bottomStocks && data.bottomStocks.length > 0}}">
       <text class="ar-section-title">需要关注</text>
       <view wx:for="{{data.bottomStocks}}" wx:key="code" class="ar-rank-item">
         <view class="ar-rank-badge ar-rank-other">{{index + 1}}</view>
@@ -99,8 +102,7 @@
       </view>
     </view>
 
-    <!-- 策略分布 -->
-    <view class="ar-section" wx:if="{{data.strategyStats.length > 0}}">
+    <view class="ar-section" wx:if="{{data.strategyStats && data.strategyStats.length > 0}}">
       <text class="ar-section-title">策略分布</text>
       <view wx:for="{{data.strategyStats}}" wx:key="tag" class="ar-strategy-item">
         <view class="ar-strategy-header">
@@ -113,15 +115,13 @@
       </view>
     </view>
 
-    <!-- 底部 -->
     <view class="ar-footer">
       <text class="ar-footer-text">股票记账 · {{data.year}}年度报告</text>
     </view>
 
-    <view style="height: 80px;"></view>
+    <view style="height: 40px;"></view>
   </scroll-view>
 
-  <!-- 导出按钮 -->
   <view class="ar-export-btn" bindtap="onExportImage" wx:if="{{!exporting}}">
     <text class="ar-export-icon">📷</text>
     <text class="ar-export-text">保存为图片</text>
@@ -129,7 +129,4 @@
   <view class="ar-export-btn ar-exporting" wx:if="{{exporting}}">
     <text class="ar-export-text">生成中...</text>
   </view>
-
-  <!-- 用于导出的离屏Canvas -->
-  <canvas type="2d" id="exportCanvas" class="ar-export-canvas"></canvas>
 </view>

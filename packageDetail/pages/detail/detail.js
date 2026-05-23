@@ -4,7 +4,7 @@ const { calculatePosition } = require('../../../utils/services/positionService')
 const { getStrategyStats } = require('../../../utils/services/statsService')
 const { fmt, fmtShortDate, fmtTime } = require("../../../utils/helpers/format")
 const { calcFloatingPercent } = require('../../../utils/helpers/positionCalculator')
-const { getMarketLabel, getMarketColor } = require("../../../utils/constants/market")
+const { getMarketLabel, getMarketColor, getMarketCurrency } = require("../../../utils/constants/market")
 
 Page({
   data: {
@@ -38,7 +38,11 @@ Page({
     totalPnLClass: "loss",
     totalPnLText: "0.00",
     disTransId: null,
-    disDivId: null
+    disDivId: null,
+    editMode: false,
+    editQuantity: "",
+    editAvgCost: "",
+    editCurrentPrice: ""
   },
 
   onLoad(options) {
@@ -77,6 +81,9 @@ Page({
       : 0
     const totalPnL = position.realizedPnL + position.floatingPnL + position.dividendIncome
 
+    // 获取该股票市场的货币符号
+    var currency = getMarketCurrency(stock.market)
+
     this.setData({
       stock: stock,
       stockId: stock.id,
@@ -87,16 +94,16 @@ Page({
       transactions: transactions,
       dividends: dividends,
       strategySummary: strategySummary,
-      formatAvgCost: fmt(position.avgCost),
-      formatMarketValue: fmt(marketValue),
+      formatAvgCost: currency + fmt(position.avgCost),
+      formatMarketValue: currency + fmt(marketValue),
       formatDividendIncome: fmt(position.dividendIncome),
       floatingPnLClass: position.floatingPnL >= 0 ? "profit" : "loss",
-      floatingPnLText: (position.floatingPnL >= 0 ? "+" : "") + fmt(position.floatingPnL),
+      floatingPnLText: (position.floatingPnL >= 0 ? "+" : "") + currency + fmt(Math.abs(position.floatingPnL)),
       floatingPnLPercent: calcFloatingPercent(position),
       realizedPnLClass: position.realizedPnL >= 0 ? "profit" : "loss",
-      realizedPnLText: (position.realizedPnL >= 0 ? "+" : "") + fmt(position.realizedPnL),
+      realizedPnLText: (position.realizedPnL >= 0 ? "+" : "") + currency + fmt(Math.abs(position.realizedPnL)),
       totalPnLClass: totalPnL >= 0 ? "profit" : "loss",
-      totalPnLText: (totalPnL >= 0 ? "+" : "") + fmt(totalPnL)
+      totalPnLText: (totalPnL >= 0 ? "+" : "") + currency + fmt(Math.abs(totalPnL))
     })
   },
 
@@ -216,5 +223,93 @@ Page({
         }
       }
     })
+  },
+
+  toggleEditMode() {
+    const position = this.data.position
+    this.setData({
+      editMode: true,
+      editQuantity: String(position.quantity),
+      editAvgCost: String(position.avgCost),
+      editCurrentPrice: position.currentPrice ? String(position.currentPrice) : ''
+    })
+  },
+
+  onEditQuantityInput(e) {
+    this.setData({ editQuantity: e.detail.value })
+  },
+
+  onEditAvgCostInput(e) {
+    this.setData({ editAvgCost: e.detail.value })
+  },
+
+  onEditCurrentPriceInput(e) {
+    this.setData({ editCurrentPrice: e.detail.value })
+  },
+
+  cancelEdit() {
+    this.setData({ editMode: false })
+  },
+
+  savePosition() {
+    const stockId = this.data.stockId || this._stockId
+    const quantity = parseInt(this.data.editQuantity) || 0
+    const avgCost = parseFloat(this.data.editAvgCost) || 0
+    const currentPrice = parseFloat(this.data.editCurrentPrice) || 0
+
+    if (quantity <= 0) {
+      wx.showToast({ title: '请输入有效持仓数量', icon: 'none' })
+      return
+    }
+
+    if (avgCost <= 0) {
+      wx.showToast({ title: '请输入有效成本价', icon: 'none' })
+      return
+    }
+
+    const transactions = Transaction.getByStockId(stockId)
+    if (transactions.length === 0) {
+      wx.showToast({ title: '暂无交易记录，无法调整持仓', icon: 'none' })
+      return
+    }
+
+    const totalCost = quantity * avgCost
+    let totalBuyQuantity = 0
+    let totalBuyAmount = 0
+    let totalSellQuantity = 0
+
+    transactions.forEach(t => {
+      if (t.type === 'BUY') {
+        totalBuyQuantity += t.quantity
+        totalBuyAmount += t.price * t.quantity + t.fee
+      } else {
+        totalSellQuantity += t.quantity
+      }
+    })
+
+    const avgBuyPrice = totalBuyQuantity > 0 ? totalBuyAmount / totalBuyQuantity : 0
+
+    const diff = totalCost - (totalBuyQuantity - totalSellQuantity) * avgBuyPrice
+    const feeRate = 0.0003
+    const syntheticFee = Math.abs(diff) * feeRate
+
+    if (diff > 0) {
+      const syntheticBuy = Transaction.create(stockId, 'BUY', avgBuyPrice, Math.ceil(diff / avgBuyPrice), syntheticFee, new Date().toISOString(), '持仓调整', '手动调整持仓', [])
+      Transaction.save(syntheticBuy)
+    } else if (diff < 0) {
+      const sellQuantity = Math.min(Math.ceil(Math.abs(diff) / avgBuyPrice), totalBuyQuantity - totalSellQuantity)
+      if (sellQuantity > 0) {
+        const syntheticSell = Transaction.create(stockId, 'SELL', avgBuyPrice, sellQuantity, syntheticFee, new Date().toISOString(), '持仓调整', '手动调整持仓', [])
+        Transaction.save(syntheticSell)
+      }
+    }
+
+    if (currentPrice > 0) {
+      PriceCache.set(stockId, currentPrice)
+    }
+
+    wx.showToast({ title: '持仓已更新', icon: 'success' })
+    this.setData({ editMode: false })
+    this.loadData()
   }
 })

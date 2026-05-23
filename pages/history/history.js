@@ -1,4 +1,4 @@
-const { MARKETS } = require('../../utils/constants/index')
+const { MARKETS, TIMING_CONFIG } = require('../../utils/constants/index')
 const { Stock, Transaction, Dividend, Strategy } = require('../../utils/models/index')
 const { fmt, fmtDate, fmtTime } = require('../../utils/helpers/format')
 const { buildStockMap } = require('../../utils/helpers/stockHelpers')
@@ -27,7 +27,7 @@ Page({
     ],
     groupedHistory: [],
     allGroupedHistory: [],  // 存储所有分组数据
-    displayCount: 10,  // 初始显示 10 天
+    displayCount: TIMING_CONFIG.PAGE_LOAD_COUNT,  // 初始显示天数
     loadingMore: false,
     hasMore: true,
     dissolvingId: null,
@@ -39,6 +39,7 @@ Page({
     selectMode: false,
     selectedIds: [],
     selectedMap: {},
+    selectedTypeMap: {},
     selectAll: false
   },
 
@@ -213,7 +214,7 @@ Page({
   loadMore() {
     if (this.data.loadingMore || !this.data.hasMore) return
 
-    const newCount = this.data.displayCount + 10
+    const newCount = this.data.displayCount + TIMING_CONFIG.PAGE_LOAD_COUNT
     const allData = this.data.allGroupedHistory
     const displayData = allData.slice(0, newCount)
     const hasMore = allData.length > newCount
@@ -232,30 +233,44 @@ Page({
       selectMode: !this.data.selectMode,
       selectedIds: [],
       selectedMap: {},
+      selectedTypeMap: {},
       selectAll: false
     })
   },
 
   toggleSelectItem(e) {
     const id = e.currentTarget.dataset.id
+    const type = e.currentTarget.dataset.type
     let selectedIds = [...this.data.selectedIds]
+    const selectedTypeMap = { ...this.data.selectedTypeMap }
     const idx = selectedIds.indexOf(id)
     if (idx >= 0) {
       selectedIds.splice(idx, 1)
+      delete selectedTypeMap[id]
     } else {
       selectedIds.push(id)
+      selectedTypeMap[id] = type
     }
     const selectedMap = {}
     selectedIds.forEach(function (sid) { selectedMap[sid] = true })
-    this.setData({ selectedIds, selectedMap })
+    this.setData({ selectedIds, selectedMap, selectedTypeMap })
   },
 
   toggleSelectAll() {
     const selectAll = !this.data.selectAll
-    const selectedIds = selectAll ? this._getDisplayIds() : []
+    const selectedTypeMap = {}
+    let selectedIds = []
+    if (selectAll) {
+      this.data.groupedHistory.forEach(group => {
+        group.items.forEach(item => {
+          selectedIds.push(item.id)
+          selectedTypeMap[item.id] = item.type
+        })
+      })
+    }
     const selectedMap = {}
     selectedIds.forEach(function (sid) { selectedMap[sid] = true })
-    this.setData({ selectAll, selectedIds, selectedMap })
+    this.setData({ selectAll, selectedIds, selectedMap, selectedTypeMap })
   },
 
   onRecordTap(e) {
@@ -282,13 +297,18 @@ Page({
         if (res.confirm) {
           wx.showLoading({ title: '删除中...' })
           const ids = this.data.selectedIds
+          const typeMap = this.data.selectedTypeMap
           ids.forEach(id => {
-            Transaction.delete(id)
-            Dividend.delete(id)
+            const recordType = typeMap[id]
+            if (recordType === 'DIVIDEND') {
+              Dividend.delete(id)
+            } else {
+              Transaction.delete(id)
+            }
           })
           wx.hideLoading()
           wx.showToast({ title: `已删除 ${count} 条`, icon: 'success' })
-          this.setData({ selectMode: false, selectedIds: [], selectedMap: {} })
+          this.setData({ selectMode: false, selectedIds: [], selectedMap: {}, selectedTypeMap: {} })
           this.loadHistory()
         }
       }
@@ -301,7 +321,7 @@ Page({
     this.setData({ searchKeyword: keyword })
     this._searchTimer = setTimeout(() => {
       this._applyFilters()
-    }, 300)
+    }, TIMING_CONFIG.SEARCH_DEBOUNCE_MS)
   },
 
   showActions(e) {

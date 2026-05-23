@@ -28,7 +28,7 @@
           <image src="/images/share.svg" mode="aspectFit" lazy-load="{{true}}" style="width: 24rpx; height: 24rpx; opacity: 0.4;" />
         </view>
       </view>
-      <text class="title mono-num" style="color: var(--xhs-title);">¥{{displayValues.totalMarketValue}}</text>
+      <text class="title mono-num" style="color: var(--xhs-title);">{{summaryCurrency}}{{displayValues.totalMarketValue}}</text>
     </view>
 
     <!-- 市场筛选 -->
@@ -41,7 +41,7 @@
     />
 
     <!-- 持仓列表 -->
-    <scroll-view wx:if="{{positions.length > 0}}" class="scroll-container" scroll-y style="height: {{scrollHeight}}px;">
+    <scroll-view wx:if="{{positions.length > 0}}" class="scroll-container {{tabAnimating ? 'tab-content-exit' : ''}}" scroll-y style="height: {{scrollHeight}}px;">
       <view wx:for="{{positions}}" wx:key="id" class="swipe-container">
         <view class="swipe-actions {{item.swipeOpen ? 'swipe-actions-open' : ''}}">
           <view class="swipe-action-btn swipe-action-edit" data-stock-id="{{item.id}}" catchtap="onSwipeEdit">
@@ -58,7 +58,7 @@
           </view>
           <view class="swipe-action-btn swipe-action-delete" data-stock-id="{{item.id}}" catchtap="onSwipeDelete">删除</view>
         </view>
-        <view class="position-card {{item.swipeOpen ? 'swipe-card-open' : ''}}"
+        <view class="position-card {{item.swipeOpen ? 'swipe-card-open' : ''}} {{item.id === deletingId ? 'position-card-deleting' : ''}} {{item.entering ? 'position-card-entering' : ''}}"
           style="transform: translateX({{item.swipeOffset || 0}}px);"
           bindtouchstart="onTouchStart"
           bindtouchmove="onTouchMove"

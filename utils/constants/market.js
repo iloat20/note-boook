@@ -46,4 +46,13 @@ function formatStockCode(code, market) {
   }
 }
 
-module.exports = { getMarketLabel, getMarketColor, validateStockCode, formatStockCode }
+function getMarketCurrency(market) {
+  const symbols = {
+    [MARKETS.A_SHARE]: '¥',
+    [MARKETS.HK_SHARE]: 'HK$',
+    [MARKETS.US_SHARE]: '$'
+  }
+  return symbols[market] || '¥'
+}
+
+module.exports = { getMarketLabel, getMarketColor, getMarketCurrency, validateStockCode, formatStockCode }

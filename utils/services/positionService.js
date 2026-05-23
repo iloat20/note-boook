@@ -10,8 +10,6 @@ const { calcPosition, batchCalcPositions } = require('../helpers/positionCalcula
 const { sortByTotalPnL } = require('../helpers/sortHelpers')
 const { caches } = require('../cache/cacheManager')
 
-// 持仓计算结果缓存
-
 /**
  * 计算指定股票的持仓信息（带缓存）
  * @param {number} stockId - 股票 ID
@@ -65,23 +63,49 @@ function getSellableQuantity(stockId, ignoredTransactionId) {
  * @param {Array} stockIds - 股票 ID 数组
  */
 function batchCalculatePositions(stockIds) {
-  // 过滤掉已有缓存的，只计算缺失的
   const needCalc = stockIds.filter(id => !caches.position.has(id))
   if (needCalc.length === 0) return
   
-  // 一次性获取所有数据
   const allTransactions = Transaction.getAll()
   const allDividends = Dividend.getAll()
   
-  // 委托给纯函数批量计算
   const results = batchCalcPositions(needCalc, allTransactions, allDividends, function (id) {
     return PriceCache.get(id)
   })
   
-  // 写入缓存
   needCalc.forEach(function (stockId) {
     caches.position.set(stockId, results[stockId])
   })
+}
+
+/**
+ * 辅助函数：将股票数组与持仓合并
+ * @param {Array} stocks - 股票数组
+ * @param {Function} filterFn - 过滤函数（可选）
+ * @param {Function} sortFn - 排序函数（可选）
+ * @returns {Array} 合并后的持仓数组
+ */
+function mergePositions(stocks, filterFn, sortFn) {
+  const stockIds = stocks.map(s => s.id)
+  batchCalculatePositions(stockIds)
+  
+  let positions = stocks.map(stock => {
+    const pos = calculatePosition(stock.id)
+    return {
+      ...stock,
+      ...pos
+    }
+  })
+  
+  if (filterFn) {
+    positions = positions.filter(filterFn)
+  }
+  
+  if (sortFn) {
+    positions.sort(sortFn)
+  }
+  
+  return positions
 }
 
 /**
@@ -95,19 +119,9 @@ function getAllPositions(forceRefresh = false) {
   if (forceRefresh) {
     stockIds.forEach(id => { caches.position.delete(id) })
   }
-  batchCalculatePositions(stockIds)
-
-  const positions = stocks.map(stock => {
-    const pos = calculatePosition(stock.id)
-    return {
-      ...stock,
-      ...pos
-    }
-  })
-
-  // 按总盈亏排序
-  sortByTotalPnL(positions)
   
+  const positions = mergePositions(stocks)
+  sortByTotalPnL(positions)
   return positions
 }
 
@@ -118,52 +132,35 @@ function getAllPositions(forceRefresh = false) {
  */
 function getPortfolioPositions(market = null) {
   const stocks = market ? Stock.getByMarket(market) : Stock.getAll()
-  const stockIds = stocks.map(s => s.id)
-  batchCalculatePositions(stockIds)
   
-  const positions = stocks.map(stock => {
-    const pos = calculatePosition(stock.id)
-    return {
-      ...stock,
-      ...pos
+  const positions = mergePositions(
+    stocks,
+    function (p) {
+      return p.quantity > 0 || Math.abs(p.realizedPnL) > 0.01 || Math.abs(p.dividendIncome) > 0.01
     }
-  }).filter(function (p) {
-    return p.quantity > 0 || Math.abs(p.realizedPnL) > 0.01 || Math.abs(p.dividendIncome) > 0.01
-  })
+  )
   
-  // 按总盈亏排序
   sortByTotalPnL(positions)
-
   return positions
 }
 
 /**
- * 获取持仓汇总（按浮动盈亏比例排序）
+ * 获取持仓汇总（按浮动盈亏百分比排序）
  * @param {string} market - 市场类型（可选）
  * @returns {Array} 持仓汇总列表
  */
 function getPositionSummary(market = null) {
   const stocks = market ? Stock.getByMarket(market) : Stock.getAll()
   
-  // 批量计算持仓，减少重复读取
-  const stockIds = stocks.map(s => s.id)
-  batchCalculatePositions(stockIds)
-  
-  const positions = stocks.map(stock => {
-    const pos = calculatePosition(stock.id)
-    return {
-      ...stock,
-      ...pos
+  return mergePositions(
+    stocks,
+    p => p.quantity > 0,
+    (a, b) => {
+      const aRatio = a.avgCost > 0 && a.quantity > 0 ? a.floatingPnL / (a.avgCost * a.quantity) : 0
+      const bRatio = b.avgCost > 0 && b.quantity > 0 ? b.floatingPnL / (b.avgCost * b.quantity) : 0
+      return bRatio - aRatio
     }
-  }).filter(p => p.quantity > 0)
-  
-  positions.sort((a, b) => {
-    const aRatio = a.avgCost > 0 && a.quantity > 0 ? a.floatingPnL / (a.avgCost * a.quantity) : 0
-    const bRatio = b.avgCost > 0 && b.quantity > 0 ? b.floatingPnL / (b.avgCost * b.quantity) : 0
-    return bRatio - aRatio
-  })
-  
-  return positions
+  )
 }
 
 /**
@@ -173,21 +170,11 @@ function getPositionSummary(market = null) {
 function getClearedPositions() {
   const stocks = Stock.getAll()
   
-  // 批量计算持仓
-  const stockIds = stocks.map(s => s.id)
-  batchCalculatePositions(stockIds)
-  
-  const cleared = stocks.map(stock => {
-    const pos = calculatePosition(stock.id)
-    return {
-      ...stock,
-      ...pos
-    }
-  }).filter(p => p.quantity === 0 && (Math.abs(p.realizedPnL) > 0.01 || Math.abs(p.dividendIncome) > 0.01))
-  
-  cleared.sort((a, b) => (b.realizedPnL + b.dividendIncome) - (a.realizedPnL + a.dividendIncome))
-  
-  return cleared
+  return mergePositions(
+    stocks,
+    p => p.quantity === 0 && (Math.abs(p.realizedPnL) > 0.01 || Math.abs(p.dividendIncome) > 0.01),
+    (a, b) => (b.realizedPnL + b.dividendIncome) - (a.realizedPnL + a.dividendIncome)
+  )
 }
 
 module.exports = {

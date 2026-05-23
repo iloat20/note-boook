@@ -35,6 +35,7 @@ Page({
     const dt = new Date(d.date)
     const idx = this.data.stockOptions.findIndex(o => o.stock && o.stock.id === d.stockId)
     this.setData({
+      isEdit: true,
       stockIdx: Math.max(idx, 0), stockText: s ? `${s.code} ${s.name}` : '请选择股票',
       divType: d.type || 'CASH',
       perShare: String(d.perShareAmount || 0),

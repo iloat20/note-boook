@@ -1,16 +1,8 @@
-/**
- * Strategy 模型 - 策略标签数据操作
- */
-
 const { STRATEGY_KEY, getData, saveData } = require('../storageCore/core')
-const { DEFAULT_STRATEGIES } = require('../storageCore/constants')
+const { DEFAULT_STRATEGIES } = require('../constants/index')
 const Transaction = require('./transaction')
 
 const Strategy = {
-  /**
-   * 获取所有策略标签（默认 + 自定义）
-   * @returns {Array} 策略标签列表
-   */
   getAll() {
     const customs = getData(STRATEGY_KEY) || []
     const merged = DEFAULT_STRATEGIES.slice()
@@ -20,18 +12,10 @@ const Strategy = {
     return merged
   },
 
-  /**
-   * 保存策略标签列表
-   * @param {Array} list - 策略标签列表
-   */
   save(list) {
     saveData(STRATEGY_KEY, list)
   },
 
-  /**
-   * 添加自定义策略标签
-   * @param {string} tag - 策略标签
-   */
   add(tag) {
     if (!tag || typeof tag !== 'string') return
     tag = tag.trim()
@@ -43,10 +27,6 @@ const Strategy = {
     }
   },
 
-  /**
-   * 删除自定义策略标签
-   * @param {string} tag - 策略标签
-   */
   remove(tag) {
     const customs = getData(STRATEGY_KEY) || []
     const idx = customs.indexOf(tag)
@@ -56,10 +36,6 @@ const Strategy = {
     }
   },
 
-  /**
-   * 获取已使用的策略标签及其使用次数
-   * @returns {Array} 策略使用统计列表
-   */
   getUsedStrategies() {
     const transactions = Transaction.getAll()
     const countMap = {}

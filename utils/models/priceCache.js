@@ -6,9 +6,26 @@
  */
 
 const { PRICE_KEY, getData, saveData, markDataDirty } = require('../storageCore/core')
+const { TIMING_CONFIG } = require('../constants/index')
 
 // 价格缓存 TTL：30 分钟（毫秒）
-const PRICE_TTL = 30 * 60 * 1000
+const PRICE_TTL = TIMING_CONFIG.PRICE_TTL_MS
+
+let _pendingSave = false
+
+function _scheduleSave(data) {
+  if (_pendingSave) return
+  _pendingSave = true
+  setTimeout(() => {
+    try {
+      saveData(PRICE_KEY, data)
+    } catch (e) {
+      console.warn('[PriceCache] 延迟保存失败:', e)
+    } finally {
+      _pendingSave = false
+    }
+  }, 100)
+}
 
 const PriceCache = {
   /**
@@ -61,7 +78,7 @@ const PriceCache = {
     // 检查 TTL
     if (Date.now() - entry.timestamp > PRICE_TTL) {
       delete prices[stockId]
-      saveData(PRICE_KEY, prices)
+      _scheduleSave(prices)
       return null
     }
     return entry.price || null
@@ -82,6 +99,37 @@ const PriceCache = {
    */
   has(stockId) {
     return this.get(stockId) !== null
+  },
+
+  /**
+   * 批量清理所有过期价格缓存
+   * 在 app 启动时调用，避免惰性清理累积太多垃圾
+   * @returns {number} 清理的过期条目数
+   */
+  pruneExpired() {
+    const prices = getData(PRICE_KEY)
+    if (!prices || typeof prices !== 'object') return 0
+
+    const now = Date.now()
+    let pruned = 0
+
+    Object.keys(prices).forEach(function (key) {
+      const entry = prices[key]
+      // 清理旧格式（纯数字，无 TTL 信息）
+      if (typeof entry === 'number') {
+        delete prices[key]
+        pruned++
+        return
+      }
+      // 清理过期条目
+      if (entry && typeof entry.timestamp === 'number' && now - entry.timestamp > PRICE_TTL) {
+        delete prices[key]
+        pruned++
+      }
+    })
+
+    if (pruned > 0) saveData(PRICE_KEY, prices)
+    return pruned
   }
 }
 

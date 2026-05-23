@@ -2,7 +2,7 @@
    跨页面共享样式 — 各页面通过 @import 引用
    ╚════════════════════════════════════════╝ */
 
-/* === Typography (RF 通用) === */
+/* === Typography (通用) === */
 .title {
   font-size: var(--xhs-font-xl);
   font-weight: var(--xhs-weight-semibold);
@@ -28,11 +28,6 @@
   font-weight: var(--xhs-weight-semibold);
 }
 
-/* === Section === */
-.section {
-  margin-bottom: var(--xhs-space-lg);
-}
-
 /* === Page Container === */
 .page-container {
   min-height: 100vh;
@@ -47,6 +42,53 @@
   flex: 1;
   height: 0;
   min-height: 0;
+}
+
+/* === Section === */
+.section {
+  margin-bottom: var(--xhs-space-lg);
+}
+.section-sm {
+  margin-bottom: var(--xhs-space-md);
+}
+.section-lg {
+  margin-bottom: var(--xhs-space-xl);
+}
+
+/* === Row (horizontal flex with gap) === */
+.row {
+  display: flex;
+  align-items: center;
+}
+.row-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.row-gap-xs { gap: var(--xhs-space-xs); }
+.row-gap-sm { gap: var(--xhs-space-sm); }
+.row-gap-md { gap: var(--xhs-space-md); }
+
+/* === Grid (2-col / 4-col) === */
+.grid-2 {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0 calc(-1 * var(--xhs-space-xs));
+}
+.grid-2 > .grid-col {
+  width: 50%;
+  padding: 0 var(--xhs-space-xs);
+  box-sizing: border-box;
+}
+.grid-4 {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0 calc(-1 * var(--xhs-space-xs));
+}
+.grid-4 > .grid-col {
+  width: 25%;
+  padding: 0 var(--xhs-space-xs);
+  box-sizing: border-box;
 }
 
 /* === Market Tag === */
@@ -75,6 +117,31 @@
   color: var(--xhs-market-us);
 }
 
+/* === Tag / Pill (shared) === */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: var(--xhs-radius-pill);
+  font-size: var(--xhs-font-xs);
+  font-weight: var(--xhs-weight-medium);
+  letter-spacing: 0.01em;
+  flex-shrink: 0;
+}
+
+.tag-buy {
+  background: var(--xhs-profit-bg);
+  color: var(--xhs-profit);
+}
+.tag-sell {
+  background: var(--xhs-loss-bg);
+  color: var(--xhs-loss);
+}
+.tag-dividend {
+  background: var(--xhs-dividend-bg);
+  color: var(--xhs-dividend);
+}
+
 /* === Text Button === */
 .text-btn {
   color: var(--xhs-primary);
@@ -85,6 +152,53 @@
   align-items: center;
   justify-content: center;
   transition: var(--xhs-transition);
+}
+
+/* === Chip / Filter === */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 16px;
+  border-radius: var(--xhs-radius-pill);
+  background: transparent;
+  font-size: var(--xhs-font-sm);
+  color: var(--xhs-caption);
+  min-height: 32px;
+  transition: var(--xhs-transition);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.chip:active {
+  transform: scale(0.95);
+}
+.chip-active {
+  color: var(--xhs-title);
+  font-weight: var(--xhs-weight-semibold);
+  position: relative;
+  background: transparent;
+}
+.chip-active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 48rpx;
+  height: 4rpx;
+  background: var(--xhs-primary);
+  border-radius: 2rpx;
+}
+
+/* === Divider === */
+.divider {
+  height: 1px;
+  background: var(--xhs-divider);
+  margin: var(--xhs-space-md) 0;
+}
+.divider-strong {
+  height: 1px;
+  background: var(--xhs-divider-strong);
+  margin: var(--xhs-space-md) 0;
 }
 
 /* === Dissolve Animation === */

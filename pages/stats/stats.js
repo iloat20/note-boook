@@ -4,6 +4,8 @@ const { Stock, Transaction, Dividend } = require('../../utils/models/index')
 const { fmt, fmtDate } = require('../../utils/helpers/format')
 const { buildStockMap } = require('../../utils/helpers/stockHelpers')
 const { exportMD } = require('../../utils/exporters/markdown')
+const { getRates, getRate } = require('../../utils/services/exchangeRate')
+const appStore = require('../../utils/state/appStore')
 
 Page({
   data: {
@@ -36,15 +38,11 @@ Page({
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({ selected: 2 })
     }
-    const appStore = require('../../utils/state/appStore')
     if (appStore.getState('dataDirty')) {
       appStore.commit('MARK_CLEAN')
     }
     this.loadStats()
     this.setData({ loading: false })
-  },
-
-  onUnload() {
   },
 
   switchPeriod: function (e) {
@@ -54,41 +52,96 @@ Page({
     })
   },
 
-  loadStats: function () {
-    const period = this.data.currentPeriod
-    const stats = getStatsByPeriod(period)
-    const totalInvestment = stats.buyAmount + stats.buyFee
-    const totalRecover = stats.sellAmount - stats.sellFee
-    const totalPnL = stats.pnL
+  _getPeriodDateRange(period) {
+    const now = new Date()
+    let startDate, endDate
+    switch (period) {
+      case 'DAY':
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+        endDate = new Date(startDate.getTime() + 24 * 60 * 60 * 1000 - 1)
+        break
+      case 'WEEK': {
+        const dow = now.getDay() || 7
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dow + 1)
+        endDate = new Date(startDate.getTime() + 7 * 24 * 60 * 60 * 1000 - 1)
+        break
+      }
+      case 'MONTH':
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1)
+        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999)
+        break
+      case 'YEAR':
+        startDate = new Date(now.getFullYear(), 0, 1)
+        endDate = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999)
+        break
+      default:
+        startDate = new Date(0)
+        endDate = now
+    }
+    return { startDate, endDate }
+  },
 
+  async _calcPeriodStats(period) {
+    const { startDate, endDate } = this._getPeriodDateRange(period)
+    const rates = await getRates()
+    const stocks = Stock.getAll()
+    
+    const stockMarket = {}
+    stocks.forEach(s => { stockMarket[s.id] = s.market })
+
+    const periodTx = Transaction.getByDateRange(startDate, endDate)
+    const periodDiv = Dividend.getAll().filter(d => {
+      const dd = new Date(d.date)
+      return dd >= startDate && dd <= endDate
+    })
+
+    let cnyBuyAmount = 0, cnySellAmount = 0, cnyBuyFee = 0, cnySellFee = 0
+    periodTx.forEach(t => {
+      const r = getRate(stockMarket[t.stockId], rates)
+      const a = t.price * t.quantity
+      if (t.type === 'BUY') { cnyBuyAmount += a * r; cnyBuyFee += t.fee * r }
+      else { cnySellAmount += a * r; cnySellFee += t.fee * r }
+    })
+    
+    let cnyDividendIncome = 0
+    periodDiv.forEach(d => {
+      const r = getRate(stockMarket[d.stockId], rates)
+      cnyDividendIncome += d.totalAmount * r
+    })
+
+    const totalInvestment = cnyBuyAmount + cnyBuyFee
+    const totalRecovery = cnySellAmount - cnySellFee
+    const totalPnL = totalRecovery - totalInvestment + cnyDividendIncome
     const totalReturnRate = totalInvestment > 0 ? (totalPnL / totalInvestment) * 100 : 0
 
-    this.setData({
-      stats: {
-        totalInvestment: totalInvestment,
-        totalRecover: totalRecover,
-        totalPnL: totalPnL,
-        totalInvestmentText: fmt(totalInvestment),
-        totalRecoverText: fmt(totalRecover),
-        totalPnLText: fmt(totalPnL),
-        totalReturnRateText: (totalReturnRate >= 0 ? '+' : '') + totalReturnRate.toFixed(2) + '%',
-        dividendIncomeText: fmt(stats.dividendIncome),
-        totalBuyFeeText: fmt(stats.buyFee),
-        totalSellFeeText: fmt(stats.sellFee)
-      }
-    })
+    const stats = {
+      totalInvestment: totalInvestment,
+      totalRecovery: totalRecovery,
+      totalPnL: totalPnL,
+      totalInvestmentText: fmt(totalInvestment),
+      totalRecoveryText: fmt(totalRecovery),
+      totalPnLText: fmt(totalPnL),
+      totalReturnRateText: (totalReturnRate >= 0 ? '+' : '') + totalReturnRate.toFixed(2) + '%',
+      dividendIncomeText: fmt(cnyDividendIncome),
+      totalBuyFeeText: fmt(cnyBuyFee),
+      totalSellFeeText: fmt(cnySellFee)
+    }
 
     const detailItems = [
       { label: '已实现盈亏', value: fmt(totalPnL), prefix: totalPnL >= 0 ? '+' : '', colorClass: totalPnL >= 0 ? 'profit' : 'loss' },
-      { label: '分红收益', value: fmt(stats.dividendIncome), prefix: '+', colorClass: 'profit' },
-      { label: '买入手续费', value: fmt(stats.buyFee), prefix: '-', colorClass: '' },
-      { label: '卖出手续费', value: fmt(stats.sellFee), prefix: '-', colorClass: '' }
+      { label: '分红收益', value: fmt(cnyDividendIncome), prefix: '+', colorClass: 'profit' },
+      { label: '买入手续费', value: fmt(cnyBuyFee), prefix: '-', colorClass: '' },
+      { label: '卖出手续费', value: fmt(cnySellFee), prefix: '-', colorClass: '' }
     ]
+
+    return { stats, detailItems }
+  },
+
+  _buildTradeList() {
     const stocks = Stock.getAll()
     const stockMap = buildStockMap(stocks)
     
-    // 优化：分别构建交易和分红列表，避免大数组 concat + sort
-    const txList = Transaction.getAll().map(function (t) {
+    const txList = Transaction.getAll().map(t => {
       const stock = stockMap[t.stockId]
       return {
         id: t.id,
@@ -104,7 +157,7 @@ Page({
       }
     })
     
-    const divList = Dividend.getAll().map(function (d) {
+    const divList = Dividend.getAll().map(d => {
       const stock = stockMap[d.stockId]
       return {
         id: d.id,
@@ -120,7 +173,6 @@ Page({
       }
     })
     
-    // 按日期倒序合并两个已排序数组（O(n) 而非 O(n log n)）
     let completeTrades = []
     let i = 0, j = 0
     while (i < txList.length && j < divList.length) {
@@ -133,7 +185,11 @@ Page({
     while (i < txList.length) { completeTrades.push(txList[i]); i++ }
     while (j < divList.length) { completeTrades.push(divList[j]); j++ }
     
-    const clearedPositions = getClearedPositions().map(function (p) {
+    return completeTrades
+  },
+
+  _formatClearedPositions() {
+    return getClearedPositions().map(p => {
       const totalPnL = p.realizedPnL + p.dividendIncome
       return Object.assign({}, p, {
         totalPnL: totalPnL,
@@ -143,18 +199,31 @@ Page({
         pnlClass: totalPnL >= 0 ? 'profit' : 'loss'
       })
     })
-    this.setData({ detailItems: detailItems, completeTrades: completeTrades, clearedPositions: clearedPositions })
+  },
+
+  loadStats: async function () {
+    const period = this.data.currentPeriod
+    
+    const { stats, detailItems } = await this._calcPeriodStats(period)
+    const completeTrades = this._buildTradeList()
+    const clearedPositions = this._formatClearedPositions()
+    
+    this.setData({
+      stats,
+      detailItems,
+      completeTrades,
+      clearedPositions
+    })
   },
 
   onExportMD: function () {
     exportMD()
   },
 
-  onOpenAnnualReport: function () {
+  onOpenAnnualReport: async function () {
     const year = new Date().getFullYear()
     const yearPrefix = year + '-'
 
-    // 本年交易统计
     const yearStart = new Date(year, 0, 1)
     const yearEnd = new Date(year, 11, 31, 23, 59, 59, 999)
     const yearTx = Transaction.getByDateRange(yearStart, yearEnd)
@@ -164,7 +233,39 @@ Page({
       else sellCount++
     })
 
-    // 月度盈亏 — 复用 getPeriodStatsList
+    const rates = await getRates()
+
+    const stocks = Stock.getAll()
+    const stockMarket = {}
+    stocks.forEach(function (s) { stockMarket[s.id] = s.market })
+
+    let yearBuyAmount = 0, yearSellAmount = 0, yearBuyFee = 0, yearSellFee = 0
+    yearTx.forEach(function (t) {
+      var r = getRate(stockMarket[t.stockId], rates)
+      var amt = t.price * t.quantity
+      if (t.type === 'BUY') {
+        yearBuyAmount += amt * r
+        yearBuyFee += t.fee * r
+      } else {
+        yearSellAmount += amt * r
+        yearSellFee += t.fee * r
+      }
+    })
+
+    var yearDivTotal = 0
+    Dividend.getAll().forEach(function (d) {
+      var dd = new Date(d.date)
+      if (dd >= yearStart && dd <= yearEnd) {
+        var r = getRate(stockMarket[d.stockId], rates)
+        yearDivTotal += d.totalAmount * r
+      }
+    })
+
+    var yearInvestment = yearBuyAmount + yearBuyFee
+    var yearRecovery = yearSellAmount - yearSellFee + yearDivTotal
+    var yearPnL = yearRecovery - yearInvestment
+    var yearPnLPercent = yearInvestment > 0 ? parseFloat((yearPnL / yearInvestment * 100).toFixed(2)) : 0
+
     const periodList = getPeriodStatsList('MONTH', 120)
     const monthlyPnL = []
     for (let m = 1; m <= 12; m++) {
@@ -173,45 +274,37 @@ Page({
       monthlyPnL.push({ month: m, pnL: found ? found.pnL : 0 })
     }
 
-    // 胜率：已清仓持仓中 totalPnL > 0
     const cleared = getClearedPositions()
     const winCount = cleared.filter(function (p) {
       return (p.realizedPnL + p.dividendIncome) > 0
     }).length
     const winRate = cleared.length > 0 ? Math.round(winCount / cleared.length * 100) : 0
 
-    // Top/Bottom 股票
     const allPositions = getPositionSummary().concat(cleared.map(function (p) {
       return Object.assign({}, p, { floatingPnL: 0 })
     }))
     const stockPnL = {}
     allPositions.forEach(function (p) {
-      const key = p.code
+      var key = p.code
+      var r = getRate(p.market, rates)
       if (!stockPnL[key]) {
         stockPnL[key] = { code: p.code, name: p.name, market: p.market, totalPnL: 0 }
       }
-      stockPnL[key].totalPnL += (p.realizedPnL || 0) + (p.floatingPnL || 0) + (p.dividendIncome || 0)
+      stockPnL[key].totalPnL += ((p.realizedPnL || 0) + (p.floatingPnL || 0) + (p.dividendIncome || 0)) * r
     })
-    const stockList = Object.values(stockPnL).map(function (s) {
+    var stockList = Object.values(stockPnL).map(function (s) {
       s.totalPnL = parseFloat(s.totalPnL.toFixed(2))
       s.totalPnLText = fmt(Math.abs(s.totalPnL))
       return s
     }).sort(function (a, b) { return b.totalPnL - a.totalPnL })
-    const topStocks = stockList.slice(0, 5)
-    const bottomStocks = stockList.slice(-5).reverse()
+    var topStocks = stockList.slice(0, 5)
 
-    // 策略分布 — 复用 getStrategyStats
     let strategyStats = getStrategyStats()
     const maxStrategyCount = strategyStats.length > 0 ? strategyStats[0].count : 1
     strategyStats = strategyStats.slice(0, 8).map(function (s) {
       s.percent = Math.round(s.count / maxStrategyCount * 100)
       return s
     })
-
-    const yearPeriodStats = getStatsByPeriod('YEAR')
-    const yearInvestment = yearPeriodStats.buyAmount + yearPeriodStats.buyFee
-    const yearRecovery = yearPeriodStats.sellAmount - yearPeriodStats.sellFee + yearPeriodStats.dividendIncome
-    const yearPnLPercent = yearInvestment > 0 ? parseFloat((yearPeriodStats.pnL / yearInvestment * 100).toFixed(2)) : 0
 
     this.setData({
       showAnnualReport: true,
@@ -221,15 +314,15 @@ Page({
         buyCount: buyCount,
         sellCount: sellCount,
         winRate: winRate,
-        totalPnL: yearPeriodStats.pnL,
-        totalPnLText: fmt(Math.abs(yearPeriodStats.pnL)),
+        totalPnL: parseFloat(yearPnL.toFixed(2)),
+        totalPnLText: fmt(Math.abs(yearPnL)),
         totalPnLPercent: yearPnLPercent,
         totalInvestmentText: fmt(yearInvestment),
         totalRecoveryText: fmt(yearRecovery),
-        dividendIncomeText: fmt(yearPeriodStats.dividendIncome),
+        dividendIncomeText: fmt(yearDivTotal),
         monthlyPnL: monthlyPnL,
         topStocks: topStocks,
-        bottomStocks: bottomStocks,
+        bottomStocks: [],
         strategyStats: strategyStats
       }
     })

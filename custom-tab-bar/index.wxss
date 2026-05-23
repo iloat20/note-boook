@@ -10,8 +10,8 @@
   left: 0;
   right: 0;
   height: 104rpx;
-  background: #FFFFFF;
-  border-top: 1rpx solid rgba(0, 0, 0, 0.04);
+  background: var(--xhs-surface, #FFFFFF);
+  border-top: 1rpx solid var(--xhs-divider, rgba(0, 0, 0, 0.04));
   padding-bottom: env(safe-area-inset-bottom);
   z-index: 999;
 }
@@ -22,28 +22,28 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 12rpx 0 8rpx;
+  padding: var(--xhs-space-sm, 16rpx) 0 var(--xhs-space-xs, 8rpx);
 }
 
 .tab-icon {
   width: 48rpx;
   height: 48rpx;
-  margin-bottom: 4rpx;
-  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  margin-bottom: var(--xhs-space-xxs, 4rpx);
+  transition: var(--xhs-transition, all 200ms cubic-bezier(0.4, 0, 0.2, 1));
 }
 
 .tab-text {
-  font-size: 20rpx;
-  color: #C7C7CC;
+  font-size: var(--xhs-font-xs, 20rpx);
+  color: var(--xhs-caption-light, #C7C7CC);
   line-height: 1;
   letter-spacing: 0.01em;
-  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  transition: var(--xhs-transition, all 200ms cubic-bezier(0.4, 0, 0.2, 1));
 }
 
-/* Active: 底部红线 + 黑色文字 */
+/* Active text */
 .tab-item.active .tab-text {
-  color: #1C1C1E;
-  font-weight: 600;
+  color: var(--xhs-title, #1C1C1E);
+  font-weight: var(--xhs-weight-semibold, 600);
 }
 
 .tab-item:active {

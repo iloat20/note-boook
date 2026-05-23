@@ -155,3 +155,135 @@ describe('Cache Size Constants', () => {
     expect(cacheContent).toContain('heatmap: new LRUCache(50)')
   })
 })
+
+describe('PriceCache pruneExpired', () => {
+  let PriceCache
+
+  beforeEach(() => {
+    jest.resetModules()
+    global.wx = {
+      getStorageSync: jest.fn(() => ({})),
+      setStorageSync: jest.fn()
+    }
+    PriceCache = require('../utils/models/priceCache')
+  })
+
+  test('pruneExpired removes entries with old timestamps', () => {
+    // 模拟数据：2 个过期，1 个未过期
+    const oldTime = Date.now() - 40 * 60 * 1000 // 40 分钟前（超过 30 分钟 TTL）
+    const recentTime = Date.now() - 5 * 60 * 1000 // 5 分钟前（未过期）
+
+    global.wx.getStorageSync = jest.fn(() => ({
+      stock_1: { price: 100, timestamp: oldTime },
+      stock_2: { price: 200, timestamp: recentTime },
+      stock_3: { price: 50, timestamp: oldTime }
+    }))
+
+    const pruned = PriceCache.pruneExpired()
+    expect(pruned).toBe(2)
+
+    // 验证 saveData 被调用，且数据只剩未过期的
+    expect(global.wx.setStorageSync).toHaveBeenCalledTimes(1)
+    const savedKey = global.wx.setStorageSync.mock.calls[0][0]
+    const savedData = global.wx.setStorageSync.mock.calls[0][1]
+    expect(savedData).toEqual({
+      stock_2: { price: 200, timestamp: recentTime }
+    })
+  })
+
+  test('pruneExpired removes plain-number entries (old format)', () => {
+    global.wx.getStorageSync = jest.fn(() => ({
+      stock_1: 100, // 旧格式纯数字
+      stock_2: { price: 200, timestamp: Date.now() }
+    }))
+
+    const pruned = PriceCache.pruneExpired()
+    expect(pruned).toBe(1)
+  })
+
+  test('pruneExpired returns 0 when cache is empty', () => {
+    global.wx.getStorageSync = jest.fn(() => ({}))
+    const pruned = PriceCache.pruneExpired()
+    expect(pruned).toBe(0)
+    expect(global.wx.setStorageSync).not.toHaveBeenCalled()
+  })
+
+  test('pruneExpired returns 0 when nothing is expired', () => {
+    global.wx.getStorageSync = jest.fn(() => ({
+      stock_1: { price: 100, timestamp: Date.now() }
+    }))
+    const pruned = PriceCache.pruneExpired()
+    expect(pruned).toBe(0)
+    expect(global.wx.setStorageSync).not.toHaveBeenCalled()
+  })
+})
+
+describe('StockPrice Retry', () => {
+  beforeEach(() => {
+    jest.resetModules()
+    // Mock the request module
+    jest.mock('../api/request', () => {
+      const mockRequest = function mockRequest() {}
+      mockRequest.get = jest.fn()
+      mockRequest.post = jest.fn()
+      return { request: mockRequest }
+    }, { virtual: true })
+  })
+
+  test('fetchStockPrice retries and succeeds after failures', async () => {
+    jest.useRealTimers()
+
+    const { request } = require('../api/request')
+    let attempts = 0
+    request.get.mockImplementation(() => {
+      attempts++
+      if (attempts < 3) {
+        return Promise.reject(new Error('网络错误'))
+      }
+      // 第 3 次成功 — 返回 ArrayBuffer 模拟真实 API 响应
+      const responseStr = '="test~名称~100~99~98~1000~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~101~102~0~0~100000"'
+      const buf = new Uint8Array(Buffer.from(responseStr, 'utf8')).buffer
+      return Promise.resolve(buf)
+    })
+
+    const { fetchStockPrice } = require('../utils/services/stockPrice')
+    const result = await fetchStockPrice('A_SHARE', '600000')
+    expect(attempts).toBe(3)
+    expect(result).toBeDefined()
+    expect(result.currentPrice).toBe(99)
+  })
+
+  test('fetchStockPrice retries exhaust and throws', async () => {
+    jest.useRealTimers()
+
+    const { request } = require('../api/request')
+    let attempts = 0
+    request.get.mockImplementation(() => {
+      attempts++
+      return Promise.reject(new Error('一直失败'))
+    })
+
+    const { fetchStockPrice } = require('../utils/services/stockPrice')
+    await expect(fetchStockPrice('A_SHARE', '600000')).rejects.toThrow()
+    expect(attempts).toBe(3) // 初始 + 2 次重试
+  }, 10000)
+
+  test('fetchPriceBatch returns null prices after retries exhausted', async () => {
+    jest.useRealTimers()
+
+    const { request } = require('../api/request')
+    request.get.mockImplementation(() => Promise.reject(new Error('一直失败')))
+
+    const { fetchAllPrices } = require('../utils/services/stockPrice')
+    const stocks = [
+      { id: 1, market: 'A_SHARE', code: '600000' },
+      { id: 2, market: 'A_SHARE', code: '600001' }
+    ]
+    const results = await fetchAllPrices(stocks)
+    expect(results).toHaveLength(2)
+    expect(results[0].stockId).toBe(1)
+    expect(results[0].price).toBeNull()
+    expect(results[1].stockId).toBe(2)
+    expect(results[1].price).toBeNull()
+  }, 10000)
+})

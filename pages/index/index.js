@@ -12,9 +12,10 @@ const { animateAllValues } = require('../../utils/ui/animationHelper')
 const { sharePortfolio } = require('../../utils/render/shareHelper')
 const { fmt, fmtDate } = require('../../utils/helpers/format')
 const { calcFloatingPercent } = require('../../utils/helpers/positionCalculator')
-const { getMarketLabel, getMarketColor } = require('../../utils/constants/market')
+const { getMarketLabel, getMarketColor, getMarketCurrency } = require('../../utils/constants/market')
 const { fetchStockPrice, fetchAllPrices } = require('../../utils/services/stockPrice')
-const { MARKETS } = require('../../utils/constants/index')
+const { getRates, getRate } = require('../../utils/services/exchangeRate')
+const { MARKETS, TIMING_CONFIG } = require('../../utils/constants/index')
 const { Stock, Transaction, Dividend, PriceCache } = require('../../utils/models/index')
 const { toast, success, loading, hideLoading, catchError } = require('../../utils/ui/feedback')
 
@@ -42,6 +43,7 @@ Page({ ...touchGestureMixin,
     
     // 市场切换
     currentMarket: null,
+    summaryCurrency: '¥',
     sliderLeft: 0,
     sliderWidth: 0,
     marketTabs: [
@@ -73,7 +75,9 @@ Page({ ...touchGestureMixin,
     loading: false,
     animating: false,
     
-    showQuickRecord: false
+    showQuickRecord: false,
+    deletingId: null,
+    tabAnimating: false
   },
   
   // ========== 生命周期 ==========
@@ -100,19 +104,22 @@ Page({ ...touchGestureMixin,
     // 等待数据加载完成后再获取现价
     await this._loadData()
 
-    // 刚进入页面获取一次现价
-    this._fetchPrices()
+    // 只在交易时段或持仓无现价时（首次进入）获取行情
+    var hasNoPrice = this.data.positions.some(function (p) { return !p.currentPrice || p.currentPrice <= 0 })
+    if (isTradingTime() || hasNoPrice) {
+      this._fetchPrices({ silent: true })
+    }
   },
   
   onShow() {
     // 使用 mixin 处理通用逻辑
     pageMixin.onShowMixin(this, 0, this._loadData)
     
-    // 每次进入持仓自动获取现价（仅交易时段）
+    // 每次进入持仓自动获取现价（仅交易时段，静默）
     if (isTradingTime()) {
       const positions = this.data.positions
       if (positions.length > 0) {
-        this._fetchPrices()
+        this._fetchPrices({ silent: true })
       }
     }
   },
@@ -146,9 +153,15 @@ Page({ ...touchGestureMixin,
       // 注意：getAllPositions 内部使用同步 storage 操作，无需 Promise
       let positions = positionService.getAllPositions(forceRefresh)
 
+      // 持仓页只显示持股数 > 0 的标的
+      positions = positions.filter(function (p) { return p.quantity > 0 })
+
       // 更新 Store（会触发订阅回调）
       positionStore.commit('SET_POSITIONS', positions)
       
+      // 获取汇率（港股/美股 → 人民币换算）
+      const rates = await getRates()
+
       // 计算显示数据
       let totalMarketValue = 0
       let totalCost = 0
@@ -158,21 +171,23 @@ Page({ ...touchGestureMixin,
       let totalBuyFee = 0
       let totalInvestment = 0
       
-      // 计算总市值、总成本、总盈亏
+      // 计算总市值、总成本、总盈亏（按汇率换算为人民币）
       const portfolioPositions = positions.filter(p => p.quantity > 0)
       
       portfolioPositions.forEach(p => {
-        totalRealizedPnL += p.realizedPnL || 0
-        totalFloatingPnL += p.floatingPnL || 0
-        totalDividendIncome += p.dividendIncome || 0
+        var rate = getRate(p.market, rates)
+        totalRealizedPnL += (p.realizedPnL || 0) * rate
+        totalFloatingPnL += (p.floatingPnL || 0) * rate
+        totalDividendIncome += (p.dividendIncome || 0) * rate
       })
       
       positions.forEach(p => {
+        var rate = getRate(p.market, rates)
         if (p.currentPrice && p.quantity > 0) {
-          totalMarketValue += p.currentPrice * p.quantity
+          totalMarketValue += p.currentPrice * p.quantity * rate
         }
-        totalCost += p.avgCost * p.quantity
-        totalBuyFee += p.totalBuyFee || 0
+        totalCost += p.avgCost * p.quantity * rate
+        totalBuyFee += (p.totalBuyFee || 0) * rate
       })
       
       // 计算总投资（买入金额 + 费用）
@@ -181,7 +196,8 @@ Page({ ...touchGestureMixin,
       
       allTransactions.forEach(t => {
         if (portfolioStockIds.has(t.stockId) && t.type === 'BUY') {
-          totalInvestment += t.price * t.quantity + t.fee
+          var tRate = getRate(positions.find(p => p.id === t.stockId)?.market, rates)
+          totalInvestment += (t.price * t.quantity + t.fee) * tRate
         }
       })
       
@@ -193,7 +209,11 @@ Page({ ...touchGestureMixin,
       const oldPositions = this.data.positions || []
       const oldPriceMap = {}
       oldPositions.forEach(function (op) { oldPriceMap[op.id] = op.currentPrice })
-
+      
+      // 找出新增的卡片ID（仅在非首次加载时标记）
+      const isFirstLoad = oldPositions.length === 0
+      const newIds = isFirstLoad ? new Set() : new Set(positions.map(p => p.id).filter(id => !oldPositions.some(op => op.id === id)))
+      
       const formattedPositions = positions.map(p => {
         const pnlPercent = calcFloatingPercent(p)
         const oldPrice = oldPriceMap[p.id]
@@ -202,28 +222,31 @@ Page({ ...touchGestureMixin,
         if (oldPrice && p.currentPrice && oldPrice !== p.currentPrice) {
           priceFlashClass = p.currentPrice > oldPrice ? 'price-flash-profit' : 'price-flash-loss'
         }
+        
+        const currency = getMarketCurrency(p.market)
 
         return {
           ...p,
           quantityText: fmt(p.quantity),
-          avgCostText: fmt(p.avgCost),
-          currentPriceText: p.currentPrice ? fmt(p.currentPrice) : '--',
+          avgCostText: currency + fmt(p.avgCost),
+          currentPriceText: p.currentPrice ? currency + fmt(p.currentPrice) : '--',
           floatingPnLText: fmt(p.floatingPnL),
           pnlPercentText: pnlPercent,
           marketLabel: getMarketLabel(p.market),
           marketColor: getMarketColor(p.market),
-          priceFlashClass: priceFlashClass
+          priceFlashClass: priceFlashClass,
+          entering: newIds.has(p.id) // 标记新增卡片
         }
       })
 
-      // 清除 priceFlashClass（600ms 动画结束后）
+      // 清除 priceFlashClass（动画结束后）
       if (formattedPositions.some(function (p) { return p.priceFlashClass })) {
         setTimeout(function () {
           const cleared = formattedPositions.map(function (p) {
             return { ...p, priceFlashClass: '' }
           })
           this.setData({ positions: cleared })
-        }.bind(this), 650)
+        }.bind(this), TIMING_CONFIG.PRICE_FLASH_CLEAR_DELAY)
       }
       
       // 筛选当前市场
@@ -240,6 +263,17 @@ Page({ ...touchGestureMixin,
         totalPnLPercent: totalInvestment > 0 ? parseFloat((totalPnL / totalInvestment * 100).toFixed(2)) : 0,
         loading: false
       })
+      
+      // 清除新增动画标记（动画完成后）
+      if (newIds.size > 0) {
+        setTimeout(() => {
+          const positions = this.data.positions.map(p => ({
+            ...p,
+            entering: false
+          }))
+          this.setData({ positions })
+        }, TIMING_CONFIG.ENTER_ANIM_DELAY)
+      }
       
       // 批量数字滚动动画
       animateAllValues(this, {
@@ -282,8 +316,16 @@ Page({ ...touchGestureMixin,
   // 切换市场（由 liquid-slider 组件触发）
   onMarketTabChange(e) {
     const key = e.detail.key
-    this.setData({ currentMarket: key })
-    this._loadData()
+    const that = this
+    
+    // 先触发退场动画
+    this.setData({ tabAnimating: true })
+    
+    // 等待退场动画完成后切换数据
+    setTimeout(function() {
+      that.setData({ currentMarket: key, tabAnimating: false })
+      that._loadData()
+    }, TIMING_CONFIG.TAB_SWITCH_ANIM_DELAY)
   },
   
   // 更新价格
@@ -328,23 +370,24 @@ Page({ ...touchGestureMixin,
   onQuickRecordSubmit() {
     this.setData({ showQuickRecord: false })
     this._loadData()
-    // 自动刷新行情，更新现价
-    this._fetchPrices()
+    // 自动刷新行情，更新现价（静默）
+    this._fetchPrices({ silent: true })
   },
   
   // ========== 获取行情 ==========
-  async _fetchPrices() {
+  async _fetchPrices(opts) {
+    var silent = opts && opts.silent
     const positions = this.data.positions
     if (!positions || positions.length === 0) return
 
     // 跳过 TTL 未过期的股票，只请求需要更新的
     const needFetch = positions.filter(p => !PriceCache.has(p.id))
     if (needFetch.length === 0) {
-      wx.showToast({ title: '行情已是最新', icon: 'none' })
+      if (!silent) wx.showToast({ title: '行情已是最新', icon: 'none' })
       return
     }
 
-    wx.showLoading({ title: '获取行情中...' })
+    if (!silent) wx.showLoading({ title: '获取行情中...' })
 
     try {
       const results = await fetchAllPrices(needFetch)
@@ -355,18 +398,20 @@ Page({ ...touchGestureMixin,
         PriceCache.setBatch(validResults)
       }
 
-      wx.hideLoading()
+      if (!silent) wx.hideLoading()
       this._loadData()
 
-      if (validResults.length > 0) {
-        wx.showToast({ title: '行情已更新', icon: 'success' })
-      } else {
-        wx.showToast({ title: '获取失败', icon: 'none' })
+      if (!silent) {
+        if (validResults.length > 0) {
+          wx.showToast({ title: '行情已更新', icon: 'success' })
+        } else {
+          wx.showToast({ title: '获取失败', icon: 'none' })
+        }
       }
     } catch (err) {
-      wx.hideLoading()
+      if (!silent) wx.hideLoading()
       this._loadData()
-      wx.showToast({ title: '获取失败', icon: 'none' })
+      if (!silent) wx.showToast({ title: '获取失败', icon: 'none' })
     }
   },
   
@@ -405,7 +450,7 @@ Page({ ...touchGestureMixin,
   onSwipeEdit(e) {
     let stockId = e.currentTarget.dataset.stockId
     wx.navigateTo({
-      url: '/packageRecord/pages/record/record?stockId=' + stockId
+      url: '/packageDetail/pages/detail/detail?stockId=' + stockId
     })
   },
   
@@ -425,12 +470,19 @@ Page({ ...touchGestureMixin,
       content: '将删除该股票的所有交易记录和分红记录，是否确认？',
       success: function(res) {
         if (res.confirm) {
-          Stock.delete(stockId)
-          Transaction.deleteByStockId(stockId)
-          Dividend.deleteByStockId(stockId)
+          // 先触发删除动画
+          that.setData({ deletingId: stockId })
           
-          wx.showToast({ title: '删除成功', icon: 'success' })
-          that._loadData()
+          // 等待动画完成后执行删除
+          setTimeout(function() {
+            Stock.delete(stockId)
+            Transaction.deleteByStockId(stockId)
+            Dividend.deleteByStockId(stockId)
+            
+            wx.showToast({ title: '删除成功', icon: 'success' })
+            that.setData({ deletingId: null })
+            that._loadData()
+          }, 400)
         }
       }
     })

@@ -1,5 +1,5 @@
 // pages/record/record.js
-const { MARKETS } = require("../../../utils/constants/index")
+const { MARKETS, TIMING_CONFIG } = require("../../../utils/constants/index")
 const { Stock, Transaction, Strategy } = require('../../../utils/models/index')
 const { getSellableQuantity, calculatePosition } = require('../../../utils/services/positionService')
 const { fetchStockPrice } = require('../../../utils/services/stockPrice')
@@ -76,6 +76,7 @@ Page({
     const date = new Date(transaction.date)
     const hasJournal = !!(transaction.reason || (transaction.strategies && transaction.strategies.length))
     this.setData({
+      isEdit: true,
       market: stock.market, code: stock.code, name: stock.name,
       type: transaction.type, price: String(transaction.price), quantity: String(transaction.quantity),
       fee: String(transaction.fee),
@@ -177,13 +178,13 @@ Page({
     }
   },
 
-  // 延迟自动获取（输入时防抖 600ms）
+  // 延迟自动获取（输入时防抖）
   _scheduleAutoFetch(code) {
     this._clearAutoFetch()
     if (!code || !validateStockCode(code, this.data.market)) return
     this._fetchTimer = setTimeout(() => {
       this._tryAutoFetch(code)
-    }, 600)
+    }, TIMING_CONFIG.AUTO_FETCH_DELAY_MS)
   },
 
   _clearAutoFetch() {
@@ -319,6 +320,6 @@ Page({
     if (this._isEdit) transaction.id = this._editId
     Transaction.save(transaction)
     wx.showToast({ title: this._isEdit ? "已修改" : "已添加", icon: "success" })
-    setTimeout(function () { wx.navigateBack() }, 800)
+    setTimeout(function () { wx.navigateBack() }, TIMING_CONFIG.NAVIGATE_BACK_DELAY)
   }
 })

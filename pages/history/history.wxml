@@ -82,7 +82,7 @@
         bindtap="{{selectMode ? 'onRecordTap' : ''}}"
       >
         <!-- 批量选择复选框 -->
-        <view wx:if="{{selectMode}}" class="record-checkbox" catchtap="toggleSelectItem" data-id="{{record.id}}">
+        <view wx:if="{{selectMode}}" class="record-checkbox" catchtap="toggleSelectItem" data-id="{{record.id}}" data-type="{{record.type}}">
           <view class="xhs-checkbox {{selectedMap[record.id] ? 'xhs-checkbox-checked' : ''}}"></view>
         </view>
 

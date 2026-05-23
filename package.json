@@ -19,11 +19,5 @@
     "babel-jest": "^29.7.0",
     "@babel/core": "^7.24.0",
     "@babel/preset-env": "^7.24.0"
-  },
-  "jest": {
-    "testEnvironment": "node",
-    "testMatch": ["**/tests/**/*.test.js"],
-    "collectCoverageFrom": ["utils/**/*.js", "pages/**/*.js"],
-    "coverageReporters": ["text", "lcov"]
   }
 }

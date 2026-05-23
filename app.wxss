@@ -1,20 +1,27 @@
 /* ═════════════════════════════════════════╗
-   小红书风格设计系统 v2 (Xiaohongshu Design)
+   小红书风格设计系统 v3 (Xiaohongshu Design)
    ╚════════════════════════════════════════╝ */
 
 /* === Design Tokens === */
 page {
+  /* ── Brand Colors ── */
   --xhs-primary: #FF2442;
+  --xhs-primary-dark: #D81E36;
   --xhs-primary-light: #FF6B7A;
   --xhs-primary-bg: rgba(255, 36, 66, 0.06);
   --xhs-primary-bg-2: rgba(255, 36, 66, 0.12);
   --xhs-primary-tag: rgba(255, 36, 66, 0.1);
 
+  /* ── Neutral / Background ── */
   --xhs-bg: #FFFFFF;
-  --xhs-bg-secondary: #F5F5F5;
+  --xhs-bg-secondary: #F5F5F7;
+  --xhs-bg-tertiary: #F0F0F2;
   --xhs-surface: #FFFFFF;
   --xhs-surface-hover: #FAFAFA;
+  --xhs-glass-bg: rgba(255, 255, 255, 0.78);
+  --xhs-glass-border: rgba(255, 255, 255, 0.3);
 
+  /* ── Text ── */
   --xhs-title: #1C1C1E;
   --xhs-body: #555555;
   --xhs-caption: #999999;
@@ -22,13 +29,25 @@ page {
   --xhs-divider: rgba(0, 0, 0, 0.04);
   --xhs-divider-strong: rgba(0, 0, 0, 0.08);
 
+  /* ── Semantic Colors ── */
   --xhs-profit: #FF6B6B;
   --xhs-profit-bg: rgba(255, 107, 107, 0.1);
+  --xhs-profit-dark: #E05555;
   --xhs-loss: #34C759;
   --xhs-loss-bg: rgba(52, 199, 89, 0.1);
+  --xhs-loss-dark: #2BA94D;
   --xhs-dividend: #FF9500;
   --xhs-dividend-bg: rgba(255, 149, 0, 0.1);
+  --xhs-dividend-dark: #E08500;
+  /* Semantic aliases */
+  --xhs-success: var(--xhs-loss);
+  --xhs-success-bg: var(--xhs-loss-bg);
+  --xhs-warning: var(--xhs-dividend);
+  --xhs-warning-bg: var(--xhs-dividend-bg);
+  --xhs-error: var(--xhs-profit);
+  --xhs-error-bg: var(--xhs-profit-bg);
 
+  /* ── Market Tags ── */
   --xhs-market-a: #007AFF;
   --xhs-market-a-bg: rgba(0, 122, 255, 0.08);
   --xhs-market-hk: #FF9500;
@@ -36,12 +55,21 @@ page {
   --xhs-market-us: #AF52DE;
   --xhs-market-us-bg: rgba(175, 82, 222, 0.08);
 
-  --xhs-card-shadow: 0 1px 4px rgba(0, 0, 0, 0.04), 0 2px 12px rgba(0, 0, 0, 0.06);
-  --xhs-card-shadow-hover: 0 2px 8px rgba(0, 0, 0, 0.06), 0 4px 20px rgba(0, 0, 0, 0.08);
-  --xhs-card-shadow-deep: 0 4px 12px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.08);
+  /* ── Elevation / Shadows ── */
+  --xhs-elevation-1: 0 1px 3px rgba(0, 0, 0, 0.03), 0 1px 8px rgba(0, 0, 0, 0.04);
+  --xhs-elevation-2: 0 1px 4px rgba(0, 0, 0, 0.04), 0 2px 12px rgba(0, 0, 0, 0.06);
+  --xhs-elevation-3: 0 2px 8px rgba(0, 0, 0, 0.06), 0 4px 20px rgba(0, 0, 0, 0.08);
+  --xhs-elevation-4: 0 4px 12px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.08);
+  --xhs-elevation-top: 0 -2px 12px rgba(0, 0, 0, 0.04), 0 -4px 16px rgba(0, 0, 0, 0.03);
+  /* Legacy aliases */
+  --xhs-card-shadow: var(--xhs-elevation-2);
+  --xhs-card-shadow-hover: var(--xhs-elevation-3);
+  --xhs-card-shadow-deep: var(--xhs-elevation-4);
   --xhs-btn-shadow: 0 4px 12px rgba(255, 36, 66, 0.3);
   --xhs-btn-shadow-hover: 0 6px 20px rgba(255, 36, 66, 0.4);
 
+  /* ── Border Radius ── */
+  --xhs-radius-xs: 8rpx;
   --xhs-radius-sm: 16rpx;
   --xhs-radius-md: 24rpx;
   --xhs-radius-lg: 32rpx;
@@ -49,13 +77,17 @@ page {
   --xhs-radius-pill: 999rpx;
   --xhs-radius-round: 50%;
 
+  /* ── Spacing Scale (4rpx base) ── */
+  --xhs-space-xxs: 4rpx;
   --xhs-space-xs: 8rpx;
   --xhs-space-sm: 16rpx;
   --xhs-space-md: 24rpx;
   --xhs-space-lg: 32rpx;
   --xhs-space-xl: 48rpx;
   --xhs-space-2xl: 64rpx;
+  --xhs-space-3xl: 80rpx;
 
+  /* ── Font Scale ── */
   --xhs-font-xs: 20rpx;
   --xhs-font-sm: 22rpx;
   --xhs-font-md: 26rpx;
@@ -64,16 +96,29 @@ page {
   --xhs-font-2xl: 44rpx;
   --xhs-font-3xl: 52rpx;
   --xhs-font-4xl: 64rpx;
+  --xhs-font-5xl: 80rpx;
 
+  /* ── Font Weight ── */
   --xhs-weight-regular: 400;
   --xhs-weight-medium: 500;
   --xhs-weight-semibold: 600;
   --xhs-weight-bold: 700;
 
+  /* ── Font Family ── */
   --xhs-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", "PingFang SC", sans-serif;
+  --xhs-mono: "SF Mono", "SFMono-Regular", "Menlo", "Monaco", "Consolas", monospace;
 
+  /* ── Motion ── */
   --xhs-transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
   --xhs-transition-slow: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  --xhs-transition-spring: all 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ── Z-Index Scale ── */
+  --xhs-z-card: 1;
+  --xhs-z-sticky: 10;
+  --xhs-z-overlay: 50;
+  --xhs-z-fab: 100;
+  --xhs-z-modal: 200;
 
   background-color: var(--xhs-bg);
   font-family: var(--xhs-sans);
@@ -205,14 +250,14 @@ page {
 .xhs-profit { color: var(--xhs-profit) !important; }
 .xhs-loss { color: var(--xhs-loss) !important; }
 
-/* === Transaction Type Tags === */
+/* === Transaction Type Tags (BUY=red, SELL=green, DIVIDEND=orange) === */
 .xhs-type-buy {
-  background: var(--xhs-loss-bg);
-  color: var(--xhs-loss);
-}
-.xhs-type-sell {
   background: var(--xhs-profit-bg);
   color: var(--xhs-profit);
+}
+.xhs-type-sell {
+  background: var(--xhs-loss-bg);
+  color: var(--xhs-loss);
 }
 .xhs-type-dividend {
   background: var(--xhs-dividend-bg);

@@ -15,6 +15,11 @@ const errLog = console.error.bind(console) // 保留错误日志
 const MAX_CONCURRENT_REQUESTS = 5
 const REQUEST_DELAY_MS = 100
 const BATCH_SIZE = 40
+
+// 请求重试配置
+const MAX_RETRIES = 2
+const RETRY_DELAYS = [1000, 3000] // 重试延迟：第 1 次等待 1s，第 2 次等待 3s
+
 let _activeRequests = 0
 let _requestQueue = []
 
@@ -30,9 +35,9 @@ function decodeGBK(arrayBuffer) {
     }
   }
   // 降级：按字节转 latin-1 字符串（中文会乱，但不会崩溃）
-  var bytes = new Uint8Array(arrayBuffer)
-  var str = ''
-  for (var i = 0; i < bytes.length; i++) {
+  const bytes = new Uint8Array(arrayBuffer)
+  let str = ''
+  for (let i = 0; i < bytes.length; i++) {
     str += String.fromCharCode(bytes[i])
   }
   return str
@@ -58,7 +63,7 @@ function getSymbol(market, code) {
     case 'HK_SHARE':
       return 'r_hk' + String(code).padStart(5, '0')
     case 'US_SHARE':
-      return 'us.' + String(code).toLowerCase()
+      return 'us' + String(code).toUpperCase()
     default:
       return null
   }
@@ -79,6 +84,13 @@ function buildBatchUrl(stocks) {
 // 解析单条腾讯财经 API 数据
 function parseTencentData(data) {
   log('[parseTencentData] 原始数据:', data.substring(0, 200))
+
+  // 非交易日 / 无效代码：腾讯 API 返回 v_pv_none_match="1"
+  if (data.indexOf('pv_none_match') !== -1) {
+    log('[parseTencentData] 非交易日或无数据匹配')
+    return null
+  }
+
   const match = data.match(/="([^"]*)"/)
   if (!match) {
     warn('[parseTencentData] 未匹配到数据，原始:', data.substring(0, 100))
@@ -92,10 +104,14 @@ function parseTencentData(data) {
     return null
   }
 
+  const currentPrice = parseFloat(fields[3]) || 0
+  // 现价为 0 时兜底用昨收价（非交易日/停牌场景）
+  const fallbackPrice = currentPrice > 0 ? currentPrice : (parseFloat(fields[4]) || 0)
+
   const result = {
     code: fields[2],
     name: fields[1],
-    currentPrice: parseFloat(fields[3]) || 0,
+    currentPrice: fallbackPrice,
     yesterdayClose: parseFloat(fields[4]) || 0,
     todayOpen: parseFloat(fields[5]) || 0,
     volume: parseInt(fields[6]) || 0,
@@ -108,6 +124,7 @@ function parseTencentData(data) {
 }
 
 // 解析批量查询响应（多条 v_xxYY="..." 数据）
+// 腾讯美股 API 会在代码后附加交易所后缀（如 AAPL.OQ, BRK.B.N），需要剥离
 function parseBatchData(responseText) {
   log('[parseBatchData] 原始响应:', responseText.substring(0, 300))
   const results = {}
@@ -118,11 +135,16 @@ function parseBatchData(responseText) {
     count++
     const fields = match[2].split('~')
     if (fields.length >= 35) {
-      const code = fields[2]
+      let code = fields[2]
+      // 剥离美股交易所后缀（.OQ / .N / .A / .P 等）
+      code = code.replace(/\.[A-Z]+$/i, '')
+      let batchPrice = parseFloat(fields[3]) || 0
+      // 现价为 0 时兜底用昨收价（非交易日/停牌场景）
+      if (batchPrice <= 0) batchPrice = parseFloat(fields[4]) || 0
       results[code] = {
         code: code,
         name: fields[1],
-        currentPrice: parseFloat(fields[3]) || 0,
+        currentPrice: batchPrice,
         yesterdayClose: parseFloat(fields[4]) || 0,
         todayOpen: parseFloat(fields[5]) || 0,
         volume: parseInt(fields[6]) || 0,
@@ -157,59 +179,90 @@ function _executeWithThrottle(fn) {
   })
 }
 
+/**
+ * 带指数退避的请求重试包装器
+ * @param {Function} fn - 返回 Promise 的请求函数
+ * @param {number} maxRetries - 最大重试次数（默认 MAX_RETRIES）
+ * @returns {Function} 包装后的函数，自动重试
+ */
+function _withRetry(fn, maxRetries = MAX_RETRIES) {
+  return function attempt(remaining = maxRetries) {
+    return fn().catch(function (err) {
+      if (remaining <= 0) throw err
+      const delay = RETRY_DELAYS[maxRetries - remaining] || RETRY_DELAYS[RETRY_DELAYS.length - 1]
+      warn('[Retry] 请求失败，' + delay + 'ms 后重试，剩余重试次数:', remaining - 1, err)
+      return new Promise(function (resolve) { setTimeout(resolve, delay) })
+        .then(function () { return attempt(remaining - 1) })
+    })
+  }
+}
+
 // 获取单个股票行情
 function fetchStockPrice(market, code) {
-  return _executeWithThrottle(() => new Promise((resolve, reject) => {
-    const url = buildUrl(market, code)
-    if (!url) {
-      reject(new Error('不支持的市场类型'))
-      return
-    }
+  return _executeWithThrottle(_withRetry(function () {
+    return new Promise(function (resolve, reject) {
+      const url = buildUrl(market, code)
+      if (!url) {
+        reject(new Error('不支持的市场类型'))
+        return
+      }
 
-    log('[fetchStockPrice] 请求行情', { market, code, url })
+      log('[fetchStockPrice] 请求行情', { market, code, url })
 
-    request.get(url, null, { timeout: 10000, responseType: 'arraybuffer' })
-      .then(data => {
-        const responseData = decodeGBK(data)
-        log('[fetchStockPrice] 解析数据:', responseData.substring(0, 200))
-        const result = parseTencentData(responseData)
-        log('[fetchStockPrice] 解析结果:', result)
+      request.get(url, null, { timeout: 10000, responseType: 'arraybuffer' })
+        .then(function (data) {
+          const responseData = decodeGBK(data)
+          log('[fetchStockPrice] 解析数据:', typeof responseData === 'string' ? responseData.substring(0, 200) : responseData)
+          const result = parseTencentData(responseData)
+          log('[fetchStockPrice] 解析结果:', result)
 
-        if (result && result.currentPrice > 0) {
-          resolve(result)
-        } else {
-          reject(new Error('解析行情数据失败，原始响应: ' + responseData.substring(0, 100)))
-        }
-      })
-      .catch(err => {
-        errLog('[fetchStockPrice] 请求失败', err)
-        reject(new Error(`网络请求失败: ${err.message || err.errMsg}`))
-      })
+          if (result && result.currentPrice > 0) {
+            resolve(result)
+          } else {
+            // 非交易日 / 无效代码等正常无数据情况，resolve(null) 而非 reject
+            // 让上层 onRefreshPrice 优雅地提示"价格无效"而非崩溃
+            log('[fetchStockPrice] 无有效行情数据（非交易日/无效代码）')
+            resolve(null)
+          }
+        })
+        .catch(function (err) {
+          errLog('[fetchStockPrice] 请求失败', err)
+          reject(new Error('网络请求失败: ' + (err.message || err.errMsg)))
+        })
+    })
   }))
 }
 
 function fetchPriceBatch(stocks) {
   const url = buildBatchUrl(stocks)
-  if (!url) return Promise.resolve(stocks.map(s => ({ stockId: s.id, price: null })))
+  if (!url) return Promise.resolve(stocks.map(function (s) { return { stockId: s.id, price: null } }))
 
-  return _executeWithThrottle(() => new Promise((resolve) => {
-    request.get(url, null, { timeout: 15000, responseType: 'arraybuffer' })
-      .then(data => {
-        const responseText = decodeGBK(data)
-        const parsed = parseBatchData(responseText)
-        const results = stocks.map(stock => {
-          const data = parsed[stock.code]
-          return {
-            stockId: stock.id,
-            price: (data && data.currentPrice > 0) ? data.currentPrice : null
-          }
+  // 内层：带重试的请求
+  // 外层 catch：重试全部耗尽后返回 null 价格，不阻塞整体
+  return _executeWithThrottle(_withRetry(function () {
+    return new Promise(function (resolve, reject) {
+      request.get(url, null, { timeout: 15000, responseType: 'arraybuffer' })
+        .then(function (data) {
+          const responseText = decodeGBK(data)
+          const parsed = parseBatchData(responseText)
+          const results = stocks.map(function (stock) {
+            const d = parsed[stock.code]
+            return {
+              stockId: stock.id,
+              price: (d && d.currentPrice > 0) ? d.currentPrice : null
+            }
+          })
+          resolve(results)
         })
-        resolve(results)
-      })
-      .catch(() => {
-        resolve(stocks.map(s => ({ stockId: s.id, price: null })))
-      })
-  }))
+        .catch(function (err) {
+          errLog('[fetchPriceBatch] 批量请求失败', err)
+          reject(err)
+        })
+    })
+  })).catch(function () {
+    // 所有重试耗尽后，返回 null 价格保证可用
+    return stocks.map(function (s) { return { stockId: s.id, price: null } })
+  })
 }
 
 // 批量获取股票行情，按固定数量分片，避免 URL 过长导致整批失败

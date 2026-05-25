@@ -239,6 +239,72 @@
   display: block;
 }
 
+.detail-row-single {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xhs-space-xs);
+  flex-wrap: nowrap;
+}
+
+.detail-row-single .detail-info {
+  display: flex !important;
+  align-items: center !important;
+  gap: var(--xhs-space-xs) !important;
+  flex: 1;
+  min-width: 0;
+}
+
+.detail-row-single .detail-info .detail-code,
+.detail-row-single .detail-info .detail-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.detail-date-inline {
+  font-size: var(--xhs-font-xs);
+  color: var(--xhs-caption);
+  flex-shrink: 0;
+  white-space: nowrap;
+  margin-left: var(--xhs-space-xs);
+}
+
+/* === 第二行：股价 × 股数 (左)  ...  金额 (右) === */
+.detail-row-detail {
+  display: flex;
+  align-items: flex-end;
+  margin-top: 6rpx;
+  padding-top: 6rpx;
+  border-top: 1px solid var(--xhs-divider);
+  line-height: 1;
+}
+
+.detail-d-price {
+  font-size: var(--xhs-font-md);
+  font-weight: var(--xhs-weight-semibold);
+  color: var(--xhs-profit);
+}
+
+.detail-d-multiply {
+  font-size: var(--xhs-font-md);
+  color: var(--xhs-caption);
+  margin: 0 4rpx;
+}
+
+.detail-d-shares {
+  font-size: var(--xhs-font-md);
+  font-weight: var(--xhs-weight-semibold);
+  color: var(--xhs-title);
+}
+
+.detail-d-amount {
+  font-size: var(--xhs-font-md);
+  font-weight: var(--xhs-weight-semibold);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
 .detail-meta {
   display: flex;
   gap: var(--xhs-space-sm);
@@ -309,7 +375,6 @@
 }
 
 .type-tag {
-  margin-left: auto;
 }
 
 /* === CTA 按钮 === */

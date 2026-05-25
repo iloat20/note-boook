@@ -44,7 +44,7 @@
           </view>
           <view class="xhs-feed-card-body">
             <text class="xhs-feed-card-value {{stats.totalPnL >= 0 ? 'xhs-profit' : 'xhs-loss'}}">
-              {{stats.totalPnL >= 0 ? '+' : ''}}{{stats.totalPnLText}}
+              {{stats.totalPnLText}}
             </text>
             <text class="xhs-feed-card-label">总盈亏</text>
           </view>
@@ -93,15 +93,25 @@
       <view class="xhs-feed-card-full-body">
         <view wx:if="{{completeTrades.length > 0}}" class="detail-list">
           <view wx:for="{{completeTrades}}" wx:key="id" class="detail-item">
-            <view class="detail-top">
+            <view class="detail-row-single">
               <view class="detail-info">
                 <view class="tag type-tag {{item.type === 'BUY' ? 'tag-buy' : item.type === 'SELL' ? 'tag-sell' : 'tag-dividend'}}">{{item.typeText}}</view>
                 <text class="detail-code">{{item.code}}</text>
                 <text class="detail-name">{{item.name}}</text>
               </view>
-              <text class="detail-amount mono-num">{{item.amountText}}</text>
+              <text class="detail-date-inline">{{item.dateText}}</text>
             </view>
-            <text class="detail-date">{{item.dateText}}</text>
+            <view wx:if="{{item.type !== 'DIVIDEND'}}" class="detail-row-detail">
+              <text class="detail-d-price mono-num">¥{{item.priceText || '0.00'}}</text>
+              <text class="detail-d-multiply">×</text>
+              <text class="detail-d-shares">{{item.quantity || 0}}股</text>
+              <text class="detail-d-amount mono-num {{item.type === 'SELL' ? 'xhs-profit' : 'xhs-loss'}}">
+                ¥{{item.amountText || '0.00'}}
+              </text>
+            </view>
+            <view wx:if="{{item.type === 'DIVIDEND'}}" class="detail-row-detail">
+              <text class="detail-d-amount mono-num xhs-profit">¥{{item.amountText}}</text>
+            </view>
           </view>
         </view>
         <view wx:else class="detail-empty">暂无交易记录</view>
@@ -122,12 +132,12 @@
                 <text class="detail-name" style="margin-left: 8px;">{{item.code}}</text>
               </view>
               <text class="detail-amount mono-num {{item.pnlClass}}">
-                {{item.totalPnL >= 0 ? '+' : ''}}{{item.totalPnLText}}
+                {{item.totalPnLText}}
               </text>
             </view>
             <view class="detail-meta">
               <text class="detail-meta-text">已实现: {{item.realizedPnLText}}</text>
-              <text class="detail-meta-text">分红: +{{item.dividendIncomeText}}</text>
+              <text class="detail-meta-text">分红: {{item.dividendIncomeText}}</text>
             </view>
           </view>
         </view>

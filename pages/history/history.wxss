@@ -247,8 +247,8 @@
 
 .record-top {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: var(--xhs-space-sm);
   margin-bottom: var(--xhs-space-sm);
 }
 
@@ -276,25 +276,52 @@
   white-space: nowrap;
 }
 
-.record-bottom {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
 .record-time {
   font-size: var(--xhs-font-xs);
   color: var(--xhs-caption);
+  flex-shrink: 0;
 }
 
-.record-amount {
+/* === 完整交易明细行 === */
+.record-detail {
+  display: flex;
+  align-items: flex-end;
+  margin-bottom: var(--xhs-space-xs);
+  line-height: 1;
+}
+
+.detail-price {
   font-size: var(--xhs-font-md);
   font-weight: var(--xhs-weight-semibold);
+  color: var(--xhs-profit);
+}
+
+.detail-multiply {
+  font-size: var(--xhs-font-md);
+  color: var(--xhs-caption);
+  margin: 0 4rpx;
+}
+
+.detail-quantity {
+  font-size: var(--xhs-font-md);
+  font-weight: var(--xhs-weight-semibold);
+  color: var(--xhs-title);
+}
+
+.detail-amount {
+  font-size: var(--xhs-font-md);
+  font-weight: var(--xhs-weight-semibold);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.detail-amount.dividend {
+  color: var(--xhs-primary);
 }
 
 /* Tag */
 .type-tag {
-  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .tag {

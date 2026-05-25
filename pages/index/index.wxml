@@ -30,7 +30,7 @@
     <!-- 汇总卡片 -->
     <view class="summary-card card animate-stagger stagger-delay-2" style="margin-bottom: var(--xhs-space-lg);">
       <view style="display: flex; justify-content: space-between; align-items: center;">
-        <text class="title mono-num">{{summaryCurrency}}{{displayValues.totalMarketValue}}</text>
+        <text class="title mono-num">{{displayValues.totalMarketValue}}</text>
         <view bindtap="onSharePortfolio" style="display: flex; align-items: center; padding: 4px;">
           <image src="/images/share.svg" mode="aspectFit" lazy-load="{{true}}" style="width: 36rpx; height: 36rpx; opacity: 0.7;" />
         </view>
@@ -106,7 +106,7 @@
 
           <view style="display: flex; justify-content: space-between; align-items: center; padding-top: var(--xhs-space-md); border-top: 1px solid var(--xhs-divider);">
             <text class="mono-num {{item.floatingPnL >= 0 ? 'profit' : 'loss'}}">
-              {{item.floatingPnL >= 0 ? '+' : ''}}{{item.floatingPnLText}}
+              {{item.floatingPnLText}}
             </text>
             <text class="caption mono-num {{item.floatingPnL >= 0 ? 'profit' : 'loss'}}">
               {{item.pnlPercentText}}%

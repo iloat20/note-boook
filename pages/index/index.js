@@ -113,14 +113,25 @@ Page({ ...touchGestureMixin,
     }
   },
   
-  onShow() {
-    // 使用 mixin 处理通用逻辑
-    pageMixin.onShowMixin(this, 0, this._loadData)
+  async onShow() {
+    // 设置 tabBar 选中状态
+    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
+      this.getTabBar().setData({ selected: 0 })
+    }
+
+    const appStore = require('../../utils/state/appStore')
     
-    // 每次进入持仓自动获取现价（仅交易时段，静默）
-    if (isTradingTime()) {
-      const positions = this.data.positions
-      if (positions.length > 0) {
+    // 如果数据过期，先刷新持仓数据
+    if (appStore.getState('dataDirty')) {
+      await this._loadData()
+      appStore.commit('MARK_CLEAN')
+      // 添加/修改交易后自动获取一次现价，不区分交易时段，强制忽略缓存
+      if (this.data.positions && this.data.positions.length > 0) {
+        this._fetchPrices({ silent: true, force: true })
+      }
+    } else if (isTradingTime()) {
+      // 交易时段正常刷新现价
+      if (this.data.positions && this.data.positions.length > 0) {
         this._fetchPrices({ silent: true })
       }
     }
@@ -230,9 +241,9 @@ Page({ ...touchGestureMixin,
 
         return {
           ...p,
-          quantityText: fmt(p.quantity),
-          avgCostText: currency + fmt(p.avgCost),
-          currentPriceText: p.currentPrice ? currency + fmt(p.currentPrice) : '--',
+          quantityText: String(Math.round(p.quantity)),
+          avgCostText: fmt(p.avgCost),
+          currentPriceText: p.currentPrice ? fmt(p.currentPrice) : '--',
           floatingPnLText: fmt(p.floatingPnL),
           pnlPercentText: pnlPercent,
           marketLabel: getMarketLabel(p.market),
@@ -409,11 +420,15 @@ Page({ ...touchGestureMixin,
   // ========== 获取行情 ==========
   async _fetchPrices(opts) {
     var silent = opts && opts.silent
+    var force = opts && opts.force
     const positions = this.data.positions
     if (!positions || positions.length === 0) return
 
-    // 跳过 TTL 未过期的股票，只请求需要更新的
-    const needFetch = positions.filter(p => !PriceCache.has(p.id))
+    // 非强制时跳过 TTL 未过期的股票
+    const needFetch = force 
+      ? positions 
+      : positions.filter(p => !PriceCache.has(p.id))
+    
     if (needFetch.length === 0) {
       if (!silent) wx.showToast({ title: '行情已是最新', icon: 'none' })
       return
@@ -426,12 +441,37 @@ Page({ ...touchGestureMixin,
       const validResults = results.filter(r => r.price !== null)
 
       if (validResults.length > 0) {
-        // 批量写入，一次 saveData 完成
+        // 批量写入缓存
         PriceCache.setBatch(validResults)
+        // 直接更新持仓的现价，不依赖 _loadData（避免 loading 锁竞争）
+        const priceMap = {}
+        validResults.forEach(function (r) { priceMap[r.stockId] = r.price })
+        const updated = this.data.positions.map(function (p) {
+          if (priceMap[p.id] != null) {
+            return Object.assign({}, p, {
+              currentPrice: priceMap[p.id],
+              currentPriceText: fmt(priceMap[p.id])
+            })
+          }
+          return p
+        })
+        // 同步更新 _allPositions
+        const allUpdated = (this.data._allPositions || []).map(function (p) {
+          if (priceMap[p.id] != null) {
+            return Object.assign({}, p, {
+              currentPrice: priceMap[p.id],
+              currentPriceText: fmt(priceMap[p.id])
+            })
+          }
+          return p
+        })
+        this.setData({ positions: updated, _allPositions: allUpdated })
+      } else {
+        // 无有效结果时仍刷新持仓（可能清理过期缓存等）
+        this._loadData()
       }
 
       if (!silent) wx.hideLoading()
-      this._loadData()
 
       if (!silent) {
         if (validResults.length > 0) {

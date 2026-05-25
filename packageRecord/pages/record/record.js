@@ -1,6 +1,6 @@
 // pages/record/record.js
 const { MARKETS, TIMING_CONFIG } = require("../../../utils/constants/index")
-const { Stock, Transaction, Strategy } = require('../../../utils/models/index')
+const { Stock, Transaction, Strategy, PriceCache } = require('../../../utils/models/index')
 const { getSellableQuantity, calculatePosition } = require('../../../utils/services/positionService')
 const { fetchStockPrice } = require('../../../utils/services/stockPrice')
 const { calculateFee, getFeeBreakdown } = require("../../../utils/helpers/feeCalculator")
@@ -101,6 +101,7 @@ Page({
     fetchStockPrice(market, code).then(function (data) {
       if (data && data.currentPrice > 0) {
         this.setData({ price: String(data.currentPrice) })
+        PriceCache.set(stockId, data.currentPrice)
         this._calcFee()
       }
     }.bind(this)).catch(function () {})
@@ -207,6 +208,11 @@ Page({
         }
         this.setData(updates)
         this._calcFee()
+        // 缓存现价到 PriceCache
+        if (data.currentPrice > 0) {
+          const stock = Stock.getByCode(code, this.data.market)
+          if (stock) PriceCache.set(stock.id, data.currentPrice)
+        }
       }
       this._fetchingCode = null
     }.bind(this)).catch(function () {
@@ -315,6 +321,12 @@ Page({
       }
     }
     if (!stock) { stock = Stock.create(code, name, market); Stock.save(stock) }
+
+    // 提交时把价格写入 PriceCache，回到持仓页立即可用
+    const priceNum = parseFloat(price)
+    if (stock && stock.id && priceNum > 0) {
+      PriceCache.set(stock.id, priceNum)
+    }
 
     const transaction = Transaction.create(stock.id, type, price, quantity, fee, new Date(date + "T" + time + ":00").toISOString(), note, data.reason, data.strategies)
     if (this._isEdit) transaction.id = this._editId

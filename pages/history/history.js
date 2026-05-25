@@ -49,7 +49,10 @@ Page({
   },
 
   onShow() {
-    pageMixin.onShowMixin(this, 1, this.loadHistory)
+    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
+      this.getTabBar().setData({ selected: 1 })
+    }
+    this.loadHistory()
   },
 
   // 构建全部记录并缓存，仅在数据变更时调用
@@ -79,7 +82,7 @@ Page({
           name: stock.name,
           price: t.price,
           priceText: fmt(t.price),
-          quantity: t.quantity,
+          quantity: parseInt(t.quantity) || 0,
           fee: t.fee,
           feeText: fmt(t.fee),
           amount: amount,
@@ -110,7 +113,7 @@ Page({
           name: stock.name,
           perShareAmount: d.perShareAmount,
           perShareAmountText: fmt(d.perShareAmount),
-          quantity: d.quantity,
+          quantity: parseInt(d.quantity) || 0,
           amount: d.totalAmount,
           amountText: fmt(d.totalAmount),
           date: fmtDate(date),

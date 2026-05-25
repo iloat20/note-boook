@@ -98,7 +98,7 @@
 
         <!-- 主内容 -->
         <view class="record-main">
-          <!-- 第一行: 代码 + 名称 + 类型标签 -->
+          <!-- 第一行: 交易信息(居左) + 买卖标签 + 时间(居右) -->
           <view class="record-top">
             <view class="record-info">
               <market-tag market="{{record.market}}" label="{{record.marketLabel}}" />
@@ -108,14 +108,22 @@
             <view class="tag type-tag {{record.type === 'BUY' ? 'tag-buy' : record.type === 'SELL' ? 'tag-sell' : 'tag-dividend'}}">
               {{record.typeText}}
             </view>
+            <text class="record-time">{{record.time}}</text>
           </view>
 
-          <!-- 第二行: 时间 + 金额 -->
-          <view class="record-bottom">
-            <text class="record-time">{{record.time}}</text>
-            <text class="record-amount mono-num {{record.type === 'BUY' ? 'profit' : 'loss'}}">
-              {{record.type === 'BUY' ? '-' : '+'}}{{record.amountText}}
+          <!-- 第二行: 股价 × 股数 (左)  ...  金额 (右) -->
+          <view wx:if="{{record.type !== 'DIVIDEND'}}" class="record-detail">
+            <text class="detail-price mono-num">¥{{record.priceText}}</text>
+            <text class="detail-multiply">×</text>
+            <text class="detail-quantity">{{record.quantity}}股</text>
+            <text class="detail-amount mono-num {{record.type === 'SELL' ? 'profit' : 'loss'}}">
+              {{record.amountText}}
             </text>
+          </view>
+
+          <!-- 分红: 金额 (右) -->
+          <view wx:if="{{record.type === 'DIVIDEND'}}" class="record-detail">
+            <text class="detail-amount mono-num dividend">{{record.amountText}}</text>
           </view>
 
           <!-- 策略标签 -->

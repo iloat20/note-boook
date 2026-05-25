@@ -120,7 +120,7 @@ Page({
       const { calcXIRRForRange } = require('../../utils/helpers/xirr')
       xirrValue = await calcXIRRForRange(startDate, endDate)
       if (xirrValue !== null) {
-        xirrText = (xirrValue >= 0 ? '+' : '') + xirrValue.toFixed(2) + '%'
+        xirrText = xirrValue.toFixed(2) + '%'
       }
     } catch (e) {
       console.error('XIRR 计算失败:', e)
@@ -142,36 +142,47 @@ Page({
     }
 
     const detailItems = [
-      { label: '已实现盈亏', value: fmt(totalPnL), prefix: totalPnL >= 0 ? '+' : '', colorClass: totalPnL >= 0 ? 'profit' : 'loss' },
-      { label: '内部收益率(XIRR)', value: xirrText !== '--' ? xirrText.replace('%', '') : '--', prefix: xirrValue !== null && xirrValue >= 0 ? '+' : '', colorClass: xirrValue !== null ? (xirrValue >= 0 ? 'profit' : 'loss') : '' },
-      { label: '分红收益', value: fmt(cnyDividendIncome), prefix: '+', colorClass: 'profit' },
-      { label: '买入手续费', value: fmt(cnyBuyFee), prefix: '-', colorClass: '' },
-      { label: '卖出手续费', value: fmt(cnySellFee), prefix: '-', colorClass: '' }
+      { label: '已实现盈亏', value: fmt(totalPnL), prefix: '', colorClass: totalPnL >= 0 ? 'profit' : 'loss' },
+      { label: '内部收益率(XIRR)', value: xirrText !== '--' ? xirrText.replace('%', '') : '--', prefix: '', colorClass: xirrValue !== null ? (xirrValue >= 0 ? 'profit' : 'loss') : '' },
+      { label: '分红收益', value: fmt(cnyDividendIncome), prefix: '', colorClass: 'profit' },
+      { label: '买入手续费', value: fmt(cnyBuyFee), prefix: '', colorClass: '' },
+      { label: '卖出手续费', value: fmt(cnySellFee), prefix: '', colorClass: '' }
     ]
 
     return { stats, detailItems }
   },
 
   _buildTradeList() {
-    const stocks = Stock.getAll()
+    const stocks = wx.getStorageSync('stock_trade_stocks') || []
     const stockMap = buildStockMap(stocks)
+    const rawTx = wx.getStorageSync('stock_trade_transactions') || []
     
-    const txList = Transaction.getAll().map(t => {
+    const txList = rawTx.map(t => {
       const stock = stockMap[t.stockId]
-      return {
+      const price = parseFloat(t.price) || 0
+      const quantity = parseInt(t.quantity) || 0
+      const fee = parseFloat(t.fee) || 0
+      const amount = price * quantity
+      const item = {
         id: t.id,
         stockId: t.stockId,
         type: t.type,
         typeText: t.type === 'BUY' ? '买入' : '卖出',
         dateText: t.date ? fmtDate(new Date(t.date)) : '-',
-        amountText: fmt((t.price || 0) * (t.quantity || 0)),
-        totalPnLText: (t.type === 'BUY' ? '-' : '+') + fmt((t.price || 0) * (t.quantity || 0)),
+        price: price,
+        priceText: fmt(price),
+        quantity: quantity,
+        fee: fee,
+        feeText: fmt(fee),
+        amountText: fmt(amount),
+        totalPnLText: fmt(amount),
         name: stock ? stock.name : '-',
         code: stock ? stock.code : '-',
         market: stock ? stock.market : ''
       }
+      return item
     })
-    
+
     const divList = Dividend.getAll().map(d => {
       const stock = stockMap[d.stockId]
       return {
@@ -181,7 +192,7 @@ Page({
         typeText: '分红',
         dateText: d.date ? fmtDate(new Date(d.date)) : '-',
         amountText: fmt(d.totalAmount),
-        totalPnLText: '+' + fmt(d.totalAmount),
+        totalPnLText: fmt(d.totalAmount),
         name: stock ? stock.name : '-',
         code: stock ? stock.code : '-',
         market: stock ? stock.market : ''
@@ -345,9 +356,9 @@ Page({
         sellCount: sellCount,
         winRate: winRate,
         yearXIRR: yearXIRR,
-        yearXIRRText: yearXIRR !== null ? ((yearXIRR >= 0 ? '+' : '') + yearXIRR.toFixed(2) + '%') : '--',
+        yearXIRRText: yearXIRR !== null ? (yearXIRR.toFixed(2) + '%') : '--',
         totalXIRR: totalXIRR,
-        totalXIRRText: totalXIRR !== null ? ((totalXIRR >= 0 ? '+' : '') + totalXIRR.toFixed(2) + '%') : '--',
+        totalXIRRText: totalXIRR !== null ? (totalXIRR.toFixed(2) + '%') : '--',
         totalPnL: parseFloat(yearPnL.toFixed(2)),
         totalPnLText: fmt(Math.abs(yearPnL)),
         totalPnLPercent: yearPnLPercent,

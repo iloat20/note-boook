@@ -55,6 +55,8 @@ Page({ ...touchGestureMixin,
     
     // 持仓数据
     positions: [],
+    _allPositions: [],
+    _rates: null,
     totalMarketValue: 0,
     totalMarketValueText: '0.00',
     totalPnL: 0,
@@ -161,6 +163,7 @@ Page({ ...touchGestureMixin,
       
       // 获取汇率（港股/美股 → 人民币换算）
       const rates = await getRates()
+      this._rates = rates
 
       // 计算显示数据
       let totalMarketValue = 0
@@ -206,7 +209,7 @@ Page({ ...touchGestureMixin,
       const totalPnL = totalRealizedPnL + totalFloatingPnL + totalDividendIncome
       
       // 格式化持仓数据
-      const oldPositions = this.data.positions || []
+      const oldPositions = this.data._allPositions || []
       const oldPriceMap = {}
       oldPositions.forEach(function (op) { oldPriceMap[op.id] = op.currentPrice })
       
@@ -249,12 +252,14 @@ Page({ ...touchGestureMixin,
         }.bind(this), TIMING_CONFIG.PRICE_FLASH_CLEAR_DELAY)
       }
       
-      // 筛选当前市场
+      // 根据当前市场筛选
       const filteredPositions = this.data.currentMarket
         ? formattedPositions.filter(p => p.market === this.data.currentMarket)
         : formattedPositions
       
       this.setData({
+        _allPositions: formattedPositions,
+        _rates: rates,
         positions: filteredPositions,
         totalMarketValue: parseFloat(totalMarketValue.toFixed(2)),
         totalMarketValueText: fmt(totalMarketValue),
@@ -291,7 +296,7 @@ Page({ ...touchGestureMixin,
         catchError(err, '加载失败')
       }
   },
-  
+
   // 更新市场 tab 计数
   _updateMarketTabs(positions) {
     const tabs = this.data.marketTabs.map(tab => ({
@@ -313,7 +318,7 @@ Page({ ...touchGestureMixin,
   },
   
   // ========== 用户交互 ==========
-  // 切换市场（由 liquid-slider 组件触发）
+  // 切换市场（由 liquid-slider 组件触发）- 只切换显示，不刷新页面
   onMarketTabChange(e) {
     const key = e.detail.key
     const that = this
@@ -323,11 +328,38 @@ Page({ ...touchGestureMixin,
     
     // 等待退场动画完成后切换数据
     setTimeout(function() {
-      that.setData({ currentMarket: key, tabAnimating: false })
-      that._loadData()
+      // 从缓存数据中筛选对应市场的持仓
+      const allPositions = that.data._allPositions || []
+      const filteredPositions = key
+        ? allPositions.filter(p => p.market === key)
+        : allPositions
+      
+      // 使用缓存的汇率计算汇总数据
+      const rates = that.data._rates || { usdToCny: 1, hkdToCny: 1 }
+      
+      const marketValue = filteredPositions.reduce((sum, p) => {
+        const rate = getRate(p.market, rates)
+        return sum + (p.currentPrice || 0) * p.quantity * rate
+      }, 0)
+      
+      // floatingPnL 和 realizedPnL 已经是换算后的人民币金额
+      const marketPnL = filteredPositions.reduce((sum, p) => {
+        return sum + (p.floatingPnL || 0) + (p.realizedPnL || 0)
+      }, 0)
+      
+      that.setData({
+        currentMarket: key,
+        positions: filteredPositions,
+        tabAnimating: false,
+        displayValues: {
+          totalMarketValue: fmt(marketValue),
+          totalPnL: fmt(marketPnL),
+          totalPnLPercent: '0.00'
+        }
+      })
     }, TIMING_CONFIG.TAB_SWITCH_ANIM_DELAY)
   },
-  
+
   // 更新价格
   updatePrice(e) {
     const stockId = parseInt(e.currentTarget.dataset.stockId)

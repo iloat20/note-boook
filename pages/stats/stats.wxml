@@ -1,4 +1,13 @@
-<view class="page-container" style="padding-top: {{statusBarHeight + navBarHeight}}px;">
+<view class="page-container page-entrance" style="padding-top: {{statusBarHeight + navBarHeight}}px;">
+  <!-- 标题栏 -->
+  <view class="page-title animate-stagger stagger-delay-1">
+    <view class="title-row">
+      <view class="title-icon-wrap">
+        <image class="title-icon" src="/images/title-stats.svg" mode="aspectFit" />
+      </view>
+    </view>
+  </view>
+  
   <!-- 骨架屏 -->
   <view wx:if="{{loading}}" class="skeleton-container">
     <view class="xhs-skeleton-card" wx:for="{{[1,2,3,4]}}" wx:key="*this">
@@ -15,7 +24,7 @@
 
   <scroll-view wx:else class="xhs-scroll" scroll-y>
     <!-- 时段选择 (黑色文字 + 红色下划线) -->
-    <view class="period-tabs">
+    <view class="period-tabs animate-stagger stagger-delay-2">
       <view
         wx:for="{{periodTabs}}"
         wx:key="key"
@@ -26,33 +35,7 @@
     </view>
 
     <!-- 双列统计卡片 (小红书笔记风格) -->
-    <view class="xhs-feed-grid">
-      <!-- 投入 -->
-      <view class="xhs-feed-card">
-        <view class="xhs-feed-card-inner">
-          <view class="xhs-feed-card-cover cover-invest">
-            <text class="xhs-feed-card-emoji">💰</text>
-          </view>
-          <view class="xhs-feed-card-body">
-            <text class="xhs-feed-card-value">{{stats.totalInvestmentText}}</text>
-            <text class="xhs-feed-card-label">总投入</text>
-          </view>
-        </view>
-      </view>
-
-      <!-- 回收 -->
-      <view class="xhs-feed-card">
-        <view class="xhs-feed-card-inner">
-          <view class="xhs-feed-card-cover cover-recover">
-            <text class="xhs-feed-card-emoji">💳</text>
-          </view>
-          <view class="xhs-feed-card-body">
-            <text class="xhs-feed-card-value">{{stats.totalRecoverText}}</text>
-            <text class="xhs-feed-card-label">总回收</text>
-          </view>
-        </view>
-      </view>
-
+    <view class="xhs-feed-grid animate-stagger stagger-delay-3">
       <!-- 盈亏 -->
       <view class="xhs-feed-card">
         <view class="xhs-feed-card-inner">
@@ -82,10 +65,25 @@
           </view>
         </view>
       </view>
+
+      <!-- XIRR 内部收益率 -->
+      <view class="xhs-feed-card">
+        <view class="xhs-feed-card-inner">
+          <view class="xhs-feed-card-cover cover-pnl">
+            <text class="xhs-feed-card-emoji">🎯</text>
+          </view>
+          <view class="xhs-feed-card-body">
+            <text class="xhs-feed-card-value {{stats.xirrValue >= 0 ? 'xhs-profit' : stats.xirrValue < 0 ? 'xhs-loss' : ''}}">
+              {{stats.xirrText || '--'}}
+            </text>
+            <text class="xhs-feed-card-label">XIRR</text>
+          </view>
+        </view>
+      </view>
     </view>
 
     <!-- 完整交易明细 (小红书长笔记风格) -->
-    <view class="xhs-feed-card-full">
+    <view class="xhs-feed-card-full animate-stagger stagger-delay-4">
       <view class="xhs-feed-card-full-header">
         <text class="xhs-feed-card-full-title">📝 完整交易明细</text>
         <view class="xhs-feed-card-full-action" bindtap="onExportMD">
@@ -151,8 +149,8 @@
     </view>
 
     <!-- 底部年度报告 CTA -->
-    <view class="xhs-feed-footer">
-      <view class="xhs-feed-cta" bindtap="onOpenAnnualReport">
+    <view class="xhs-feed-footer animate-stagger stagger-delay-7">
+      <view class="xhs-feed-cta hover-lift" bindtap="onOpenAnnualReport">
         <text>📊 查看年度报告</text>
       </view>
     </view>

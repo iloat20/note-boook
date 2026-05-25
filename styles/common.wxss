@@ -31,7 +31,7 @@
 /* === Page Container === */
 .page-container {
   min-height: 100vh;
-  padding: var(--xhs-space-lg);
+  padding: var(--page-margin);
   padding-bottom: calc(160rpx + env(safe-area-inset-bottom));
   box-sizing: border-box;
   display: flex;

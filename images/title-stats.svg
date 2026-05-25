@@ -1,0 +1,6 @@
+<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- 统计图标 - 简约饼图+趋势 -->
+  <circle cx="18" cy="28" r="8" stroke="#1C1C1E" stroke-width="2" fill="none"/>
+  <path d="M18 20V28L24 28" stroke="#FF3B30" stroke-width="2" stroke-linecap="round"/>
+  <path d="M28 18L34 14L38 18" stroke="#FF3B30" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

@@ -1,0 +1,10 @@
+<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- 流水图标 - 简约时间线 -->
+  <line x1="12" y1="14" x2="12" y2="34" stroke="#C7C7CC" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="12" cy="14" r="2.5" fill="#1C1C1E"/>
+  <circle cx="12" cy="24" r="2.5" fill="#1C1C1E"/>
+  <circle cx="12" cy="34" r="2.5" fill="#1C1C1E"/>
+  <line x1="18" y1="14" x2="30" y2="14" stroke="#C7C7CC" stroke-width="2" stroke-linecap="round"/>
+  <line x1="18" y1="24" x2="26" y2="24" stroke="#C7C7CC" stroke-width="2" stroke-linecap="round"/>
+  <line x1="18" y1="34" x2="28" y2="34" stroke="#C7C7CC" stroke-width="2" stroke-linecap="round"/>
+</svg>

@@ -1,7 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" fill="none">
-  <!-- 持仓图标：简洁折线图 + 数据点，Liquid Glass 线条风格 -->
-  <path d="M8 36L18 20L28 26L40 10" stroke="#86868B" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="18" cy="20" r="3" fill="#86868B"/>
-  <circle cx="28" cy="26" r="3" fill="#86868B"/>
-  <circle cx="40" cy="10" r="3" fill="#86868B"/>
+<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- 持仓图标 - 股票组合/文件夹 -->
+  <rect x="8" y="10" width="32" height="28" rx="3" stroke="#C7C7CC" stroke-width="2" fill="none"/>
+  <path d="M14 10V8C14 6.89543 14.8954 6 16 6H32C33.1046 6 34 6.89543 34 8V10" stroke="#C7C7CC" stroke-width="2" stroke-linecap="round"/>
+  <line x1="14" y1="20" x2="34" y2="20" stroke="#C7C7CC" stroke-width="2" stroke-linecap="round"/>
+  <line x1="14" y1="26" x2="28" y2="26" stroke="#C7C7CC" stroke-width="2" stroke-linecap="round"/>
+  <line x1="14" y1="32" x2="22" y2="32" stroke="#C7C7CC" stroke-width="2" stroke-linecap="round"/>
+  <!-- 上涨箭头 -->
+  <path d="M34 30L38 26L40 28" stroke="#FF3B30" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

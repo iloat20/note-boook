@@ -1,5 +1,5 @@
 /* ═════════════════════════════════════════╗
-   小红书风格底部导航栏 (XHS Tab Bar)
+   高级底部导航栏动画 (Premium Tab Bar)
    ╚════════════════════════════════════════╝ */
 
 .tab-bar {
@@ -9,9 +9,11 @@
   bottom: 0;
   left: 0;
   right: 0;
-  height: 104rpx;
-  background: var(--xhs-surface, #FFFFFF);
-  border-top: 1rpx solid var(--xhs-divider, rgba(0, 0, 0, 0.04));
+  height: 62rpx;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1rpx solid rgba(0, 0, 0, 0.04);
   padding-bottom: env(safe-area-inset-bottom);
   z-index: 999;
 }
@@ -22,30 +24,48 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: var(--xhs-space-sm, 16rpx) 0 var(--xhs-space-xs, 8rpx);
+  position: relative;
+  padding: 0;
 }
 
 .tab-icon {
-  width: 48rpx;
-  height: 48rpx;
-  margin-bottom: var(--xhs-space-xxs, 4rpx);
-  transition: var(--xhs-transition, all 200ms cubic-bezier(0.4, 0, 0.2, 1));
+  display: none;
 }
 
 .tab-text {
-  font-size: var(--xhs-font-xs, 20rpx);
+  font-size: 26rpx;
   color: var(--xhs-caption-light, #C7C7CC);
   line-height: 1;
   letter-spacing: 0.01em;
-  transition: var(--xhs-transition, all 200ms cubic-bezier(0.4, 0, 0.2, 1));
+  transition: all 350ms cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0.7;
 }
 
-/* Active text */
+/* Active state */
 .tab-item.active .tab-text {
   color: var(--xhs-title, #1C1C1E);
   font-weight: var(--xhs-weight-semibold, 600);
+  opacity: 1;
+}
+
+/* Active indicator - 文字下方红线 */
+.tab-item::after {
+  content: '';
+  position: absolute;
+  bottom: 8rpx;
+  left: 50%;
+  transform: translateX(-50%) scaleX(0);
+  width: 48rpx;
+  height: 3rpx;
+  background: var(--xhs-primary, #FF3B30);
+  border-radius: 1.5rpx;
+  transition: all 350ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.tab-item.active::after {
+  transform: translateX(-50%) scaleX(1);
 }
 
 .tab-item:active {
-  transform: scale(0.95);
+  opacity: 0.6;
 }

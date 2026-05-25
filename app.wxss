@@ -1,25 +1,27 @@
 /* ═════════════════════════════════════════╗
-   小红书风格设计系统 v3 (Xiaohongshu Design)
+   股票记账设计系统 v4 (StockBook Design)
    ╚════════════════════════════════════════╝ */
 
 /* === Design Tokens === */
 page {
   /* ── Brand Colors ── */
-  --xhs-primary: #FF2442;
-  --xhs-primary-dark: #D81E36;
-  --xhs-primary-light: #FF6B7A;
-  --xhs-primary-bg: rgba(255, 36, 66, 0.06);
-  --xhs-primary-bg-2: rgba(255, 36, 66, 0.12);
-  --xhs-primary-tag: rgba(255, 36, 66, 0.1);
+  --xhs-primary: #FF3B30;
+  --xhs-primary-dark: #D93025;
+  --xhs-primary-light: #FF6B61;
+  --xhs-primary-bg: rgba(255, 59, 48, 0.06);
+  --xhs-primary-bg-2: rgba(255, 59, 48, 0.12);
+  --xhs-primary-tag: rgba(255, 59, 48, 0.1);
+  --xhs-secondary: #007AFF;
+  --xhs-secondary-bg: rgba(0, 122, 255, 0.08);
 
   /* ── Neutral / Background ── */
-  --xhs-bg: #FFFFFF;
-  --xhs-bg-secondary: #F5F5F7;
-  --xhs-bg-tertiary: #F0F0F2;
+  --xhs-bg: #FAFAFC;
+  --xhs-bg-secondary: #F2F2F7;
+  --xhs-bg-tertiary: #E5E5EA;
   --xhs-surface: #FFFFFF;
-  --xhs-surface-hover: #FAFAFA;
-  --xhs-glass-bg: rgba(255, 255, 255, 0.78);
-  --xhs-glass-border: rgba(255, 255, 255, 0.3);
+  --xhs-surface-hover: #F8F8FA;
+  --xhs-glass-bg: rgba(255, 255, 255, 0.85);
+  --xhs-glass-border: rgba(255, 255, 255, 0.4);
 
   /* ── Text ── */
   --xhs-title: #1C1C1E;
@@ -86,6 +88,7 @@ page {
   --xhs-space-xl: 48rpx;
   --xhs-space-2xl: 64rpx;
   --xhs-space-3xl: 80rpx;
+  --page-margin: 20rpx;
 
   /* ── Font Scale ── */
   --xhs-font-xs: 20rpx;
@@ -309,7 +312,7 @@ page {
 /* === Page Container === */
 .xhs-page {
   min-height: 100vh;
-  padding: var(--xhs-space-lg);
+  padding: var(--page-margin);
   padding-bottom: calc(80px + env(safe-area-inset-bottom));
   box-sizing: border-box;
   display: flex;
@@ -512,4 +515,145 @@ page {
 .dissolving {
   animation: dissolve-out 350ms ease-in forwards;
   pointer-events: none;
+}
+
+/* === Number Pop Animation === */
+@keyframes number-pop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+
+.number-updated {
+  animation: number-pop 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* === Gradient Card === */
+.xhs-gradient-card {
+  background: linear-gradient(135deg, var(--xhs-primary) 0%, var(--xhs-primary-light) 100%);
+  color: white;
+}
+
+.xhs-gradient-card .xhs-title,
+.xhs-gradient-card .xhs-body,
+.xhs-gradient-card .xhs-caption {
+  color: white;
+}
+
+/* ═════════════════════════════════════════╗
+   页面入场动画系统 (Page Entrance Animations)
+   ╚════════════════════════════════════════╝ */
+
+/* Page container for entrance animations */
+.page-entrance {
+  animation: pageFadeInUp 500ms cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+@keyframes pageFadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Staggered children animations */
+.animate-stagger {
+  opacity: 0;
+  transform: translateY(20px);
+  animation: staggerFadeInUp 500ms cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+@keyframes staggerFadeInUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Stagger delay classes */
+.stagger-delay-1 { animation-delay: 80ms; }
+.stagger-delay-2 { animation-delay: 160ms; }
+.stagger-delay-3 { animation-delay: 240ms; }
+.stagger-delay-4 { animation-delay: 320ms; }
+.stagger-delay-5 { animation-delay: 400ms; }
+.stagger-delay-6 { animation-delay: 480ms; }
+.stagger-delay-7 { animation-delay: 560ms; }
+.stagger-delay-8 { animation-delay: 640ms; }
+
+/* Fade in only */
+.animate-fade-in {
+  opacity: 0;
+  animation: fadeIn 400ms ease-out forwards;
+}
+
+@keyframes fadeIn {
+  to { opacity: 1; }
+}
+
+/* Scale in */
+.animate-scale-in {
+  opacity: 0;
+  transform: scale(0.9);
+  animation: scaleIn 400ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes scaleIn {
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Slide in from left */
+.animate-slide-left {
+  opacity: 0;
+  transform: translateX(-30px);
+  animation: slideFromLeft 450ms cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+@keyframes slideFromLeft {
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Slide in from right */
+.animate-slide-right {
+  opacity: 0;
+  transform: translateX(30px);
+  animation: slideFromRight 450ms cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+@keyframes slideFromRight {
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Smooth hover effect */
+.hover-lift {
+  transition: all 250ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.hover-lift:active {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+}
+
+/* Loading shimmer */
+.shimmer {
+  background: linear-gradient(90deg, var(--xhs-divider) 25%, rgba(0, 0, 0, 0.04) 37%, var(--xhs-divider) 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: 0 0; }
 }

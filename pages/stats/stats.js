@@ -1,4 +1,4 @@
-const { getStatsByPeriod, getPeriodStatsList, getStrategyStats } = require('../../utils/services/statsService')
+const { getStatsByPeriod, getPeriodStatsList, getStrategyStats, getTotalXIRR } = require('../../utils/services/statsService')
 const { getClearedPositions, getPositionSummary } = require('../../utils/services/positionService')
 const { Stock, Transaction, Dividend } = require('../../utils/models/index')
 const { fmt, fmtDate } = require('../../utils/helpers/format')
@@ -114,10 +114,24 @@ Page({
     const totalPnL = totalRecovery - totalInvestment + cnyDividendIncome
     const totalReturnRate = totalInvestment > 0 ? (totalPnL / totalInvestment) * 100 : 0
 
+    let xirrValue = null
+    let xirrText = '--'
+    try {
+      const { calcXIRRForRange } = require('../../utils/helpers/xirr')
+      xirrValue = await calcXIRRForRange(startDate, endDate)
+      if (xirrValue !== null) {
+        xirrText = (xirrValue >= 0 ? '+' : '') + xirrValue.toFixed(2) + '%'
+      }
+    } catch (e) {
+      console.error('XIRR 计算失败:', e)
+    }
+
     const stats = {
       totalInvestment: totalInvestment,
       totalRecovery: totalRecovery,
       totalPnL: totalPnL,
+      xirrValue: xirrValue,
+      xirrText: xirrText,
       totalInvestmentText: fmt(totalInvestment),
       totalRecoveryText: fmt(totalRecovery),
       totalPnLText: fmt(totalPnL),
@@ -129,6 +143,7 @@ Page({
 
     const detailItems = [
       { label: '已实现盈亏', value: fmt(totalPnL), prefix: totalPnL >= 0 ? '+' : '', colorClass: totalPnL >= 0 ? 'profit' : 'loss' },
+      { label: '内部收益率(XIRR)', value: xirrText !== '--' ? xirrText.replace('%', '') : '--', prefix: xirrValue !== null && xirrValue >= 0 ? '+' : '', colorClass: xirrValue !== null ? (xirrValue >= 0 ? 'profit' : 'loss') : '' },
       { label: '分红收益', value: fmt(cnyDividendIncome), prefix: '+', colorClass: 'profit' },
       { label: '买入手续费', value: fmt(cnyBuyFee), prefix: '-', colorClass: '' },
       { label: '卖出手续费', value: fmt(cnySellFee), prefix: '-', colorClass: '' }
@@ -306,6 +321,21 @@ Page({
       return s
     })
 
+    let yearXIRR = null
+    try {
+      const { calcXIRRForRange } = require('../../utils/helpers/xirr')
+      yearXIRR = await calcXIRRForRange(yearStart, yearEnd)
+    } catch (e) {
+      console.error('年度报告 XIRR 计算失败:', e)
+    }
+
+    let totalXIRR = null
+    try {
+      totalXIRR = await getTotalXIRR()
+    } catch (e) {
+      console.error('总 XIRR 计算失败:', e)
+    }
+
     this.setData({
       showAnnualReport: true,
       annualReportData: {
@@ -314,6 +344,10 @@ Page({
         buyCount: buyCount,
         sellCount: sellCount,
         winRate: winRate,
+        yearXIRR: yearXIRR,
+        yearXIRRText: yearXIRR !== null ? ((yearXIRR >= 0 ? '+' : '') + yearXIRR.toFixed(2) + '%') : '--',
+        totalXIRR: totalXIRR,
+        totalXIRRText: totalXIRR !== null ? ((totalXIRR >= 0 ? '+' : '') + totalXIRR.toFixed(2) + '%') : '--',
         totalPnL: parseFloat(yearPnL.toFixed(2)),
         totalPnLText: fmt(Math.abs(yearPnL)),
         totalPnLPercent: yearPnLPercent,

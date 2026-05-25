@@ -9,6 +9,7 @@ const PriceCache = require('../models/priceCache')
 const { getStrategyStats: getStrategyStatsFromTransaction } = require('../models/strategy')
 const { calcPosition } = require('../helpers/positionCalculator')
 const { caches } = require('../cache/cacheManager')
+const { calcXIRRForRange, getTotalXIRR } = require('../helpers/xirr')
 
 // 周期统计数据缓存
 
@@ -329,5 +330,7 @@ module.exports = {
   getTotalStats,
   getStatsByPeriod,
   getPeriodStatsList,
-  getStrategyStats
+  getStrategyStats,
+  calcXIRRForRange,
+  getTotalXIRR
 }

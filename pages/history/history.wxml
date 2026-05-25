@@ -1,9 +1,15 @@
-<view class="page-container" style="padding-top: {{statusBarHeight + navBarHeight}}px;">
-  <!-- 标题栏（仅间距） -->
-  <view class="page-title"></view>
+<view class="page-container page-entrance" style="padding-top: {{statusBarHeight + navBarHeight}}px;">
+  <!-- 标题栏 -->
+  <view class="page-title animate-stagger stagger-delay-1">
+    <view class="title-row">
+      <view class="title-icon-wrap">
+        <image class="title-icon" src="/images/title-history.svg" mode="aspectFit" />
+      </view>
+    </view>
+  </view>
 
   <!-- 搜索栏 (小红书风格圆角) -->
-  <view class="search-bar-wrap">
+  <view class="search-bar-wrap animate-stagger stagger-delay-2">
     <view class="search-bar">
       <image src="/images/search.svg" mode="aspectFit" class="search-icon" />
       <input class="search-input" placeholder="搜索股票代码/名称..." value="{{searchKeyword}}" bindinput="onSearchInput" />
@@ -30,13 +36,14 @@
 
   <!-- 类型筛选 (买入/卖出/分红) -->
   <liquid-slider
+    class="animate-stagger stagger-delay-3"
     tabs="{{filterTabs}}"
     currentKey="{{currentFilter}}"
     bind:change="onFilterTabChange"
   />
 
   <!-- 市场和策略筛选 (合并为一行滑动) -->
-  <scroll-view scroll-x class="filter-chips" enhanced show-scrollbar="{{false}}">
+  <scroll-view scroll-x class="filter-chips animate-stagger stagger-delay-4" enhanced show-scrollbar="{{false}}">
     <view class="chip-row">
       <!-- 市场筛选 -->
       <view
@@ -64,7 +71,7 @@
   </scroll-view>
 
   <!-- 记录列表 -->
-  <scroll-view wx:if="{{groupedHistory.length > 0}}" class="scroll-container" scroll-y bindscrolltolower="loadMore" enhanced show-scrollbar="{{false}}">
+  <scroll-view wx:if="{{groupedHistory.length > 0}}" class="scroll-container animate-stagger stagger-delay-5" scroll-y bindscrolltolower="loadMore" enhanced show-scrollbar="{{false}}">
     <view wx:for="{{groupedHistory}}" wx:key="date" class="section">
       <!-- 日期标题 (更突出) -->
       <view class="date-header">
@@ -118,7 +125,7 @@
     </view>
 
     <!-- 加载更多 -->
-    <view wx:if="{{hasMore}}" class="load-more" bindtap="loadMore">
+    <view wx:if="{{hasMore}}" class="load-more animate-stagger stagger-delay-6" bindtap="loadMore">
       <text wx:if="{{!loadingMore}}" class="load-more-text">展开更多记录</text>
       <view wx:else class="loading-dots">
         <view class="dot"></view>
@@ -126,7 +133,7 @@
         <view class="dot"></view>
       </view>
     </view>
-    <view wx:else class="no-more">
+    <view wx:else class="no-more animate-stagger stagger-delay-6">
       <text class="no-more-text">— 已经到底了 —</text>
     </view>
     <view style="height: {{selectMode ? '300rpx' : '160rpx'}};"></view>
@@ -154,8 +161,8 @@
   <!-- 空状态 -->
   <empty-state wx:else icon="📝" title="暂无记录" desc="开始记录您的每一笔交易吧" showSlot="{{true}}">
     <view slot="actions" class="empty-actions">
-      <view class="empty-btn" bindtap="goToRecord">✏️ 添加交易</view>
-      <view class="empty-btn" bindtap="goToDividend">💰 添加分红</view>
+      <view class="empty-btn animate-scale-in" bindtap="goToRecord">✏️ 添加交易</view>
+      <view class="empty-btn animate-scale-in" style="animation-delay: 100ms;" bindtap="goToDividend">💰 添加分红</view>
     </view>
   </empty-state>
 </view>

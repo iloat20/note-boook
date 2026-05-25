@@ -7,11 +7,6 @@
     data-path="{{item.pagePath}}"
     data-index="{{index}}"
   >
-    <image
-      class="tab-icon"
-      src="{{selected === index ? item.selectedIconPath : item.iconPath}}"
-      mode="aspectFit"
-    />
     <text class="tab-text">{{item.text}}</text>
   </view>
 </view>

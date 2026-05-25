@@ -31,6 +31,14 @@
           <text class="ar-grid-value">{{data.sellCount}}</text>
           <text class="ar-grid-label">卖出次数</text>
         </view>
+        <view class="ar-grid-item">
+          <text class="ar-grid-value {{data.yearXIRR >= 0 ? 'ar-profit' : data.yearXIRR < 0 ? 'ar-loss' : ''}}">{{data.yearXIRRText || '--'}}</text>
+          <text class="ar-grid-label">XIRR</text>
+        </view>
+        <view class="ar-grid-item">
+          <text class="ar-grid-value {{data.totalXIRR >= 0 ? 'ar-profit' : data.totalXIRR < 0 ? 'ar-loss' : ''}}">{{data.totalXIRRText || '--'}}</text>
+          <text class="ar-grid-label">累计XIRR</text>
+        </view>
       </view>
     </view>
 

@@ -308,6 +308,52 @@ Page({ ...touchGestureMixin,
       }
   },
 
+  _updateSummary() {
+    const allPositions = this.data._allPositions || []
+    const rates = this.data._rates || { usdToCny: 1, hkdToCny: 1 }
+
+    let totalMarketValue = 0
+    let totalPnL = 0
+    let totalInvestment = 0
+
+    const portfolioPositions = allPositions.filter(p => p.quantity > 0)
+    const positionIds = new Set(portfolioPositions.map(p => p.id))
+
+    portfolioPositions.forEach(p => {
+      const rate = getRate(p.market, rates)
+      if (p.currentPrice && p.quantity > 0) {
+        totalMarketValue += p.currentPrice * p.quantity * rate
+      }
+      totalPnL += (p.floatingPnL || 0) * rate
+        + (p.realizedPnL || 0) * rate
+        + (p.dividendIncome || 0) * rate
+    })
+
+    const allTransactions = Transaction.getAll()
+    allTransactions.forEach(t => {
+      if (positionIds.has(t.stockId) && t.type === 'BUY') {
+        const tRate = getRate(allPositions.find(p => p.id === t.stockId)?.market, rates)
+        totalInvestment += (t.price * t.quantity + t.fee) * tRate
+      }
+    })
+
+    const totalPnLPercent = totalInvestment > 0 ? (totalPnL / totalInvestment * 100) : 0
+
+    this.setData({
+      totalMarketValue: parseFloat(totalMarketValue.toFixed(2)),
+      totalMarketValueText: fmt(totalMarketValue),
+      totalPnL: parseFloat(totalPnL.toFixed(2)),
+      totalPnLText: fmt(totalPnL),
+      totalPnLPercent: parseFloat(totalPnLPercent.toFixed(2))
+    })
+
+    animateAllValues(this, {
+      totalMarketValue: totalMarketValue,
+      totalPnL: totalPnL,
+      totalPnLPercent: totalPnLPercent
+    })
+  },
+
   // 更新市场 tab 计数
   _updateMarketTabs(positions) {
     const tabs = this.data.marketTabs.map(tab => ({
@@ -353,10 +399,20 @@ Page({ ...touchGestureMixin,
         return sum + (p.currentPrice || 0) * p.quantity * rate
       }, 0)
       
-      // floatingPnL 和 realizedPnL 已经是换算后的人民币金额
       const marketPnL = filteredPositions.reduce((sum, p) => {
-        return sum + (p.floatingPnL || 0) + (p.realizedPnL || 0)
+        const rate = getRate(p.market, rates)
+        return sum + (p.floatingPnL || 0) * rate + (p.realizedPnL || 0) * rate + (p.dividendIncome || 0) * rate
       }, 0)
+
+      let marketInvestment = 0
+      const filteredStockIds = new Set(filteredPositions.map(p => p.id))
+      Transaction.getAll().forEach(t => {
+        if (filteredStockIds.has(t.stockId) && t.type === 'BUY') {
+          const tRate = getRate(allPositions.find(p => p.id === t.stockId)?.market || '', rates)
+          marketInvestment += (t.price * t.quantity + t.fee) * tRate
+        }
+      })
+      const marketPnLPercent = marketInvestment > 0 ? (marketPnL / marketInvestment * 100) : 0
       
       that.setData({
         currentMarket: key,
@@ -365,7 +421,7 @@ Page({ ...touchGestureMixin,
         displayValues: {
           totalMarketValue: fmt(marketValue),
           totalPnL: fmt(marketPnL),
-          totalPnLPercent: '0.00'
+          totalPnLPercent: fmt(marketPnLPercent)
         }
       })
     }, TIMING_CONFIG.TAB_SWITCH_ANIM_DELAY)
@@ -466,6 +522,7 @@ Page({ ...touchGestureMixin,
           return p
         })
         this.setData({ positions: updated, _allPositions: allUpdated })
+        this._updateSummary()
       } else {
         // 无有效结果时仍刷新持仓（可能清理过期缓存等）
         this._loadData()

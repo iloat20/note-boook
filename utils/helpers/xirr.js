@@ -69,11 +69,10 @@ async function buildCashFlows(transactions, dividends, stocks) {
   
   transactions.forEach(t => {
     const r = getRate(stockMarket[t.stockId], rates)
-    const amount = t.price * t.quantity + t.fee
     if (t.type === 'BUY') {
-      items.push({ date: t.date, amount: -amount })
+      items.push({ date: t.date, amount: -(t.price * t.quantity + t.fee) * r })
     } else {
-      items.push({ date: t.date, amount: amount - t.fee })
+      items.push({ date: t.date, amount: (t.price * t.quantity - t.fee) * r })
     }
   })
   
@@ -91,7 +90,6 @@ async function buildCashFlows(transactions, dividends, stocks) {
   
   const lastDate = new Date()
   lastDate.setHours(23, 59, 59, 999)
-  const lastPrice = require('./positionCalculator').getLastPrice || null
   
   const holdingPositions = {}
   transactions.forEach(t => {

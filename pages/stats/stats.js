@@ -34,15 +34,14 @@ Page({
     this.setData(getApp().getNavBarInfo())
   },
 
-  onShow() {
+  async onShow() {
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({ selected: 2 })
     }
     if (appStore.getState('dataDirty')) {
       appStore.commit('MARK_CLEAN')
     }
-    this.loadStats()
-    this.setData({ loading: false })
+    await this.loadStats()
   },
 
   switchPeriod: function (e) {
@@ -153,9 +152,9 @@ Page({
   },
 
   _buildTradeList() {
-    const stocks = wx.getStorageSync('stock_trade_stocks') || []
+    const stocks = Stock.getAll()
     const stockMap = buildStockMap(stocks)
-    const rawTx = wx.getStorageSync('stock_trade_transactions') || []
+    const rawTx = Transaction.getAll()
     
     const txList = rawTx.map(t => {
       const stock = stockMap[t.stockId]
@@ -163,12 +162,14 @@ Page({
       const quantity = parseInt(t.quantity) || 0
       const fee = parseFloat(t.fee) || 0
       const amount = price * quantity
+      const dateObj = new Date(t.date)
       const item = {
         id: t.id,
         stockId: t.stockId,
         type: t.type,
         typeText: t.type === 'BUY' ? '买入' : '卖出',
-        dateText: t.date ? fmtDate(new Date(t.date)) : '-',
+        dateText: t.date ? fmtDate(dateObj) : '-',
+        _sortKey: dateObj.getTime(),
         price: price,
         priceText: fmt(price),
         quantity: quantity,
@@ -185,12 +186,14 @@ Page({
 
     const divList = Dividend.getAll().map(d => {
       const stock = stockMap[d.stockId]
+      const dateObj = new Date(d.date)
       return {
         id: d.id,
         stockId: d.stockId,
         type: 'DIVIDEND',
         typeText: '分红',
-        dateText: d.date ? fmtDate(new Date(d.date)) : '-',
+        dateText: d.date ? fmtDate(dateObj) : '-',
+        _sortKey: dateObj.getTime(),
         amountText: fmt(d.totalAmount),
         totalPnLText: fmt(d.totalAmount),
         name: stock ? stock.name : '-',
@@ -202,7 +205,7 @@ Page({
     let completeTrades = []
     let i = 0, j = 0
     while (i < txList.length && j < divList.length) {
-      if ((txList[i].dateText || '') >= (divList[j].dateText || '')) {
+      if (txList[i]._sortKey >= divList[j]._sortKey) {
         completeTrades.push(txList[i]); i++
       } else {
         completeTrades.push(divList[j]); j++
@@ -238,7 +241,8 @@ Page({
       stats,
       detailItems,
       completeTrades,
-      clearedPositions
+      clearedPositions,
+      loading: false
     })
   },
 

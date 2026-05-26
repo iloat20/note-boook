@@ -6,6 +6,7 @@ function _calcAShare(type, amount) {
   const config = FEE_CONFIG.A_SHARE
   let commission = amount * config.commissionRate
   if (commission < config.commissionMin) commission = config.commissionMin
+  commission = Math.round(commission * 100) / 100
   let stampDuty = 0
   if (type === TRANSACTION_TYPE.SELL) {
     stampDuty = amount * config.stampDutyRate

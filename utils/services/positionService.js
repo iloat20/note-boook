@@ -120,9 +120,7 @@ function getAllPositions(forceRefresh = false) {
     stockIds.forEach(id => { caches.position.delete(id) })
   }
   
-  const positions = mergePositions(stocks)
-  sortByTotalPnL(positions)
-  return positions
+  return sortByTotalPnL(mergePositions(stocks))
 }
 
 /**
@@ -133,15 +131,12 @@ function getAllPositions(forceRefresh = false) {
 function getPortfolioPositions(market = null) {
   const stocks = market ? Stock.getByMarket(market) : Stock.getAll()
   
-  const positions = mergePositions(
+  return sortByTotalPnL(mergePositions(
     stocks,
     function (p) {
       return p.quantity > 0 || Math.abs(p.realizedPnL) > 0.01 || Math.abs(p.dividendIncome) > 0.01
     }
-  )
-  
-  sortByTotalPnL(positions)
-  return positions
+  ))
 }
 
 /**

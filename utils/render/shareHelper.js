@@ -19,6 +19,10 @@ function sharePortfolio(page) {
 
   loading('生成截图中...')
 
+  const windowInfo = wx.getWindowInfo()
+  const canvasWidth = windowInfo.screenWidth || 375
+  const canvasHeight = windowInfo.screenHeight || 667
+
   let query = wx.createSelectorQuery()
   query.select('#shareCanvas').fields({ node: true, size: true }).exec(function (res) {
     if (!res || !res[0] || !res[0].node) {
@@ -29,9 +33,9 @@ function sharePortfolio(page) {
 
     let canvas = res[0].node
     let ctx = canvas.getContext('2d')
-    let dpr = 2
-    canvas.width = 375 * dpr
-    canvas.height = 667 * dpr
+    let dpr = wx.getWindowInfo().pixelRatio || 2
+    canvas.width = canvasWidth * dpr
+    canvas.height = canvasHeight * dpr
     ctx.scale(dpr, dpr)
 
     let now = new Date()
@@ -54,17 +58,17 @@ function sharePortfolio(page) {
       })
     }
 
-    renderPortfolioCard(ctx, canvas, cardData, 375, 667)
+    renderPortfolioCard(ctx, canvas, cardData, canvasWidth, canvasHeight)
 
     setTimeout(function () {
       wx.canvasToTempFilePath({
         canvas: canvas,
         x: 0,
         y: 0,
-        width: 375 * dpr,
-        height: 667 * dpr,
-        destWidth: 375 * dpr,
-        destHeight: 667 * dpr,
+        width: canvasWidth * dpr,
+        height: canvasHeight * dpr,
+        destWidth: canvasWidth * dpr,
+        destHeight: canvasHeight * dpr,
         success: function (fileRes) {
           hideLoading()
           _showShareActions(fileRes.tempFilePath)

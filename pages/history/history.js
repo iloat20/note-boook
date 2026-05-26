@@ -281,14 +281,6 @@ Page({
     this.toggleSelectItem(e)
   },
 
-  _getDisplayIds() {
-    const ids = []
-    this.data.groupedHistory.forEach(group => {
-      group.items.forEach(item => ids.push(item.id))
-    })
-    return ids
-  },
-
   batchDelete() {
     const count = this.data.selectedIds.length
     if (count === 0) return

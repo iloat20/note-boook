@@ -66,17 +66,32 @@
         </view>
       </view>
 
-      <!-- XIRR 内部收益率 -->
+      <!-- 收益率指标 (XIRR/周收益率) -->
       <view class="xhs-feed-card">
         <view class="xhs-feed-card-inner">
           <view class="xhs-feed-card-cover cover-pnl">
             <text class="xhs-feed-card-emoji">🎯</text>
           </view>
           <view class="xhs-feed-card-body">
-            <text class="xhs-feed-card-value {{stats.xirrValue >= 0 ? 'xhs-profit' : stats.xirrValue < 0 ? 'xhs-loss' : ''}}">
-              {{stats.xirrText || '--'}}
+            <text class="xhs-feed-card-value {{stats.returnValue >= 0 ? 'xhs-profit' : stats.returnValue < 0 ? 'xhs-loss' : ''}}">
+              {{stats.returnText || '--'}}
             </text>
-            <text class="xhs-feed-card-label">XIRR</text>
+            <text class="xhs-feed-card-label">{{stats.returnLabel || 'XIRR'}}</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 分红收益 -->
+      <view class="xhs-feed-card">
+        <view class="xhs-feed-card-inner">
+          <view class="xhs-feed-card-cover cover-dividend">
+            <text class="xhs-feed-card-emoji">💰</text>
+          </view>
+          <view class="xhs-feed-card-body">
+            <text class="xhs-feed-card-value" style="color: var(--xhs-dividend);">
+              {{stats.dividendIncomeText || '0.00'}}
+            </text>
+            <text class="xhs-feed-card-label">分红收益</text>
           </view>
         </view>
       </view>

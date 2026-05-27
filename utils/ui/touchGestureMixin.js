@@ -16,6 +16,7 @@ module.exports = {
     this._touchStartX = t.clientX
     this._touchStartY = t.clientY
     this._swiping = null
+    this._lastSwipeTime = 0
   },
 
   onTouchMove(e) {
@@ -31,6 +32,11 @@ module.exports = {
       this._swiping = Math.abs(dx) > Math.abs(dy)
       if (!this._swiping) return
     }
+
+    // 节流：每帧最多更新一次（~16ms）
+    const now = Date.now()
+    if (now - this._lastSwipeTime < 16) return
+    this._lastSwipeTime = now
 
     const index = e.currentTarget.dataset.index
     const positions = this.data.positions

@@ -44,9 +44,11 @@ function calcPosition(stockId, transactions, dividends, currentPrice) {
   })
 
   let positionQuantity = totalBuyQuantity + shareDividendQty - totalSellQuantity
-  let avgCost = totalBuyQuantity > 0 ? (totalBuyAmount + totalBuyFee) / totalBuyQuantity : 0
+  let avgCost = (totalBuyQuantity + shareDividendQty) > 0
+    ? (totalBuyAmount + totalBuyFee) / (totalBuyQuantity + shareDividendQty)
+    : 0
 
-  let realizedPnL = totalBuyQuantity > 0
+  let realizedPnL = (totalBuyQuantity + shareDividendQty) > 0
     ? totalSellAmount - totalSellFee - avgCost * totalSellQuantity
     : totalSellAmount - totalSellFee
 

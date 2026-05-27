@@ -1,6 +1,6 @@
 /**
  * 页面 Mixin 工具
- * 提取页面公共逻辑（NavBar 初始化、dataDirty 检查等）
+ * 提取 tab 页公共逻辑（NavBar 初始化、TabBar 选中状态）
  */
 
 /**
@@ -17,7 +17,7 @@ function initPageData(pageData = {}) {
 }
 
 /**
- * 页面 onLoad 通用逻辑
+ * 页面 onLoad 通用逻辑：设置导航栏高度
  * @param {Object} page - 页面实例（this）
  */
 function onLoadMixin(page) {
@@ -25,29 +25,32 @@ function onLoadMixin(page) {
 }
 
 /**
- * 页面 onShow 通用逻辑
+ * Tab 页 onShow 公共逻辑：设置 TabBar 选中态
  * @param {Object} page - 页面实例（this）
- * @param {number} selectedTab - 选中的 tab 索引
- * @param {Function} loadDataFn - 加载数据的函数
+ * @param {number} tabIndex - tab 索引
  */
-function onShowMixin(page, selectedTab, loadDataFn) {
-  // 设置 tabBar 选中状态
+function setTabSelected(page, tabIndex) {
   if (typeof page.getTabBar === 'function' && page.getTabBar()) {
-    page.getTabBar().setData({ selected: selectedTab })
+    page.getTabBar().setData({ selected: tabIndex })
   }
-  
-  // 通过 appStore 检查数据是否过期
+}
+
+/**
+ * 检查并消费 dataDirty 标记
+ * @returns {boolean} 数据是否过期
+ */
+function consumeDirtyFlag() {
   const appStore = require('../state/appStore')
   if (appStore.getState('dataDirty')) {
-    if (typeof loadDataFn === 'function') {
-      loadDataFn.call(page)
-    }
     appStore.commit('MARK_CLEAN')
+    return true
   }
+  return false
 }
 
 module.exports = {
   initPageData,
   onLoadMixin,
-  onShowMixin
+  setTabSelected,
+  consumeDirtyFlag
 }

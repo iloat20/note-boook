@@ -93,10 +93,12 @@ Page({
       position: position,
       transactions: transactions,
       dividends: dividends,
+      disTransId: null,
+      disDivId: null,
       strategySummary: strategySummary,
       formatAvgCost: currency + fmt(position.avgCost),
       formatMarketValue: currency + fmt(marketValue),
-      formatDividendIncome: fmt(position.dividendIncome),
+      formatDividendIncome: (position.dividendIncome >= 0 ? '+' : '') + currency + fmt(position.dividendIncome),
       floatingPnLClass: position.floatingPnL >= 0 ? "profit" : "loss",
       floatingPnLText: (position.floatingPnL >= 0 ? "+" : "") + currency + fmt(Math.abs(position.floatingPnL)),
       floatingPnLPercent: calcFloatingPercent(position),
@@ -268,6 +270,7 @@ Page({
     }
 
     const transactions = Transaction.getByStockId(stockId)
+    const dividends = Dividend.getByStockId(stockId)
     if (transactions.length === 0) {
       wx.showToast({ title: '暂无交易记录，无法调整持仓', icon: 'none' })
       return
@@ -277,6 +280,7 @@ Page({
     let totalBuyQuantity = 0
     let totalBuyAmount = 0
     let totalSellQuantity = 0
+    let shareDividendQty = 0
 
     transactions.forEach(t => {
       if (t.type === 'BUY') {
@@ -287,17 +291,30 @@ Page({
       }
     })
 
-    const avgBuyPrice = totalBuyQuantity > 0 ? totalBuyAmount / totalBuyQuantity : 0
+    dividends.forEach(d => {
+      if (d.type === 'SHARE') shareDividendQty += d.shareQuantity || 0
+    })
 
-    const diff = totalCost - (totalBuyQuantity - totalSellQuantity) * avgBuyPrice
+    const totalShares = totalBuyQuantity + shareDividendQty
+    const avgBuyPrice = totalShares > 0 ? totalBuyAmount / totalShares : 0
+    const currentPosition = totalShares - totalSellQuantity
+
+    const diff = totalCost - currentPosition * avgBuyPrice
     const feeRate = 0.0003
     const syntheticFee = Math.abs(diff) * feeRate
 
+    if (Math.abs(diff) < avgBuyPrice * 0.5) {
+      wx.showToast({ title: '持仓已是最新的', icon: 'none' })
+      this.setData({ editMode: false })
+      return
+    }
+
     if (diff > 0) {
-      const syntheticBuy = Transaction.create(stockId, 'BUY', avgBuyPrice, Math.ceil(diff / avgBuyPrice), syntheticFee, new Date().toISOString(), '持仓调整', '手动调整持仓', [])
+      const buyQty = Math.max(Math.round(diff / avgBuyPrice), 1)
+      const syntheticBuy = Transaction.create(stockId, 'BUY', avgBuyPrice, buyQty, syntheticFee, new Date().toISOString(), '持仓调整', '手动调整持仓', [])
       Transaction.save(syntheticBuy)
     } else if (diff < 0) {
-      const sellQuantity = Math.min(Math.ceil(Math.abs(diff) / avgBuyPrice), totalBuyQuantity - totalSellQuantity)
+      const sellQuantity = Math.min(Math.round(Math.abs(diff) / avgBuyPrice), currentPosition)
       if (sellQuantity > 0) {
         const syntheticSell = Transaction.create(stockId, 'SELL', avgBuyPrice, sellQuantity, syntheticFee, new Date().toISOString(), '持仓调整', '手动调整持仓', [])
         Transaction.save(syntheticSell)

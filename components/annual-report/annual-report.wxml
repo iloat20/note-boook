@@ -1,5 +1,14 @@
-<view wx:if="{{data}}" class="ar-overlay" catchtouchmove>
-  <view class="ar-close" bindtap="onClose">✕</view>
+<view wx:if="{{data}}" class="ar-overlay">
+  <view class="ar-top-bar">
+    <view class="ar-close" bindtap="onClose">✕</view>
+    <view class="ar-export-btn" bindtap="onExportImage" wx:if="{{!exporting}}">
+      <text class="ar-export-icon">📷</text>
+      <text class="ar-export-text">保存图片</text>
+    </view>
+    <view class="ar-export-btn ar-exporting" wx:if="{{exporting}}">
+      <text class="ar-export-text">生成中...</text>
+    </view>
+  </view>
 
   <scroll-view scroll-y class="ar-scroll">
     <view class="ar-hero">
@@ -129,12 +138,4 @@
 
     <view style="height: 40px;"></view>
   </scroll-view>
-
-  <view class="ar-export-btn" bindtap="onExportImage" wx:if="{{!exporting}}">
-    <text class="ar-export-icon">📷</text>
-    <text class="ar-export-text">保存为图片</text>
-  </view>
-  <view class="ar-export-btn ar-exporting" wx:if="{{exporting}}">
-    <text class="ar-export-text">生成中...</text>
-  </view>
 </view>

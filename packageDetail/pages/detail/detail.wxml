@@ -144,7 +144,7 @@ bindtap="showDividendActions" data-id="{{item.id}}" data-type="dividend">
             <text class="caption">每股: {{item.perShareText}}</text>
             <text class="caption">数量: {{item.quantity}}股</text>
           </view>
-          <text class="body profit" style="font-weight: var(--weight-title); margin-top: 4px;">+{{item.totalText}}</text>
+          <text class="body profit" style="font-weight: var(--xhs-weight-bold); margin-top: 4px;">+{{item.totalText}}</text>
         </view>
       </view>
       <view wx:else class="card card-sm" style="text-align: center;">

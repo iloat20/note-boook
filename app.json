@@ -27,7 +27,7 @@
       "packages": ["packageDetail", "packageRecord"]
     },
     "pages/stats/stats": {
-      "packages": ["packageRecord"]
+      "packages": ["packageRecord", "packageDetail"]
     }
   },
   "window": {

@@ -8,90 +8,92 @@ const { getMarketLabel } = require('../constants/market')
 function renderPortfolioCard(ctx, canvas, data, width, height) {
   let dpr = data.dpr || 2
 
-  // ====== 背景 ======
-  let bgGradient = ctx.createLinearGradient(0, 0, 0, height)
-  bgGradient.addColorStop(0, '#1A1A2E')
-  bgGradient.addColorStop(0.5, '#16213E')
-  bgGradient.addColorStop(1, '#0F3460')
-  ctx.fillStyle = bgGradient
+  // ====== 背景（白底，匹配 app 风格） ======
+  ctx.fillStyle = '#FAFAFC'
   ctx.fillRect(0, 0, width, height)
+
+  // ====== 顶部品牌色条 ======
+  let headerGrad = ctx.createLinearGradient(0, 0, width, 0)
+  headerGrad.addColorStop(0, '#FF3B30')
+  headerGrad.addColorStop(1, '#FF6B61')
+  ctx.fillStyle = headerGrad
+  ctx.fillRect(0, 0, width, 180)
 
   // ====== 标题 ======
   ctx.fillStyle = '#FFFFFF'
-  ctx.font = 'bold 20px sans-serif'
+  ctx.font = 'bold 18px sans-serif'
   ctx.textAlign = 'center'
-  ctx.fillText('我的股票持仓', width / 2, 50)
+  ctx.fillText('我的持仓', width / 2, 45)
 
   // ====== 日期 ======
   ctx.font = '12px sans-serif'
-  ctx.fillStyle = 'rgba(255,255,255,0.6)'
-  ctx.fillText(data.date || '', width / 2, 75)
+  ctx.fillStyle = 'rgba(255,255,255,0.7)'
+  ctx.fillText(data.date || '', width / 2, 65)
 
   // ====== 总市值 ======
   ctx.fillStyle = '#FFFFFF'
-  ctx.font = 'bold 32px sans-serif'
+  ctx.font = 'bold 30px sans-serif'
   ctx.textAlign = 'center'
-  ctx.fillText('¥' + data.totalMarketValueText || '0.00', width / 2, 140)
+  ctx.fillText('¥' + (data.totalMarketValueText || '0.00'), width / 2, 115)
 
   // ====== 总盈亏 ======
-  let pnlColor = data.totalPnL >= 0 ? '#FF6B6B' : '#34C759'
+  let pnlColor = data.totalPnL >= 0 ? '#FFFFFF' : 'rgba(255,255,255,0.8)'
   ctx.fillStyle = pnlColor
-  ctx.font = '16px sans-serif'
+  ctx.font = '14px sans-serif'
   let pnlText = (data.totalPnL >= 0 ? '+' : '') + (data.totalPnLText || '0.00')
   let percentText = (data.totalPnLPercent >= 0 ? '+' : '') + (data.totalPnLPercent || '0') + '%'
-  ctx.fillText(pnlText + ' (' + percentText + ')', width / 2, 170)
-
-  // ====== 分割线 ======
-  ctx.strokeStyle = 'rgba(255,255,255,0.1)'
-  ctx.lineWidth = 1
-  ctx.beginPath()
-  ctx.moveTo(30, 200)
-  ctx.lineTo(width - 30, 200)
-  ctx.stroke()
+  ctx.fillText(pnlText + ' (' + percentText + ')', width / 2, 145)
 
   // ====== 持仓数量 ======
-  ctx.fillStyle = 'rgba(255,255,255,0.6)'
+  ctx.fillStyle = '#999999'
   ctx.font = '12px sans-serif'
   ctx.textAlign = 'left'
-  ctx.fillText('持仓 ' + data.positionCount + ' 只', 30, 225)
+  ctx.fillText('持仓 ' + data.positionCount + ' 只', 20, 210)
 
   // ====== 持仓列表（最多 5 只）=====
   let positions = data.positions || []
-  let startY = 250
+  let startY = 230
 
   positions.forEach(function (p, i) {
     let y = startY + i * 55
 
-    // 市场标签
-    let marketLabel = getMarketLabel(p.market) || ''
-    ctx.fillStyle = p.market === 'A_SHARE' ? '#007AFF' : p.market === 'HK_SHARE' ? '#FF9500' : '#AF52DE'
-    ctx.font = '11px sans-serif'
-    ctx.textAlign = 'center'
-    ctx.fillText(marketLabel, 50, y + 15)
-
-    // 股票名称 + 代码
+    // 卡片背景
     ctx.fillStyle = '#FFFFFF'
+    ctx.beginPath()
+    ctx.roundRect(16, y - 5, width - 32, 48, 8)
+    ctx.fill()
+
+    // 市场标签圆点
+    let tagColor = p.market === 'A_SHARE' ? '#007AFF' : p.market === 'HK_SHARE' ? '#FF9500' : '#AF52DE'
+    ctx.fillStyle = tagColor
+    ctx.beginPath()
+    ctx.arc(32, y + 18, 4, 0, Math.PI * 2)
+    ctx.fill()
+
+    // 股票名称
+    ctx.fillStyle = '#1C1C1E'
     ctx.font = '14px sans-serif'
     ctx.textAlign = 'left'
-    ctx.fillText(p.name || '', 75, y + 15)
+    ctx.fillText(p.name || '', 44, y + 15)
 
-    ctx.fillStyle = 'rgba(255,255,255,0.4)'
+    // 代码
+    ctx.fillStyle = '#999999'
     ctx.font = '11px sans-serif'
-    ctx.fillText(p.code || '', 75, y + 32)
+    ctx.fillText(p.code || '', 44, y + 32)
 
     // 盈亏
     let pnl = p.floatingPnL || 0
     ctx.fillStyle = pnl >= 0 ? '#FF6B6B' : '#34C759'
-    ctx.font = 'bold 16px sans-serif'
+    ctx.font = 'bold 15px sans-serif'
     ctx.textAlign = 'right'
-    ctx.fillText((pnl >= 0 ? '+' : '') + fmt(pnl), width - 30, y + 20)
+    ctx.fillText((pnl >= 0 ? '+' : '') + fmt(pnl), width - 24, y + 22)
   })
 
   // ====== 底部 ======
-  ctx.fillStyle = 'rgba(255,255,255,0.3)'
+  ctx.fillStyle = '#C7C7CC'
   ctx.font = '10px sans-serif'
   ctx.textAlign = 'center'
-  ctx.fillText('由「股票记账」生成', width / 2, height - 20)
+  ctx.fillText('股票记账 · ' + (data.date || ''), width / 2, height - 15)
 }
 
 module.exports = { renderPortfolioCard }

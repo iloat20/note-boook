@@ -46,10 +46,8 @@ function decodeGBK(arrayBuffer) {
 // A股代码前缀映射
 function getAsharePrefix(code) {
   const codeNum = parseInt(code)
-  if (codeNum >= 600000 && codeNum < 700000) return 'sh'   // 上海主板（600xxx-699xxx）
-  if (codeNum >= 688000 && codeNum < 690000) return 'sh'   // 科创板（688xxx）
-  if (codeNum >= 0 && codeNum < 400000) return 'sz'         // 深圳（000xxx-399xxx）
-  if (codeNum >= 300000 && codeNum < 400000) return 'sz'    // 创业板（300xxx）
+  if (codeNum >= 600000 && codeNum < 700000) return 'sh'   // 上海主板 + 科创板（600xxx-688xxx）
+  if (codeNum >= 0 && codeNum < 400000) return 'sz'         // 深圳主板 + 创业板（000xxx-300xxx）
   if (codeNum >= 800000 && codeNum < 900000) return 'bj'    // 北交所（8xxxxx）
   if (codeNum >= 400000 && codeNum < 500000) return 'bj'    // 北交所（4xxxxx）
   return 'sh'  // 默认上海

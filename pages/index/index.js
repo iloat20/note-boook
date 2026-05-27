@@ -72,11 +72,13 @@ Page({ ...touchGestureMixin,
     
     // 虚拟列表高度
     scrollHeight: 400,
+    displayCount: 20,
     
     // 加载状态（初始 false，_loadData 开始时会设为 true）
     loading: false,
     animating: false,
-    
+    entranceDone: false,
+
     showQuickRecord: false,
     deletingId: null,
     tabAnimating: false
@@ -98,8 +100,8 @@ Page({ ...touchGestureMixin,
     const scrollHeight = windowHeight - fixedHeight
     this.setData({ scrollHeight: Math.max(scrollHeight, 300) })
 
-    // 订阅状态变化
-    this._unsubscribePositions = positionStore.subscribe('positions', (newPositions) => {
+    // 订阅状态变化（使用 mutation type 作为 key，与 store 的 _notify 一致）
+    this._unsubscribePositions = positionStore.subscribe('SET_POSITIONS', (newPositions) => {
       this.setData({ positions: newPositions })
     })
 
@@ -107,24 +109,19 @@ Page({ ...touchGestureMixin,
     await this._loadData()
 
     // 只在交易时段或持仓无现价时（首次进入）获取行情
-    var hasNoPrice = this.data.positions.some(function (p) { return !p.currentPrice || p.currentPrice <= 0 })
+    var allPos = this.data._allPositions || this.data.positions
+    var hasNoPrice = allPos.some(function (p) { return !p.currentPrice || p.currentPrice <= 0 })
     if (isTradingTime() || hasNoPrice) {
       this._fetchPrices({ silent: true })
     }
   },
   
   async onShow() {
-    // 设置 tabBar 选中状态
-    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-      this.getTabBar().setData({ selected: 0 })
-    }
+    pageMixin.setTabSelected(this, 0)
 
-    const appStore = require('../../utils/state/appStore')
-    
     // 如果数据过期，先刷新持仓数据
-    if (appStore.getState('dataDirty')) {
+    if (pageMixin.consumeDirtyFlag()) {
       await this._loadData()
-      appStore.commit('MARK_CLEAN')
       // 添加/修改交易后自动获取一次现价，不区分交易时段，强制忽略缓存
       if (this.data.positions && this.data.positions.length > 0) {
         this._fetchPrices({ silent: true, force: true })
@@ -150,9 +147,12 @@ Page({ ...touchGestureMixin,
   },
   
   onPullDownRefresh() {
-    this._loadData(true)
+    this._loadData(true).then(function () {
+      wx.stopPullDownRefresh()
+    }).catch(function () {
+      wx.stopPullDownRefresh()
+    })
     this._fetchPrices()
-    wx.stopPullDownRefresh()
   },
   
   // ========== 数据加载 ==========
@@ -164,14 +164,8 @@ Page({ ...touchGestureMixin,
 
       // 使用 positionService 获取数据（已封装缓存逻辑）
       // 注意：getAllPositions 内部使用同步 storage 操作，无需 Promise
-      let positions = positionService.getAllPositions(forceRefresh)
+      const allPositions = positionService.getAllPositions(forceRefresh)
 
-      // 持仓页只显示持股数 > 0 的标的
-      positions = positions.filter(function (p) { return p.quantity > 0 })
-
-      // 更新 Store（会触发订阅回调）
-      positionStore.commit('SET_POSITIONS', positions)
-      
       // 获取汇率（港股/美股 → 人民币换算）
       const rates = await getRates()
       this._rates = rates
@@ -184,33 +178,38 @@ Page({ ...touchGestureMixin,
       let totalDividendIncome = 0
       let totalBuyFee = 0
       let totalInvestment = 0
-      
-      // 计算总市值、总成本、总盈亏（按汇率换算为人民币）
-      const portfolioPositions = positions.filter(p => p.quantity > 0)
-      
-      portfolioPositions.forEach(p => {
+
+      // 已实现盈亏和分红收入从所有持仓（含已清仓）计算
+      allPositions.forEach(p => {
         var rate = getRate(p.market, rates)
         totalRealizedPnL += (p.realizedPnL || 0) * rate
-        totalFloatingPnL += (p.floatingPnL || 0) * rate
         totalDividendIncome += (p.dividendIncome || 0) * rate
       })
-      
+
+      // 持仓页只显示持股数 > 0 的标的
+      const positions = allPositions.filter(function (p) { return p.quantity > 0 })
+
+      // 更新 Store（会触发订阅回调）
+      positionStore.commit('SET_POSITIONS', positions)
+
+      // 浮动盈亏和市值仅统计当前持仓
       positions.forEach(p => {
         var rate = getRate(p.market, rates)
-        if (p.currentPrice && p.quantity > 0) {
+        totalFloatingPnL += (p.floatingPnL || 0) * rate
+        if (p.currentPrice) {
           totalMarketValue += p.currentPrice * p.quantity * rate
         }
         totalCost += p.avgCost * p.quantity * rate
         totalBuyFee += (p.totalBuyFee || 0) * rate
       })
-      
-      // 计算总投资（买入金额 + 费用）
+
+      // 计算总投资（买入金额 + 费用，含已清仓股票）
       const allTransactions = Transaction.getAll()
-      const portfolioStockIds = new Set(portfolioPositions.map(p => p.id))
-      
+      const allStockIds = new Set(allPositions.map(p => p.id))
+
       allTransactions.forEach(t => {
-        if (portfolioStockIds.has(t.stockId) && t.type === 'BUY') {
-          var tRate = getRate(positions.find(p => p.id === t.stockId)?.market, rates)
+        if (allStockIds.has(t.stockId) && t.type === 'BUY') {
+          var tRate = getRate(allPositions.find(p => p.id === t.stockId)?.market, rates)
           totalInvestment += (t.price * t.quantity + t.fee) * tRate
         }
       })
@@ -277,7 +276,8 @@ Page({ ...touchGestureMixin,
         totalPnL: parseFloat(totalPnL.toFixed(2)),
         totalPnLText: fmt(totalPnL),
         totalPnLPercent: totalInvestment > 0 ? parseFloat((totalPnL / totalInvestment * 100).toFixed(2)) : 0,
-        loading: false
+        loading: false,
+        entranceDone: true
       })
       
       // 清除新增动画标记（动画完成后）
@@ -304,6 +304,7 @@ Page({ ...touchGestureMixin,
       } catch (err) {
         console.error('[Index] loadData error:', err)
         this.setData({ loading: false })
+        wx.showToast({ title: '数据加载失败', icon: 'none' })
         catchError(err, '加载失败')
       }
   },
@@ -382,7 +383,7 @@ Page({ ...touchGestureMixin,
     
     // 先触发退场动画
     this.setData({ tabAnimating: true })
-    
+
     // 等待退场动画完成后切换数据
     setTimeout(function() {
       // 从缓存数据中筛选对应市场的持仓
@@ -418,6 +419,7 @@ Page({ ...touchGestureMixin,
         currentMarket: key,
         positions: filteredPositions,
         tabAnimating: false,
+        displayCount: 20,
         displayValues: {
           totalMarketValue: fmt(marketValue),
           totalPnL: fmt(marketPnL),
@@ -444,6 +446,34 @@ Page({ ...touchGestureMixin,
     const stockId = e.currentTarget.dataset.stockId
     wx.navigateTo({
       url: `/packageDetail/pages/detail/detail?stockId=${stockId}`
+    })
+  },
+
+  // 持仓列表加载更多
+  loadMorePositions() {
+    const current = this.data.displayCount
+    const total = (this.data.positions || []).length
+    if (current < total) {
+      this.setData({ displayCount: Math.min(current + 20, total) })
+    }
+  },
+
+  // 长按持仓卡片 — 快捷操作菜单
+  onPositionLongPress(e) {
+    const stockId = e.currentTarget.dataset.stockId
+    const stock = (this.data._allPositions || []).find(p => p.id === stockId)
+    if (!stock) return
+    wx.showActionSheet({
+      itemList: ['查看详情', '快速卖出', '添加交易'],
+      success: (res) => {
+        if (res.tapIndex === 0) {
+          wx.navigateTo({ url: `/packageDetail/pages/detail/detail?stockId=${stockId}` })
+        } else if (res.tapIndex === 1) {
+          wx.navigateTo({ url: `/packageRecord/pages/record/record?stockId=${stockId}&type=SELL` })
+        } else if (res.tapIndex === 2) {
+          wx.navigateTo({ url: `/packageRecord/pages/record/record?stockId=${stockId}` })
+        }
+      }
     })
   },
   
@@ -477,7 +507,8 @@ Page({ ...touchGestureMixin,
   async _fetchPrices(opts) {
     var silent = opts && opts.silent
     var force = opts && opts.force
-    const positions = this.data.positions
+    // 使用 _allPositions 确保所有市场的股票都能获取行情（不只是当前 tab 筛选的）
+    const positions = this.data._allPositions || this.data.positions
     if (!positions || positions.length === 0) return
 
     // 非强制时跳过 TTL 未过期的股票

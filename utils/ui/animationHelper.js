@@ -38,7 +38,7 @@ function animateAllValues(page, targets, duration) {
     page.setData(updates)
 
     if (progress < 1) {
-      page._animTimer = setTimeout(animate, 33)
+      page._animTimer = setTimeout(animate, 16)
     } else {
       page._animTimer = null
     }

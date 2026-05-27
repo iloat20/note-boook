@@ -93,12 +93,48 @@ page {
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
 }
 
+.summary-stats {
+  display: flex;
+  align-items: center;
+  margin-top: var(--xhs-space-md);
+  padding-top: var(--xhs-space-md);
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.summary-stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4rpx;
+}
+
+.summary-stat-label {
+  font-size: var(--xhs-font-xs);
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: var(--xhs-weight-medium);
+}
+
+.summary-stat-value {
+  font-size: var(--xhs-font-lg);
+  font-weight: var(--xhs-weight-bold);
+  color: #FFFFFF;
+  letter-spacing: 0.01em;
+}
+
+.summary-stat-divider {
+  width: 1rpx;
+  height: 48rpx;
+  background: rgba(255, 255, 255, 0.2);
+  flex-shrink: 0;
+}
+
 /* === 持仓卡片 === */
 .position-card {
   background: linear-gradient(145deg, #FFFFFF, #F8F8FA);
   border-radius: var(--xhs-radius-md);
   border: 1px solid rgba(0, 0, 0, 0.03);
-  box-shadow: 
+  box-shadow:
     0 2px 8px rgba(0, 0, 0, 0.04),
     0 4px 16px rgba(0, 0, 0, 0.02);
   padding: var(--page-margin);
@@ -107,11 +143,11 @@ page {
   z-index: var(--xhs-z-card);
   overflow: hidden;
   transition: var(--xhs-transition-slow);
+  will-change: transform;
 }
 
 .position-card:active {
-  transform: scale(0.98);
-  box-shadow: 
+  box-shadow:
     0 4px 12px rgba(0, 0, 0, 0.06),
     0 8px 24px rgba(0, 0, 0, 0.04);
 }
@@ -162,15 +198,35 @@ page {
 }
 
 /* === 删除动画：侧滑淡出 + 高度收缩 === */
+@keyframes card-delete {
+  0% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+    max-height: 300px;
+    margin-bottom: var(--xhs-space-xs);
+    padding: var(--page-margin);
+  }
+  50% {
+    opacity: 0;
+    transform: translateX(100%) scale(0.9);
+    max-height: 300px;
+    margin-bottom: var(--xhs-space-xs);
+    padding: var(--page-margin);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(100%) scale(0.9);
+    max-height: 0;
+    margin-bottom: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+}
+
 .position-card-deleting {
-  opacity: 0;
-  transform: translateX(100%) scale(0.9) !important;
-  max-height: 0 !important;
-  margin-bottom: 0 !important;
-  padding-top: 0 !important;
-  padding-bottom: 0 !important;
+  animation: card-delete 400ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
   overflow: hidden !important;
-  transition: all 400ms cubic-bezier(0.4, 0, 0.2, 1) !important;
+  pointer-events: none;
 }
 
 /* === 新增动画：缩放渐显 === */
@@ -278,32 +334,21 @@ page {
 
 /* === 价格闪光动画 === */
 .price-flash-profit {
-  animation: price-flash-profit 600ms ease-out;
+  animation: price-flash-profit 800ms ease-out;
 }
 
 .price-flash-loss {
-  animation: price-flash-loss 600ms ease-out;
+  animation: price-flash-loss 800ms ease-out;
 }
 
 @keyframes price-flash-profit {
-  0% { background-color: var(--xhs-profit-bg); }
+  0% { background-color: rgba(255, 107, 107, 0.2); }
   100% { background-color: transparent; }
 }
 
 @keyframes price-flash-loss {
-  0% { background-color: var(--xhs-loss-bg); }
+  0% { background-color: rgba(52, 199, 89, 0.2); }
   100% { background-color: transparent; }
-}
-
-/* === 数字翻滚动画 === */
-@keyframes number-roll {
-  0% { transform: translateY(0); opacity: 1; }
-  50% { transform: translateY(-8px); opacity: 0; }
-  51% { transform: translateY(8px); opacity: 0; }
-  100% { transform: translateY(0); opacity: 1; }
-}
-.number-rolling {
-  animation: number-roll 400ms ease-out;
 }
 
 /* === Profit/Loss Badge === */

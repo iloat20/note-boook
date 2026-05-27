@@ -1,6 +1,16 @@
 <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- 持仓图标 - 简约股票K线 -->
-  <rect x="8" y="8" width="32" height="32" rx="6" fill="#F5F5F7" stroke="#1C1C1E" stroke-width="2"/>
-  <path d="M14 28L18 20L22 24L26 16L30 22L34 14" stroke="#FF3B30" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="34" cy="14" r="2.5" fill="#FF3B30"/>
+  <!-- 持仓图标 - 上升趋势折线 + 圆点 -->
+  <defs>
+    <linearGradient id="pg" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0%" stop-color="#FF3B30" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#FF3B30" stop-opacity="0.15"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="32" height="32" rx="8" fill="#F8F8FA"/>
+  <path d="M14 34L14 28L20 22L26 26L32 16L36 14" fill="none" stroke="url(#pg)" stroke-width="0"/>
+  <path d="M14 34L14 28L20 22L26 26L32 16L36 14V34Z" fill="url(#pg)"/>
+  <path d="M14 28L20 22L26 26L32 16L36 14" stroke="#FF3B30" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="36" cy="14" r="3" fill="#FF3B30"/>
+  <circle cx="36" cy="14" r="1.2" fill="white"/>
+  <line x1="14" y1="34" x2="36" y2="34" stroke="#E5E5EA" stroke-width="1.5" stroke-linecap="round"/>
 </svg>

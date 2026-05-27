@@ -9,6 +9,8 @@ const PriceCache = require('../models/priceCache')
 const { calcPosition } = require('../helpers/positionCalculator')
 const { caches } = require('../cache/cacheManager')
 const { calcXIRRForRange, getTotalXIRR } = require('../helpers/xirr')
+const { getRate, getRates } = require('./exchangeRate')
+const { fmt } = require('../helpers/format')
 
 // 周期统计数据缓存
 
@@ -68,7 +70,7 @@ function getTotalStats() {
   let totalInvestment = 0
   let totalBuyFee = 0
   let totalSellFee = 0
-  
+
   // 从交易记录计算投入和手续费
   const transactions = Transaction.getAll()
   transactions.forEach(t => {
@@ -83,11 +85,10 @@ function getTotalStats() {
   
   // 通过纯函数计算每个持仓，避免依赖 positionService
   const stocks = Stock.getAll()
-  const allTx = Transaction.getAll()
   const allDiv = Dividend.getAll()
   
   let txMap = {}, divMap = {}
-  allTx.forEach(function (t) {
+  transactions.forEach(function (t) {
     if (!txMap[t.stockId]) txMap[t.stockId] = []
     txMap[t.stockId].push(t)
   })
@@ -99,7 +100,8 @@ function getTotalStats() {
   let totalRealizedPnL = 0
   let totalFloatingPnL = 0
   let totalDividendIncome = 0
-  
+  let totalCostBasis = 0
+
   stocks.forEach(function (s) {
     let tx = txMap[s.id] || []
     let div = divMap[s.id] || []
@@ -108,11 +110,13 @@ function getTotalStats() {
     totalDividendIncome += pos.dividendIncome
     if (pos.quantity > 0) {
       totalFloatingPnL += pos.floatingPnL
+      totalCostBasis += pos.avgCost * pos.quantity
     }
   })
-  
+
   const totalPnL = totalRealizedPnL + totalFloatingPnL + totalDividendIncome
-  const totalPnLPercent = totalInvestment > 0 ? (totalPnL / totalInvestment * 100) : 0
+  // 使用实际持仓成本（而非累计买入总额）计算收益率，避免反复买卖膨胀分母
+  const totalPnLPercent = totalCostBasis > 0 ? (totalPnL / totalCostBasis * 100) : 0
   
   return {
     totalInvestment: parseFloat(totalInvestment.toFixed(2)),
@@ -324,6 +328,99 @@ function getStrategyStats(transactions) {
   }).sort(function (a, b) { return b.count - a.count })
 }
 
+/**
+ * 按周期计算统计数据（含收益率/XIRR）
+ * 从 stats.js _calcPeriodStats 提取，保持 Page 层轻量
+ * @param {string} period - 周期类型
+ * @param {Function} getDateRange - (period) => { startDate, endDate }
+ * @returns {Promise<{stats: Object, detailItems: Array}>}
+ */
+async function getPeriodStatsWithReturn(period, getDateRange) {
+  const { startDate, endDate } = getDateRange(period)
+  const rates = await getRates()
+  const stocks = Stock.getAll()
+
+  const stockMarket = {}
+  stocks.forEach(s => { stockMarket[s.id] = s.market })
+
+  const periodTx = Transaction.getByDateRange(startDate, endDate)
+  const periodDiv = Dividend.getAll().filter(d => {
+    const dd = new Date(d.date)
+    return dd >= startDate && dd <= endDate
+  })
+
+  let cnyBuyAmount = 0, cnySellAmount = 0, cnyBuyFee = 0, cnySellFee = 0
+  periodTx.forEach(t => {
+    const r = getRate(stockMarket[t.stockId], rates)
+    const a = t.price * t.quantity
+    if (t.type === 'BUY') { cnyBuyAmount += a * r; cnyBuyFee += t.fee * r }
+    else { cnySellAmount += a * r; cnySellFee += t.fee * r }
+  })
+
+  let cnyDividendIncome = 0
+  periodDiv.forEach(d => {
+    const r = getRate(stockMarket[d.stockId], rates)
+    cnyDividendIncome += d.totalAmount * r
+  })
+
+  const totalInvestment = cnyBuyAmount + cnyBuyFee
+  const totalRecovery = cnySellAmount - cnySellFee
+  const totalPnL = totalRecovery - totalInvestment + cnyDividendIncome
+  const totalReturnRate = totalInvestment > 0 ? (totalPnL / totalInvestment) * 100 : 0
+
+  // 短周期用周期收益率，长周期用 XIRR（年化）
+  let returnValue = null
+  let returnText = '--'
+  let returnLabel = 'XIRR'
+
+  const daysInRange = (endDate - startDate) / (24 * 60 * 60 * 1000)
+  const usePeriodRate = daysInRange < 90 || (periodTx.length + periodDiv.length) < 4
+
+  if (usePeriodRate) {
+    returnLabel = period === 'WEEK' ? '周收益率' : period === 'MONTH' ? '月收益率' : '收益率'
+    if (totalInvestment > 0) {
+      returnValue = parseFloat(totalReturnRate.toFixed(2))
+      returnText = (returnValue >= 0 ? '+' : '') + returnValue.toFixed(2) + '%'
+    }
+  } else {
+    try {
+      returnValue = await calcXIRRForRange(startDate, endDate)
+      if (returnValue !== null) {
+        returnText = returnValue.toFixed(2) + '%'
+      }
+    } catch (e) {
+      console.error('XIRR 计算失败:', e)
+    }
+    if (returnValue === null && totalInvestment > 0) {
+      returnLabel = '收益率'
+      returnValue = parseFloat(totalReturnRate.toFixed(2))
+      returnText = (returnValue >= 0 ? '+' : '') + returnValue.toFixed(2) + '%'
+    }
+  }
+
+  const stats = {
+    totalInvestment, totalRecovery, totalPnL,
+    returnValue, returnText, returnLabel,
+    totalInvestmentText: fmt(totalInvestment),
+    totalRecoveryText: fmt(totalRecovery),
+    totalPnLText: fmt(totalPnL),
+    totalReturnRateText: (totalReturnRate >= 0 ? '+' : '') + totalReturnRate.toFixed(2) + '%',
+    dividendIncomeText: fmt(cnyDividendIncome),
+    totalBuyFeeText: fmt(cnyBuyFee),
+    totalSellFeeText: fmt(cnySellFee)
+  }
+
+  const detailItems = [
+    { label: '已实现盈亏', value: fmt(totalPnL), prefix: '', colorClass: totalPnL >= 0 ? 'profit' : 'loss' },
+    { label: returnLabel, value: returnText !== '--' ? returnText.replace('%', '') : '--', prefix: '', colorClass: returnValue !== null ? (returnValue >= 0 ? 'profit' : 'loss') : '' },
+    { label: '分红收益', value: fmt(cnyDividendIncome), prefix: '', colorClass: 'profit' },
+    { label: '买入手续费', value: fmt(cnyBuyFee), prefix: '', colorClass: '' },
+    { label: '卖出手续费', value: fmt(cnySellFee), prefix: '', colorClass: '' }
+  ]
+
+  return { stats, detailItems }
+}
+
 module.exports = {
   calcStatsForRange,
   getTotalStats,
@@ -331,5 +428,6 @@ module.exports = {
   getPeriodStatsList,
   getStrategyStats,
   calcXIRRForRange,
-  getTotalXIRR
+  getTotalXIRR,
+  getPeriodStatsWithReturn
 }

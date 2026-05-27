@@ -11,22 +11,6 @@ const { TIMING_CONFIG } = require('../constants/index')
 // 价格缓存 TTL：30 分钟（毫秒）
 const PRICE_TTL = TIMING_CONFIG.PRICE_TTL_MS
 
-let _pendingSave = false
-
-function _scheduleSave(data) {
-  if (_pendingSave) return
-  _pendingSave = true
-  setTimeout(() => {
-    try {
-      saveData(PRICE_KEY, data)
-    } catch (e) {
-      console.warn('[PriceCache] 延迟保存失败:', e)
-    } finally {
-      _pendingSave = false
-    }
-  }, 100)
-}
-
 const PriceCache = {
   /**
    * 设置股票价格缓存
@@ -34,6 +18,7 @@ const PriceCache = {
    * @param {number} price - 股票价格
    */
   set(stockId, price) {
+    if (stockId == null || isNaN(parseFloat(price)) || parseFloat(price) < 0) return
     const prices = this.getAll()
     prices[stockId] = {
       price: parseFloat(price),
@@ -75,10 +60,10 @@ const PriceCache = {
     if (!entry) return null
     // 兼容旧格式（纯数字，没有 TTL 信息）
     if (typeof entry === 'number') return entry
-    // 检查 TTL
+    // 检查 TTL，过期则惰性清理
     if (Date.now() - entry.timestamp > PRICE_TTL) {
       delete prices[stockId]
-      _scheduleSave(prices)
+      try { saveData(PRICE_KEY, prices) } catch (e) { /* 同步保存失败不影响返回 */ }
       return null
     }
     return entry.price || null

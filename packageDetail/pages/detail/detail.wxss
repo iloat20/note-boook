@@ -216,8 +216,8 @@ page {
 .edit-input {
   flex: 1;
   height: 40px;
-  background: var(--xhs-bg-secondary);
-  border: 1.5px solid transparent;
+  background: var(--xhs-surface);
+  border: 1.5px solid var(--xhs-divider-strong);
   border-radius: 10px;
   padding: 0 var(--xhs-space-sm);
   font-size: var(--xhs-font-lg);
@@ -229,7 +229,8 @@ page {
 
 .edit-input:focus {
   border-color: var(--xhs-primary);
-  background: var(--xhs-surface);
+  background: var(--xhs-primary-bg);
+  box-shadow: 0 0 0 3px rgba(255, 59, 48, 0.08);
 }
 
 /* === 编辑按钮 === */

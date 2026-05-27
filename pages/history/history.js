@@ -49,10 +49,10 @@ Page({
   },
 
   onShow() {
-    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-      this.getTabBar().setData({ selected: 1 })
+    pageMixin.setTabSelected(this, 1)
+    if (pageMixin.consumeDirtyFlag() || this.data.allGroupedHistory.length === 0) {
+      this.loadHistory()
     }
-    this.loadHistory()
   },
 
   // 构建全部记录并缓存，仅在数据变更时调用

@@ -22,6 +22,7 @@ function fmt(num) {
  */
 function fmtDate(date) {
   const d = new Date(date)
+  if (isNaN(d.getTime())) return ''
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
 }
 
@@ -32,6 +33,7 @@ function fmtDate(date) {
  */
 function fmtTime(date) {
   const d = new Date(date)
+  if (isNaN(d.getTime())) return ''
   return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0')
 }
 
@@ -42,6 +44,7 @@ function fmtTime(date) {
  */
 function fmtShortDate(date) {
   const d = new Date(date)
+  if (isNaN(d.getTime())) return ''
   return (d.getMonth() + 1) + '/' + d.getDate()
 }
 

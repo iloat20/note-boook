@@ -50,9 +50,10 @@ function getHeatmapData(year, month) {
   
   const startDate = new Date(year, month - 1, 1)
   const endDate = new Date(year, month, 0, 23, 59, 59, 999)
-  
+  const daysInMonth = new Date(year, month, 0).getDate()
+
   const dayMap = {}
-  for (let d = 1; d <= 31; d++) {
+  for (let d = 1; d <= daysInMonth; d++) {
     dayMap[d] = { count: 0, amount: 0 }
   }
   
@@ -79,7 +80,7 @@ function getHeatmapData(year, month) {
   })
   
   const result = []
-  for (let day = 1; day <= 31; day++) {
+  for (let day = 1; day <= daysInMonth; day++) {
     const data = dayMap[day]
     let level = 0
     if (data.count === 1) level = 1

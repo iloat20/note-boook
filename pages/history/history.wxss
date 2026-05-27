@@ -157,7 +157,8 @@
   display: flex;
   align-items: center;
   gap: var(--xhs-space-sm);
-  margin-bottom: var(--xhs-space-md);
+  margin-top: var(--xhs-space-md);
+  margin-bottom: var(--xhs-space-xs);
 }
 
 .date-dot {
@@ -350,24 +351,7 @@
   color: var(--xhs-primary);
 }
 
-/* === 删除动画 === */
-@keyframes dissolve-out {
-  0% {
-    opacity: 1;
-    transform: scale(1);
-    max-height: 200px;
-    margin-bottom: var(--xhs-space-md);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(0.95);
-    max-height: 0;
-    margin-bottom: 0;
-    padding-top: 0;
-    padding-bottom: 0;
-  }
-}
-
+/* === 删除动画 (keyframes defined in app.wxss) === */
 .dissolving {
   animation: dissolve-out 350ms ease-in forwards;
   pointer-events: none;
@@ -516,4 +500,24 @@
 /* === Scroll === */
 .scroll-container {
   height: calc(100vh - 300px);
+}
+
+/* === 搜索无结果 === */
+.search-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 120rpx var(--page-margin);
+  gap: var(--xhs-space-md);
+}
+
+.search-empty-icon {
+  font-size: 80rpx;
+  opacity: 0.6;
+}
+
+.search-empty-text {
+  font-size: var(--xhs-font-md);
+  color: var(--xhs-caption);
 }

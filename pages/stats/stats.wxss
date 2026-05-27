@@ -134,6 +134,7 @@
 .cover-recover { background: linear-gradient(135deg, #E6F3FF 0%, #CCE5FF 100%); }
 .cover-pnl { background: linear-gradient(135deg, #FFF0F0 0%, #FFE0E0 100%); }
 .cover-rate { background: linear-gradient(135deg, #F0FFF0 0%, #E0FFE0 100%); }
+.cover-dividend { background: linear-gradient(135deg, #FFF8E6 0%, #FFEDCC 100%); }
 
 /* 盈亏色 */
 .xhs-profit { color: var(--xhs-profit); }

@@ -147,6 +147,12 @@
     <view style="height: {{selectMode ? '300rpx' : '160rpx'}};"></view>
   </scroll-view>
 
+  <!-- 搜索无结果 -->
+  <view wx:elif="{{searchKeyword && allGroupedHistory.length > 0 && groupedHistory.length === 0}}" class="search-empty animate-stagger stagger-delay-5">
+    <text class="search-empty-icon">🔍</text>
+    <text class="search-empty-text">未找到"{{searchKeyword}}"相关记录</text>
+  </view>
+
   <!-- 批量选择底部工具栏 -->
   <view wx:if="{{selectMode}}" class="batch-bar">
     <view class="batch-bar-inner">
@@ -167,10 +173,10 @@
   </view>
 
   <!-- 空状态 -->
-  <empty-state wx:else icon="📝" title="暂无记录" desc="开始记录您的每一笔交易吧" showSlot="{{true}}">
+  <empty-state wx:else icon="📝" title="暂无记录" desc="记录每一笔交易，让投资有迹可循" showSlot="{{true}}">
     <view slot="actions" class="empty-actions">
-      <view class="empty-btn animate-scale-in" bindtap="goToRecord">✏️ 添加交易</view>
-      <view class="empty-btn animate-scale-in" style="animation-delay: 100ms;" bindtap="goToDividend">💰 添加分红</view>
+      <view class="empty-btn animate-scale-in" bindtap="goToRecord">📈 添加买入记录</view>
+      <view class="empty-btn animate-scale-in" style="animation-delay: 100ms;" bindtap="goToDividend">💰 添加分红记录</view>
     </view>
   </empty-state>
 </view>

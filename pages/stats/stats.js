@@ -1,17 +1,16 @@
-const { getStatsByPeriod, getPeriodStatsList, getStrategyStats, getTotalXIRR } = require('../../utils/services/statsService')
+const { getStatsByPeriod, getPeriodStatsList, getStrategyStats, getTotalXIRR, getPeriodStatsWithReturn } = require('../../utils/services/statsService')
 const { getClearedPositions, getPositionSummary } = require('../../utils/services/positionService')
 const { Stock, Transaction, Dividend } = require('../../utils/models/index')
 const { fmt, fmtDate } = require('../../utils/helpers/format')
 const { buildStockMap } = require('../../utils/helpers/stockHelpers')
 const { exportMD } = require('../../utils/exporters/markdown')
 const { getRates, getRate } = require('../../utils/services/exchangeRate')
-const appStore = require('../../utils/state/appStore')
+const pageMixin = require('../../utils/ui/pageMixin')
 
 Page({
   data: {
+    ...pageMixin.initPageData(),
     loading: true,
-    statusBarHeight: 0,
-    navBarHeight: 44,
     currentPeriod: 'MONTH',
     periodTabs: [
       { key: 'WEEK', label: '周' },
@@ -31,23 +30,20 @@ Page({
   },
 
   onLoad() {
-    this.setData(getApp().getNavBarInfo())
+    pageMixin.onLoadMixin(this)
   },
 
   async onShow() {
-    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-      this.getTabBar().setData({ selected: 2 })
-    }
-    if (appStore.getState('dataDirty')) {
-      appStore.commit('MARK_CLEAN')
-    }
+    pageMixin.setTabSelected(this, 2)
+    // dirty 标记在 loadStats 完成后再消费，避免异步期间新标记丢失
+    const wasDirty = pageMixin.consumeDirtyFlag()
     await this.loadStats()
   },
 
   switchPeriod: function (e) {
     const period = e.currentTarget.dataset.period
     this.setData({ currentPeriod: period }, () => {
-      this.loadStats()
+      this.loadStats().catch(function (err) { console.error('[stats] switchPeriod loadStats error:', err) })
     })
   },
 
@@ -81,74 +77,7 @@ Page({
   },
 
   async _calcPeriodStats(period) {
-    const { startDate, endDate } = this._getPeriodDateRange(period)
-    const rates = await getRates()
-    const stocks = Stock.getAll()
-    
-    const stockMarket = {}
-    stocks.forEach(s => { stockMarket[s.id] = s.market })
-
-    const periodTx = Transaction.getByDateRange(startDate, endDate)
-    const periodDiv = Dividend.getAll().filter(d => {
-      const dd = new Date(d.date)
-      return dd >= startDate && dd <= endDate
-    })
-
-    let cnyBuyAmount = 0, cnySellAmount = 0, cnyBuyFee = 0, cnySellFee = 0
-    periodTx.forEach(t => {
-      const r = getRate(stockMarket[t.stockId], rates)
-      const a = t.price * t.quantity
-      if (t.type === 'BUY') { cnyBuyAmount += a * r; cnyBuyFee += t.fee * r }
-      else { cnySellAmount += a * r; cnySellFee += t.fee * r }
-    })
-    
-    let cnyDividendIncome = 0
-    periodDiv.forEach(d => {
-      const r = getRate(stockMarket[d.stockId], rates)
-      cnyDividendIncome += d.totalAmount * r
-    })
-
-    const totalInvestment = cnyBuyAmount + cnyBuyFee
-    const totalRecovery = cnySellAmount - cnySellFee
-    const totalPnL = totalRecovery - totalInvestment + cnyDividendIncome
-    const totalReturnRate = totalInvestment > 0 ? (totalPnL / totalInvestment) * 100 : 0
-
-    let xirrValue = null
-    let xirrText = '--'
-    try {
-      const { calcXIRRForRange } = require('../../utils/helpers/xirr')
-      xirrValue = await calcXIRRForRange(startDate, endDate)
-      if (xirrValue !== null) {
-        xirrText = xirrValue.toFixed(2) + '%'
-      }
-    } catch (e) {
-      console.error('XIRR 计算失败:', e)
-    }
-
-    const stats = {
-      totalInvestment: totalInvestment,
-      totalRecovery: totalRecovery,
-      totalPnL: totalPnL,
-      xirrValue: xirrValue,
-      xirrText: xirrText,
-      totalInvestmentText: fmt(totalInvestment),
-      totalRecoveryText: fmt(totalRecovery),
-      totalPnLText: fmt(totalPnL),
-      totalReturnRateText: (totalReturnRate >= 0 ? '+' : '') + totalReturnRate.toFixed(2) + '%',
-      dividendIncomeText: fmt(cnyDividendIncome),
-      totalBuyFeeText: fmt(cnyBuyFee),
-      totalSellFeeText: fmt(cnySellFee)
-    }
-
-    const detailItems = [
-      { label: '已实现盈亏', value: fmt(totalPnL), prefix: '', colorClass: totalPnL >= 0 ? 'profit' : 'loss' },
-      { label: '内部收益率(XIRR)', value: xirrText !== '--' ? xirrText.replace('%', '') : '--', prefix: '', colorClass: xirrValue !== null ? (xirrValue >= 0 ? 'profit' : 'loss') : '' },
-      { label: '分红收益', value: fmt(cnyDividendIncome), prefix: '', colorClass: 'profit' },
-      { label: '买入手续费', value: fmt(cnyBuyFee), prefix: '', colorClass: '' },
-      { label: '卖出手续费', value: fmt(cnySellFee), prefix: '', colorClass: '' }
-    ]
-
-    return { stats, detailItems }
+    return getPeriodStatsWithReturn(period, this._getPeriodDateRange.bind(this))
   },
 
   _buildTradeList() {
@@ -202,18 +131,9 @@ Page({
       }
     })
     
-    let completeTrades = []
-    let i = 0, j = 0
-    while (i < txList.length && j < divList.length) {
-      if (txList[i]._sortKey >= divList[j]._sortKey) {
-        completeTrades.push(txList[i]); i++
-      } else {
-        completeTrades.push(divList[j]); j++
-      }
-    }
-    while (i < txList.length) { completeTrades.push(txList[i]); i++ }
-    while (j < divList.length) { completeTrades.push(divList[j]); j++ }
-    
+    let completeTrades = txList.concat(divList)
+    completeTrades.sort(function (a, b) { return b._sortKey - a._sortKey })
+
     return completeTrades
   },
 
@@ -222,7 +142,7 @@ Page({
       const totalPnL = p.realizedPnL + p.dividendIncome
       return Object.assign({}, p, {
         totalPnL: totalPnL,
-        totalPnLText: fmt(totalPnL),
+        totalPnLText: (totalPnL >= 0 ? '+' : '') + fmt(totalPnL),
         realizedPnLText: fmt(p.realizedPnL),
         dividendIncomeText: fmt(p.dividendIncome),
         pnlClass: totalPnL >= 0 ? 'profit' : 'loss'
@@ -328,6 +248,9 @@ Page({
       return s
     }).sort(function (a, b) { return b.totalPnL - a.totalPnL })
     var topStocks = stockList.slice(0, 5)
+    var bottomStocks = stockList.filter(function (s) { return s.totalPnL < 0 })
+      .slice(-5).reverse()
+      .map(function (s) { s.totalPnLText = fmt(Math.abs(s.totalPnL)); return s })
 
     let strategyStats = getStrategyStats()
     const maxStrategyCount = strategyStats.length > 0 ? strategyStats[0].count : 1
@@ -371,7 +294,7 @@ Page({
         dividendIncomeText: fmt(yearDivTotal),
         monthlyPnL: monthlyPnL,
         topStocks: topStocks,
-        bottomStocks: [],
+        bottomStocks: bottomStocks,
         strategyStats: strategyStats
       }
     })

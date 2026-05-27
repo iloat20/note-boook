@@ -16,9 +16,6 @@ Component({
   lifetimes: {
     attached: function () {
       this._processData();
-    },
-    ready: function () {
-      this._processData();
     }
   },
 

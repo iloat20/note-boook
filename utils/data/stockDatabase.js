@@ -158,6 +158,14 @@ function searchStocks(keyword, market, limit) {
     hkPrefix = true
   }
 
+  // 同时搜索用户本地已添加的股票（确保用户的股票出现在建议中）
+  let userStocks = []
+  try {
+    const Stock = require('../models/stock')
+    const stocks = Stock.getAll()
+    userStocks = stocks.map(function (s) { return { code: s.code, name: s.name, market: s.market, isUser: true } })
+  } catch (e) { /* 首次加载时 model 可能未初始化 */ }
+
   let pool
   if (!market) pool = _poolAll
   else if (market === 'A_SHARE') pool = _poolA
@@ -165,7 +173,20 @@ function searchStocks(keyword, market, limit) {
   else if (market === 'US_SHARE') pool = _poolUS
   else pool = _poolAll
 
-  const results = pool.filter(function (s) {
+  // 合并去重（用户股票优先）
+  const seen = {}
+  const combined = []
+  userStocks.forEach(function (s) {
+    if (market && s.market !== market) return
+    const key = s.code + '_' + s.market
+    if (!seen[key]) { seen[key] = true; combined.push(s) }
+  })
+  pool.forEach(function (s) {
+    const key = s.code + '_' + s.market
+    if (!seen[key]) { seen[key] = true; combined.push(s) }
+  })
+
+  const results = combined.filter(function (s) {
     // 如果输入了 hk 前缀，只匹配港股
     if (hkPrefix && s.market !== 'HK_SHARE') return false
     return s.code.toLowerCase().indexOf(keyword) !== -1 ||

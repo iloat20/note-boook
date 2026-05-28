@@ -1,0 +1,36 @@
+# PR 标签配置 - 根据变更文件路径自动打标签
+# 文档: https://github.com/actions/labeler
+
+performance:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'utils/ui/**'
+      - 'utils/cache/**'
+      - 'utils/storageCore/**'
+      - 'utils/services/stockPrice.js'
+      - 'utils/services/exchangeRate.js'
+
+frontend:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'pages/**/*.wxml'
+      - 'pages/**/*.wxss'
+      - 'components/**/*.wxml'
+      - 'components/**/*.wxss'
+      - 'app.wxss'
+      - 'custom-tab-bar/**'
+
+core-logic:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'utils/models/**'
+      - 'utils/helpers/**'
+      - 'utils/services/positionService.js'
+      - 'utils/services/statsService.js'
+
+pages:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'pages/**/*.js'
+      - 'packageDetail/**/*.js'
+      - 'packageRecord/**/*.js'

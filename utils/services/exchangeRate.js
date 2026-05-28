@@ -22,6 +22,10 @@ const DEFAULTS = {
 // 汇率缓存有效期（毫秒）- 4小时，支持当天内刷新
 const RATE_CACHE_TTL = TIMING_CONFIG.RATE_CACHE_TTL_MS
 
+// 内存缓存，避免每次 getRates 都读 wx.getStorageSync
+let _memCachedRates = null
+let _memCachedAt = 0
+
 /**
  * 从 API 获取汇率并缓存
  * @returns {Promise<{usdToCny: number, hkdToCny: number}>}
@@ -30,9 +34,10 @@ function fetchAndCacheRates() {
   return new Promise(function (resolve) {
     request.get(API_URL, null, { timeout: 8000 })
       .then(function (data) {
-        // API 以 CNY 为 base，需要取反
-        // 1 CNY = X USD → 1 USD = 1/X CNY
-        // 1 CNY = Y HKD → 1 HKD = 1/Y CNY
+        // API 以 CNY 为 base
+        // data.rates.USD = 1 CNY 兑换多少 USD
+        // data.rates.HKD = 1 CNY 兑换多少 HKD
+        // 需要取倒数：usdToCny = 1 / rates.USD
         let usdToCny = data.rates && data.rates.USD ? (1 / data.rates.USD) : DEFAULTS.usdToCny
         let hkdToCny = data.rates && data.rates.HKD ? (1 / data.rates.HKD) : DEFAULTS.hkdToCny
 
@@ -65,11 +70,19 @@ function fetchAndCacheRates() {
   })
 }
 
+// Promise deduplication for concurrent calls
+let _inflightPromise = null
+
 /**
  * 获取汇率（优先缓存，缓存过期则重新拉取）
  * @returns {Promise<{usdToCny: number, hkdToCny: number}>}
  */
 function getRates() {
+  // Check memory cache first
+  if (_memCachedRates && (Date.now() - _memCachedAt < RATE_CACHE_TTL)) {
+    return Promise.resolve(_memCachedRates)
+  }
+
   return new Promise(function (resolve) {
     let cached = null
     try {
@@ -78,21 +91,33 @@ function getRates() {
       // 读取缓存失败
     }
 
-    // 缓存有效（当天且在 TTL 内）
+    // 缓存有效（在 TTL 内，或当天且有旧缓存）
     const now = Date.now()
-    const isFresh = cached && 
-                    cached.date === _today() && 
-                    cached.timestamp && 
-                    (now - cached.timestamp < RATE_CACHE_TTL) &&
-                    cached.usdToCny && 
-                    cached.hkdToCny
+    const isFresh = cached &&
+                    cached.usdToCny &&
+                    cached.hkdToCny &&
+                    cached.timestamp &&
+                    (now - cached.timestamp < RATE_CACHE_TTL)
     if (isFresh) {
+      _memCachedRates = { usdToCny: cached.usdToCny, hkdToCny: cached.hkdToCny }
+      _memCachedAt = now
       resolve({ usdToCny: cached.usdToCny, hkdToCny: cached.hkdToCny })
       return
     }
 
-    // 缓存过期或不存在，重新获取
-    fetchAndCacheRates().then(resolve)
+    // Deduplicate concurrent requests
+    if (_inflightPromise) {
+      _inflightPromise.then(resolve)
+      return
+    }
+
+    _inflightPromise = fetchAndCacheRates().then(function (rates) {
+      _memCachedRates = rates
+      _memCachedAt = Date.now()
+      _inflightPromise = null
+      return rates
+    })
+    _inflightPromise.then(resolve)
   })
 }
 

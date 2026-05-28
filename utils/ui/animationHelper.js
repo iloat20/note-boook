@@ -17,14 +17,17 @@ function animateAllValues(page, targets, duration) {
   let keys = Object.keys(targets)
 
   keys.forEach(function (k) {
-    startValues[k] = parseFloat(page.data.displayValues[k]) || 0
+    const displayVal = page.data.displayValues[k]
+    startValues[k] = parseFloat(String(displayVal || 0).replace(/,/g, '')) || 0
   })
 
   let startTime = Date.now()
+  let _alive = true
 
   if (page._animTimer) clearTimeout(page._animTimer)
 
   function animate() {
+    if (!_alive) return
     let elapsed = Date.now() - startTime
     let progress = Math.min(elapsed / duration, 1)
     let eased = 1 - Math.pow(1 - progress, 3)
@@ -35,16 +38,24 @@ function animateAllValues(page, targets, duration) {
       updates['displayValues.' + k] = fmt(parseFloat(current.toFixed(2)))
     })
 
-    page.setData(updates)
+    if (page.setData) page.setData(updates)
 
     if (progress < 1) {
-      page._animTimer = setTimeout(animate, 16)
+      page._animTimer = setTimeout(animate, 33)
     } else {
       page._animTimer = null
     }
   }
 
   animate()
+
+  return function cancel() {
+    _alive = false
+    if (page._animTimer) {
+      clearTimeout(page._animTimer)
+      page._animTimer = null
+    }
+  }
 }
 
 module.exports = {

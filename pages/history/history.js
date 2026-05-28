@@ -26,7 +26,6 @@ Page({
       { key: MARKETS.US_SHARE, label: '美股' }
     ],
     groupedHistory: [],
-    allGroupedHistory: [],  // 存储所有分组数据
     displayCount: TIMING_CONFIG.PAGE_LOAD_COUNT,  // 初始显示天数
     loadingMore: false,
     hasMore: true,
@@ -50,7 +49,7 @@ Page({
 
   onShow() {
     pageMixin.setTabSelected(this, 1)
-    if (pageMixin.consumeDirtyFlag() || this.data.allGroupedHistory.length === 0) {
+    if (pageMixin.consumeDirtyFlag() || !this._allGroupedHistory) {
       this.loadHistory()
     }
   },
@@ -70,10 +69,14 @@ Page({
       if (stock) {
         const date = new Date(t.date)
         const amount = t.type === 'BUY' ? -(t.price * t.quantity + t.fee) : t.price * t.quantity - t.fee
+        const isBuy = t.type === 'BUY'
         allRecords.push({
           id: t.id,
           type: t.type,
-          typeText: t.type === 'BUY' ? '买入' : '卖出',
+          typeText: isBuy ? '买入' : '卖出',
+          typeTagClass: 'tag type-tag ' + (isBuy ? 'tag-buy' : 'tag-sell'),
+          typeBarClass: 'record-type-bar ' + (isBuy ? 'bar-buy' : 'bar-sell'),
+          amountClass: 'detail-amount mono-num ' + (isBuy ? 'loss' : 'profit'),
           stockId: t.stockId,
           market: stock.market,
           marketLabel: getMarketLabel(stock.market),
@@ -105,6 +108,9 @@ Page({
           id: d.id,
           type: 'DIVIDEND',
           typeText: '分红',
+          typeTagClass: 'tag type-tag tag-dividend',
+          typeBarClass: 'record-type-bar bar-dividend',
+          amountClass: 'detail-amount mono-num dividend',
           stockId: d.stockId,
           market: stock.market,
           marketLabel: getMarketLabel(stock.market),
@@ -145,8 +151,10 @@ Page({
       filtered = filtered.filter(r => r.strategies && r.strategies.indexOf(this.data.currentStrategy) >= 0)
     }
 
-    if (this.data.searchKeyword) {
-      const kw = this.data.searchKeyword.toLowerCase()
+    // Use pending keyword if available (debounced input not yet flushed)
+    const keyword = this._pendingKeyword || this.data.searchKeyword
+    if (keyword) {
+      const kw = keyword.toLowerCase()
       filtered = filtered.filter(r =>
         r.code.toLowerCase().includes(kw) ||
         r.name.toLowerCase().includes(kw)
@@ -166,13 +174,16 @@ Page({
       items: grouped[date]
     }))
 
+    // Store as instance variable to avoid sending through setData
+    this._allGroupedHistory = groupedArray
+
     const displayCount = this.data.displayCount
     const displayData = groupedArray.slice(0, displayCount)
     const hasMore = groupedArray.length > displayCount
 
     this.setData({
-      allGroupedHistory: groupedArray,
       groupedHistory: displayData,
+      recordCount: groupedArray.length,
       hasMore: hasMore,
       loadingMore: false,
     isFromCache: false,
@@ -210,6 +221,7 @@ Page({
   },
   
   clearSearch() {
+    this._pendingKeyword = ''
     this.setData({ searchKeyword: '' })
     this._applyFilters()
   },
@@ -218,7 +230,7 @@ Page({
     if (this.data.loadingMore || !this.data.hasMore) return
 
     const newCount = this.data.displayCount + TIMING_CONFIG.PAGE_LOAD_COUNT
-    const allData = this.data.allGroupedHistory
+    const allData = this._allGroupedHistory || []
     const displayData = allData.slice(0, newCount)
     const hasMore = allData.length > newCount
 
@@ -313,8 +325,10 @@ Page({
   onSearchInput(e) {
     if (this._searchTimer) clearTimeout(this._searchTimer)
     const keyword = e.detail.value.toLowerCase()
-    this.setData({ searchKeyword: keyword })
+    // Store locally to avoid setData on every keystroke
+    this._pendingKeyword = keyword
     this._searchTimer = setTimeout(() => {
+      this.setData({ searchKeyword: this._pendingKeyword })
       this._applyFilters()
     }, TIMING_CONFIG.SEARCH_DEBOUNCE_MS)
   },
@@ -371,6 +385,7 @@ Page({
   onUnload() {
     if (this._searchTimer) clearTimeout(this._searchTimer)
     this._cachedAllRecords = null
+    this._allGroupedHistory = null
   },
 
   onPullDownRefresh() {

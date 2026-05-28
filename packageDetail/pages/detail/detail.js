@@ -5,6 +5,7 @@ const { getStrategyStats } = require('../../../utils/services/statsService')
 const { fmt, fmtShortDate, fmtTime } = require("../../../utils/helpers/format")
 const { calcFloatingPercent } = require('../../../utils/helpers/positionCalculator')
 const { getMarketLabel, getMarketColor, getMarketCurrency } = require("../../../utils/constants/market")
+const pageMixin = require('../../../utils/ui/pageMixin')
 
 Page({
   data: {
@@ -55,8 +56,13 @@ Page({
   },
 
   onShow() {
-    // 始终重新加载数据以反映可能的变更
-    this.loadData()
+    if (pageMixin.consumeDirtyFlag() || !this._dataLoaded) {
+      this.loadData()
+    }
+  },
+
+  onUnload() {
+    if (this._deleteTimer) clearTimeout(this._deleteTimer)
   },
 
   loadData() {
@@ -76,14 +82,17 @@ Page({
     const dividends = Dividend.getByStockId(stock.id).map(this._formatDividend.bind(this))
     const strategySummary = getStrategyStats(rawTransactions)
 
+    // Cache for reuse
+    this._rawTransactions = rawTransactions
+    this._currency = getMarketCurrency(stock.market)
+
     const marketValue = position.currentPrice && position.quantity > 0
       ? position.currentPrice * position.quantity
       : 0
     const totalPnL = position.realizedPnL + position.floatingPnL + position.dividendIncome
+    const currency = this._currency
 
-    // 获取该股票市场的货币符号
-    var currency = getMarketCurrency(stock.market)
-
+    this._dataLoaded = true
     this.setData({
       stock: stock,
       stockId: stock.id,
@@ -97,6 +106,7 @@ Page({
       disDivId: null,
       strategySummary: strategySummary,
       formatAvgCost: currency + fmt(position.avgCost),
+      formatCurrentPrice: position.currentPrice ? currency + fmt(position.currentPrice) : '--',
       formatMarketValue: currency + fmt(marketValue),
       formatDividendIncome: (position.dividendIncome >= 0 ? '+' : '') + currency + fmt(position.dividendIncome),
       floatingPnLClass: position.floatingPnL >= 0 ? "profit" : "loss",
@@ -155,8 +165,35 @@ Page({
     const stockId = this.data.stockId || this._stockId
     if (!isNaN(price) && price > 0) {
       PriceCache.set(stockId, price)
+      // Incremental update: only recalculate price-dependent fields
+      this._updatePriceFields(price)
+    } else {
+      this.loadData()
     }
-    this.loadData()
+  },
+
+  _updatePriceFields(price) {
+    const position = this.data.position
+    const quantity = position.quantity || 0
+    const avgCost = position.avgCost || 0
+    const currency = this._currency || getMarketCurrency(this.data.stock?.market)
+
+    const marketValue = price * quantity
+    const floatingPnL = quantity > 0 ? (price - avgCost) * quantity : 0
+    const totalPnL = position.realizedPnL + floatingPnL + position.dividendIncome
+    const pnlPercent = avgCost > 0 ? ((price - avgCost) / avgCost * 100) : 0
+
+    this.setData({
+      'position.currentPrice': price,
+      'position.floatingPnL': floatingPnL,
+      formatCurrentPrice: currency + fmt(price),
+      formatMarketValue: currency + fmt(marketValue),
+      floatingPnLClass: floatingPnL >= 0 ? "profit" : "loss",
+      floatingPnLText: (floatingPnL >= 0 ? "+" : "") + currency + fmt(Math.abs(floatingPnL)),
+      floatingPnLPercent: parseFloat(pnlPercent.toFixed(2)),
+      totalPnLClass: totalPnL >= 0 ? "profit" : "loss",
+      totalPnLText: (totalPnL >= 0 ? "+" : "") + currency + fmt(Math.abs(totalPnL))
+    })
   },
 
   goBack() {
@@ -188,7 +225,8 @@ Page({
             success: function (modalRes) {
               if (modalRes.confirm) {
                 self.setData({ disTransId: id })
-                setTimeout(function () {
+                if (self._deleteTimer) clearTimeout(self._deleteTimer)
+                self._deleteTimer = setTimeout(function () {
                   Transaction.delete(id)
                   self.loadData()
                 }, 400)
@@ -215,7 +253,8 @@ Page({
             success: function (modalRes) {
               if (modalRes.confirm) {
                 self.setData({ disDivId: id })
-                setTimeout(function () {
+                if (self._deleteTimer) clearTimeout(self._deleteTimer)
+                self._deleteTimer = setTimeout(function () {
                   Dividend.delete(id)
                   self.loadData()
                 }, 400)
@@ -269,7 +308,7 @@ Page({
       return
     }
 
-    const transactions = Transaction.getByStockId(stockId)
+    const transactions = this._rawTransactions || Transaction.getByStockId(stockId)
     const dividends = Dividend.getByStockId(stockId)
     if (transactions.length === 0) {
       wx.showToast({ title: '暂无交易记录，无法调整持仓', icon: 'none' })

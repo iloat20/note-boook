@@ -46,7 +46,7 @@
   font-weight: var(--xhs-weight-medium);
   color: var(--xhs-caption);
   position: relative;
-  transition: all 250ms ease;
+  transition: color 250ms ease, font-weight 250ms ease;
 }
 
 .period-tab.active {
@@ -394,7 +394,7 @@
   padding: var(--page-margin) var(--xhs-space-lg);
   border-radius: var(--xhs-radius-pill);
   text-align: center;
-  transition: all 200ms ease;
+  transition: transform 200ms ease, background-color 200ms ease, border-color 200ms ease;
 }
 
 /* === Scroll === */

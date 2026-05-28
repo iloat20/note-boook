@@ -60,7 +60,7 @@ function renderPortfolioCard(ctx, canvas, data, width, height) {
     // 卡片背景
     ctx.fillStyle = '#FFFFFF'
     ctx.beginPath()
-    ctx.roundRect(16, y - 5, width - 32, 48, 8)
+    ctx.roundRect(16, y - 5, width - 32, 48, [8])
     ctx.fill()
 
     // 市场标签圆点

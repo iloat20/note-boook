@@ -55,6 +55,7 @@ Page({ ...touchGestureMixin,
     
     // 持仓数据
     positions: [],
+    displayPositions: [],
     _allPositions: [],
     _rates: null,
     totalMarketValue: 0,
@@ -102,7 +103,10 @@ Page({ ...touchGestureMixin,
 
     // 订阅状态变化（使用 mutation type 作为 key，与 store 的 _notify 一致）
     this._unsubscribePositions = positionStore.subscribe('SET_POSITIONS', (newPositions) => {
-      this.setData({ positions: newPositions })
+      const filtered = this.data.currentMarket
+        ? newPositions.filter(p => p.market === this.data.currentMarket)
+        : newPositions
+      this.setData({ positions: filtered, displayPositions: filtered.slice(0, this.data.displayCount) })
     })
 
     // 等待数据加载完成后再获取现价
@@ -137,7 +141,8 @@ Page({ ...touchGestureMixin,
   onUnload() {
     // 清理定时器
     if (this._animTimer) clearTimeout(this._animTimer)
-    
+    if (this._cleanupTimer) clearTimeout(this._cleanupTimer)
+
     // 取消状态订阅
     if (this._unsubscribePositions) {
       this._unsubscribePositions()
@@ -160,7 +165,6 @@ Page({ ...touchGestureMixin,
     if (this.data.loading) return
 
     try {
-      this.setData({ loading: true })
 
       // 使用 positionService 获取数据（已封装缓存逻辑）
       // 注意：getAllPositions 内部使用同步 storage 操作，无需 Promise
@@ -203,16 +207,23 @@ Page({ ...touchGestureMixin,
         totalBuyFee += (p.totalBuyFee || 0) * rate
       })
 
+      // Build positionMap for O(1) lookups
+      const positionMap = new Map(allPositions.map(function (p) { return [p.id, p] }))
+      this._positionMap = positionMap
+
       // 计算总投资（买入金额 + 费用，含已清仓股票）
       const allTransactions = Transaction.getAll()
       const allStockIds = new Set(allPositions.map(p => p.id))
 
       allTransactions.forEach(t => {
         if (allStockIds.has(t.stockId) && t.type === 'BUY') {
-          var tRate = getRate(allPositions.find(p => p.id === t.stockId)?.market, rates)
+          var tRate = getRate(positionMap.get(t.stockId)?.market, rates)
           totalInvestment += (t.price * t.quantity + t.fee) * tRate
         }
       })
+
+      // Cache for _updateSummary and onMarketTabChange
+      this._cachedTotalInvestment = totalInvestment
       
       if (totalInvestment <= 0) totalInvestment = totalCost + totalBuyFee
       
@@ -231,12 +242,16 @@ Page({ ...touchGestureMixin,
         const pnlPercent = calcFloatingPercent(p)
         const oldPrice = oldPriceMap[p.id]
         let priceFlashClass = ''
-        // 价格变高 → 红色闪光；变低 → 绿色闪光
         if (oldPrice && p.currentPrice && oldPrice !== p.currentPrice) {
           priceFlashClass = p.currentPrice > oldPrice ? 'price-flash-profit' : 'price-flash-loss'
         }
-        
+
         const currency = getMarketCurrency(p.market)
+
+        // Pre-compute card class to avoid ternary in WXML
+        var cardClass = 'position-card'
+        if (newIds.has(p.id)) cardClass += ' position-card-entering'
+        if (priceFlashClass) cardClass += ' ' + priceFlashClass
 
         return {
           ...p,
@@ -248,58 +263,86 @@ Page({ ...touchGestureMixin,
           marketLabel: getMarketLabel(p.market),
           marketColor: getMarketColor(p.market),
           priceFlashClass: priceFlashClass,
-          entering: newIds.has(p.id) // 标记新增卡片
+          entering: newIds.has(p.id),
+          cardClass: cardClass
         }
       })
 
-      // 清除 priceFlashClass（动画结束后）
-      if (formattedPositions.some(function (p) { return p.priceFlashClass })) {
-        setTimeout(function () {
-          const cleared = formattedPositions.map(function (p) {
-            return { ...p, priceFlashClass: '' }
+      // Schedule combined cleanup for priceFlash + entering animations
+      const hasFlash = formattedPositions.some(function (p) { return p.priceFlashClass !== '' })
+      const hasEntering = newIds.size > 0
+      if (hasFlash || hasEntering) {
+        const delay = Math.max(TIMING_CONFIG.PRICE_FLASH_CLEAR_DELAY, TIMING_CONFIG.ENTER_ANIM_DELAY)
+        this._cleanupTimer = setTimeout(() => {
+          const cleaned = this.data.positions.map(p => {
+            var result = Object.assign({}, p)
+            if (hasFlash) result.priceFlashClass = ''
+            if (hasEntering) result.entering = false
+            return result
           })
-          this.setData({ positions: cleared })
-        }.bind(this), TIMING_CONFIG.PRICE_FLASH_CLEAR_DELAY)
+          this.setData({ positions: cleaned })
+        }, delay)
       }
       
+      // Compute market tab counts in single pass
+      const marketCounts = { null: formattedPositions.length }
+      formattedPositions.forEach(function (p) {
+        marketCounts[p.market] = (marketCounts[p.market] || 0) + 1
+      })
+      const updatedTabs = this.data.marketTabs.map(function (tab) {
+        return Object.assign({}, tab, { count: marketCounts[tab.key] || 0 })
+      })
+
+      // Pre-compute per-market investment for tab switching
+      const marketInvestment = {}
+      const allTx = Transaction.getAll()
+      allTx.forEach(function (t) {
+        if (t.type === 'BUY') {
+          var pos = positionMap.get(t.stockId)
+          if (pos) {
+            var tRate = getRate(pos.market, rates)
+            marketInvestment[pos.market] = (marketInvestment[pos.market] || 0) + (t.price * t.quantity + t.fee) * tRate
+          }
+        }
+      })
+      marketInvestment[null] = totalInvestment
+      this._cachedMarketInvestment = marketInvestment
+
       // 根据当前市场筛选
       const filteredPositions = this.data.currentMarket
         ? formattedPositions.filter(p => p.market === this.data.currentMarket)
         : formattedPositions
-      
+
+      // 防止 NaN 导致 toFixed 报错
+      const safeTotalMarketValue = isNaN(totalMarketValue) ? 0 : totalMarketValue
+      const safeTotalPnL = isNaN(totalPnL) ? 0 : totalPnL
+      const safeTotalInvestment = isNaN(totalInvestment) ? 1 : totalInvestment
+
       this.setData({
         _allPositions: formattedPositions,
         _rates: rates,
         positions: filteredPositions,
-        totalMarketValue: parseFloat(totalMarketValue.toFixed(2)),
-        totalMarketValueText: fmt(totalMarketValue),
-        totalPnL: parseFloat(totalPnL.toFixed(2)),
-        totalPnLText: fmt(totalPnL),
-        totalPnLPercent: totalInvestment > 0 ? parseFloat((totalPnL / totalInvestment * 100).toFixed(2)) : 0,
+        displayPositions: filteredPositions.slice(0, this.data.displayCount),
+        totalMarketValue: parseFloat(safeTotalMarketValue.toFixed(2)),
+        totalMarketValueText: fmt(safeTotalMarketValue),
+        totalPnL: parseFloat(safeTotalPnL.toFixed(2)),
+        totalPnLText: fmt(safeTotalPnL),
+        totalPnLPercent: safeTotalInvestment > 0 ? parseFloat((safeTotalPnL / safeTotalInvestment * 100).toFixed(2)) : 0,
         loading: false,
-        entranceDone: true
+        entranceDone: true,
+        marketTabs: updatedTabs,
+        // 直接设置 displayValues 初始值，防止 animateAllValues 失败时显示空白
+        'displayValues.totalMarketValue': fmt(safeTotalMarketValue),
+        'displayValues.totalPnL': fmt(safeTotalPnL),
+        'displayValues.totalPnLPercent': fmt(safeTotalInvestment > 0 ? parseFloat((safeTotalPnL / safeTotalInvestment * 100).toFixed(2)) : 0)
       })
-      
-      // 清除新增动画标记（动画完成后）
-      if (newIds.size > 0) {
-        setTimeout(() => {
-          const positions = this.data.positions.map(p => ({
-            ...p,
-            entering: false
-          }))
-          this.setData({ positions })
-        }, TIMING_CONFIG.ENTER_ANIM_DELAY)
-      }
-      
+
       // 批量数字滚动动画
       animateAllValues(this, {
         totalMarketValue: totalMarketValue,
         totalPnL: totalPnL,
         totalPnLPercent: totalInvestment > 0 ? (totalPnL / totalInvestment * 100) : 0
       })
-      
-      // 更新市场 tab 计数
-      this._updateMarketTabs(positions)
       
       } catch (err) {
         console.error('[Index] loadData error:', err)
@@ -315,10 +358,8 @@ Page({ ...touchGestureMixin,
 
     let totalMarketValue = 0
     let totalPnL = 0
-    let totalInvestment = 0
 
     const portfolioPositions = allPositions.filter(p => p.quantity > 0)
-    const positionIds = new Set(portfolioPositions.map(p => p.id))
 
     portfolioPositions.forEach(p => {
       const rate = getRate(p.market, rates)
@@ -330,13 +371,7 @@ Page({ ...touchGestureMixin,
         + (p.dividendIncome || 0) * rate
     })
 
-    const allTransactions = Transaction.getAll()
-    allTransactions.forEach(t => {
-      if (positionIds.has(t.stockId) && t.type === 'BUY') {
-        const tRate = getRate(allPositions.find(p => p.id === t.stockId)?.market, rates)
-        totalInvestment += (t.price * t.quantity + t.fee) * tRate
-      }
-    })
+    const totalInvestment = this._cachedTotalInvestment || 1
 
     const totalPnLPercent = totalInvestment > 0 ? (totalPnL / totalInvestment * 100) : 0
 
@@ -355,17 +390,8 @@ Page({ ...touchGestureMixin,
     })
   },
 
-  // 更新市场 tab 计数
-  _updateMarketTabs(positions) {
-    const tabs = this.data.marketTabs.map(tab => ({
-      ...tab,
-      count: tab.key
-        ? positions.filter(p => p.market === tab.key).length
-        : positions.length
-    }))
-    
-    this.setData({ marketTabs: tabs })
-  },
+  // 更新市场 tab 计数（已内联到 _loadData）
+  // _updateMarketTabs removed - counts computed in _loadData main setData
 
   
   // 更新日期
@@ -406,25 +432,29 @@ Page({ ...touchGestureMixin,
       }, 0)
 
       let marketInvestment = 0
-      const filteredStockIds = new Set(filteredPositions.map(p => p.id))
-      Transaction.getAll().forEach(t => {
-        if (filteredStockIds.has(t.stockId) && t.type === 'BUY') {
-          const tRate = getRate(allPositions.find(p => p.id === t.stockId)?.market || '', rates)
-          marketInvestment += (t.price * t.quantity + t.fee) * tRate
-        }
-      })
+      const cachedMI = that._cachedMarketInvestment
+      if (key && cachedMI) {
+        marketInvestment = cachedMI[key] || 0
+      } else if (cachedMI) {
+        marketInvestment = cachedMI[null] || 0
+      }
       const marketPnLPercent = marketInvestment > 0 ? (marketPnL / marketInvestment * 100) : 0
       
       that.setData({
         currentMarket: key,
         positions: filteredPositions,
+        displayPositions: filteredPositions.slice(0, 20),
         tabAnimating: false,
         displayCount: 20,
-        displayValues: {
-          totalMarketValue: fmt(marketValue),
-          totalPnL: fmt(marketPnL),
-          totalPnLPercent: fmt(marketPnLPercent)
-        }
+        totalMarketValue: parseFloat(marketValue.toFixed(2)),
+        totalPnL: parseFloat(marketPnL.toFixed(2)),
+        totalPnLPercent: parseFloat(marketPnLPercent.toFixed(2))
+      })
+      // Use animateAllValues to update displayValues with raw numbers (not formatted strings)
+      animateAllValues(that, {
+        totalMarketValue: marketValue,
+        totalPnL: marketPnL,
+        totalPnLPercent: marketPnLPercent
       })
     }, TIMING_CONFIG.TAB_SWITCH_ANIM_DELAY)
   },
@@ -454,7 +484,11 @@ Page({ ...touchGestureMixin,
     const current = this.data.displayCount
     const total = (this.data.positions || []).length
     if (current < total) {
-      this.setData({ displayCount: Math.min(current + 20, total) })
+      const newCount = Math.min(current + 20, total)
+      this.setData({
+        displayCount: newCount,
+        displayPositions: this.data.positions.slice(0, newCount)
+      })
     }
   },
 
@@ -552,7 +586,7 @@ Page({ ...touchGestureMixin,
           }
           return p
         })
-        this.setData({ positions: updated, _allPositions: allUpdated })
+        this.setData({ positions: updated, _allPositions: allUpdated, displayPositions: updated.slice(0, this.data.displayCount) })
         this._updateSummary()
       } else {
         // 无有效结果时仍刷新持仓（可能清理过期缓存等）

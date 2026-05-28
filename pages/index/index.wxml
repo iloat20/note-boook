@@ -28,28 +28,35 @@
     </view>
 
     <!-- 汇总卡片 -->
-    <view class="summary-card card {{entranceDone ? '' : 'animate-stagger stagger-delay-2'}}" style="margin-bottom: var(--xhs-space-lg);">
-      <view style="display: flex; justify-content: space-between; align-items: center;">
-        <text class="title mono-num" style="color: #FFFFFF; text-shadow: none;">{{displayValues.totalMarketValue}}</text>
-        <view bindtap="onSharePortfolio" style="display: flex; align-items: center; padding: 4px;">
-          <image src="/images/share.svg" mode="aspectFit" lazy-load="{{true}}" style="width: 36rpx; height: 36rpx; opacity: 0.7;" />
-        </view>
+    <view class="summary-card {{entranceDone ? '' : 'animate-stagger stagger-delay-2'}}" style="margin-bottom: var(--xhs-space-lg);">
+      <!-- 总市值 -->
+      <view class="summary-header">
+        <view class="summary-label">总市值（元）</view>
+        <view class="summary-value">{{displayValues.totalMarketValue}}</view>
       </view>
+      
+      <!-- 分割线 -->
+      <view class="summary-divider"></view>
+      
+      <!-- 统计信息 -->
       <view class="summary-stats">
         <view class="summary-stat">
-          <text class="summary-stat-label">总盈亏</text>
-          <text class="summary-stat-value mono-num">{{displayValues.totalPnL}}</text>
+          <text class="stat-label">总盈亏</text>
+          <text class="stat-value {{totalPnL >= 0 ? 'profit' : 'loss'}}">{{displayValues.totalPnL}}</text>
         </view>
-        <view class="summary-stat-divider"></view>
         <view class="summary-stat">
-          <text class="summary-stat-label">收益率</text>
-          <text class="summary-stat-value mono-num">{{totalPnLPercent >= 0 ? '+' : ''}}{{displayValues.totalPnLPercent}}%</text>
+          <text class="stat-label">收益率</text>
+          <text class="stat-value {{totalPnLPercent >= 0 ? 'profit' : 'loss'}}">{{totalPnLPercent >= 0 ? '+' : ''}}{{displayValues.totalPnLPercent}}%</text>
         </view>
-        <view class="summary-stat-divider"></view>
         <view class="summary-stat">
-          <text class="summary-stat-label">持仓</text>
-          <text class="summary-stat-value mono-num">{{positions.length}}只</text>
+          <text class="stat-label">持仓</text>
+          <text class="stat-value">{{positions.length}}只</text>
         </view>
+      </view>
+      
+      <!-- 分享按钮 -->
+      <view class="share-btn" bindtap="onSharePortfolio">
+        <image src="/images/share.svg" mode="aspectFit" style="width: 32rpx; height: 32rpx;" />
       </view>
     </view>
 
@@ -65,23 +72,23 @@
 
     <!-- 持仓列表 -->
     <scroll-view wx:if="{{positions.length > 0}}" class="scroll-container {{tabAnimating ? 'tab-content-exit' : ''}} {{entranceDone ? '' : 'animate-stagger stagger-delay-4'}}" scroll-y style="height: {{scrollHeight}}px;" bindscrolltolower="loadMorePositions">
-      <view wx:for="{{positions}}" wx:key="id" wx:if="{{index < displayCount}}" class="swipe-container">
+      <view wx:for="{{displayPositions}}" wx:key="id" class="swipe-container">
         <view class="swipe-actions {{item.swipeOpen ? 'swipe-actions-open' : ''}}">
           <view class="swipe-action-btn swipe-action-edit" data-stock-id="{{item.id}}" catchtap="onSwipeEdit">
-            <view style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
+            <view class="swipe-action-content">
               <text>编辑</text>
-              <text style="font-size: 18rpx; opacity: 0.8;">{{item.quantityText}}股</text>
+              <text class="swipe-action-sub">{{item.quantityText}}股</text>
             </view>
           </view>
           <view class="swipe-action-btn swipe-action-sell" data-stock-id="{{item.id}}" catchtap="onSwipeSell">
-            <view style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
+            <view class="swipe-action-content">
               <text>卖出</text>
-              <text wx:if="{{item.quantity > 0}}" style="font-size: 18rpx; opacity: 0.8;">可卖{{item.quantityText}}</text>
+              <text wx:if="{{item.quantity > 0}}" class="swipe-action-sub">可卖{{item.quantityText}}</text>
             </view>
           </view>
           <view class="swipe-action-btn swipe-action-delete" data-stock-id="{{item.id}}" catchtap="onSwipeDelete">删除</view>
         </view>
-        <view class="position-card {{item.swipeOpen ? 'swipe-card-open' : ''}} {{item.id === deletingId ? 'position-card-deleting' : ''}} {{item.entering ? 'position-card-entering' : ''}}"
+        <view class="{{item.cardClass}} {{item.swipeOpen ? 'swipe-card-open' : ''}} {{item.id === deletingId ? 'position-card-deleting' : ''}}"
           style="transform: translateX({{item.swipeOffset || 0}}px);"
           bindtouchstart="onTouchStart"
           bindtouchmove="onTouchMove"
@@ -90,13 +97,13 @@
           bindlongpress="onPositionLongPress"
           data-stock-id="{{item.id}}"
           data-index="{{index}}">
-          <view style="display: flex; align-items: center; gap: var(--xhs-space-sm); margin-bottom: var(--xhs-space-md);">
+          <view class="position-header-row">
             <market-tag market="{{item.market}}" label="{{item.marketLabel}}" />
             <text class="stock-code">{{item.code}}</text>
             <text class="stock-name">{{item.name}}</text>
           </view>
 
-          <view style="display: flex; gap: var(--xhs-space-md); margin-bottom: var(--xhs-space-md); align-items: flex-start;">
+          <view class="position-data-row">
             <view style="flex: 1;">
               <text class="caption">持仓</text>
               <view class="mono-num" style="color: var(--xhs-title);">{{item.quantityText}}股</view>
@@ -107,7 +114,7 @@
             </view>
             <view style="flex: 1;">
               <text class="caption">现价</text>
-              <view class="mono-num {{item.priceFlashClass}}" style="color: var(--xhs-title); display: flex; align-items: center; gap: var(--xhs-space-xs);">
+              <view class="mono-num" style="color: var(--xhs-title); display: flex; align-items: center; gap: var(--xhs-space-xs);">
                 <text wx:if="{{item.currentPrice > 0}}">{{item.currentPriceText}}</text>
                 <text wx:else style="color: var(--xhs-caption);">--</text>
                 <view
@@ -121,10 +128,10 @@
             </view>
           </view>
 
-          <view style="display: flex; justify-content: space-between; align-items: center; padding-top: var(--xhs-space-md); border-top: 1px solid var(--xhs-divider);">
-            <text class="mono-num {{item.floatingPnL >= 0 ? 'profit' : 'loss'}}">
+          <view class="position-pnl-row">
+            <view class="mono-num {{item.floatingPnL >= 0 ? 'profit' : 'loss'}}" style="align-items: center;">
               {{item.floatingPnLText}}
-            </text>
+            </view>
             <view class="profit-badge {{item.floatingPnL >= 0 ? 'profit' : 'loss'}}">
               <text class="mono-num">{{item.pnlPercentText}}%</text>
             </view>
@@ -162,5 +169,5 @@
   <quick-record visible="{{showQuickRecord}}" bind:close="onQuickRecordClose" bind:submit="onQuickRecordSubmit" />
 
   <!-- 隐藏 canvas 用于生成分享图 -->
-  <canvas type="2d" id="shareCanvas" style="position: fixed; left: -9999px; top: 0; width: 100vw; height: 100vh;"></canvas>
+  <canvas type="2d" id="shareCanvas" style="position: fixed; left: -9999px; top: 0; width: 1px; height: 1px;"></canvas>
 </view>

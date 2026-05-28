@@ -11,8 +11,7 @@
   right: 0;
   height: 62rpx;
   background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: rgba(255, 255, 255, 0.98);
   border-top: 1rpx solid rgba(0, 0, 0, 0.04);
   padding-bottom: env(safe-area-inset-bottom);
   z-index: 999;
@@ -37,7 +36,7 @@
   color: var(--xhs-caption-light, #C7C7CC);
   line-height: 1;
   letter-spacing: 0.01em;
-  transition: all 350ms cubic-bezier(0.4, 0, 0.2, 1);
+  transition: color 350ms cubic-bezier(0.4, 0, 0.2, 1), opacity 350ms cubic-bezier(0.4, 0, 0.2, 1);
   opacity: 0.7;
 }
 
@@ -59,7 +58,7 @@
   height: 3rpx;
   background: var(--xhs-primary, #FF3B30);
   border-radius: 1.5rpx;
-  transition: all 350ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: transform 350ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .tab-item.active::after {

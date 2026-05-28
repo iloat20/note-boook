@@ -60,13 +60,14 @@ const PriceCache = {
     if (!entry) return null
     // 兼容旧格式（纯数字，没有 TTL 信息）
     if (typeof entry === 'number') return entry
-    // 检查 TTL，过期则惰性清理
+    // 检查 TTL
     if (Date.now() - entry.timestamp > PRICE_TTL) {
       delete prices[stockId]
-      try { saveData(PRICE_KEY, prices) } catch (e) { /* 同步保存失败不影响返回 */ }
+      // 直接同步保存，避免竞态条件
+      saveData(PRICE_KEY, prices)
       return null
     }
-    return entry.price || null
+    return entry.price != null ? entry.price : null
   },
 
   /**
@@ -75,6 +76,42 @@ const PriceCache = {
    */
   getAll() {
     return getData(PRICE_KEY) || {}
+  },
+
+  /**
+   * 批量获取多只股票的价格（只读一次 storage）
+   * @param {Array<number>} stockIds - 股票 ID 列表
+   * @returns {Object} { stockId: price, ... }，过期或不存在的不包含
+   */
+  getBatch(stockIds) {
+    if (!stockIds || stockIds.length === 0) return {}
+    const prices = this.getAll()
+    const now = Date.now()
+    const result = {}
+    const expiredIds = []
+
+    stockIds.forEach(function (id) {
+      const entry = prices[id]
+      if (!entry) return
+      // 兼容旧格式
+      if (typeof entry === 'number') {
+        result[id] = entry
+        return
+      }
+      if (now - entry.timestamp > PRICE_TTL) {
+        expiredIds.push(id)
+      } else if (entry.price != null) {
+        result[id] = entry.price
+      }
+    })
+
+    // Batch cleanup expired entries
+    if (expiredIds.length > 0) {
+      expiredIds.forEach(function (id) { delete prices[id] })
+      saveData(PRICE_KEY, prices)
+    }
+
+    return result
   },
 
   /**

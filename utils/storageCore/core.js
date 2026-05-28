@@ -15,7 +15,6 @@ const STRATEGY_KEY = 'stock_trade_strategies'
 
 // 内存缓存，避免频繁读取本地存储
 // 使用 LRU 策略，防止缓存无限增长
-const MAX_MEM_CACHE = 50
 const _memCache = caches.mem
 
 let _lastTimestamp = 0
@@ -34,7 +33,6 @@ function getNextId() {
     _lastTimestamp = now
     _seq = 0
   }
-  // 使用 1000 作为乘数，支持同一毫秒内的 1000 个唯一 ID
   const ID_MULTIPLIER = 1000
   return now * ID_MULTIPLIER + _seq
 }
@@ -58,11 +56,7 @@ function saveData(key, data) {
  */
 function getData(key) {
   if (_memCache.has(key)) {
-    // LRU: 移到末尾
-    const val = _memCache.get(key)
-    _memCache.delete(key)
-    _memCache.set(key, val)
-    return val
+    return _memCache.get(key)
   }
   let data = wx.getStorageSync(key)
   if (!data || (Array.isArray(data) && data.length === 0)) {
@@ -105,21 +99,24 @@ function clearMemCache() {
  * @returns {Object} 保存后的对象
  */
 function upsertAndSave(key, item, dirtyTags) {
+  if (!item || item.id == null) {
+    console.error('[upsertAndSave] Invalid item:', item)
+    return item
+  }
   const list = getData(key)
   const index = list.findIndex(function (x) { return x.id === item.id })
   if (index >= 0) {
-    list[index] = item
+    // 保留原对象的其他字段，只更新提供的字段
+    list[index] = Object.assign({}, list[index], item)
   } else {
     list.push(item)
   }
   saveData(key, list)
   if (dirtyTags) {
-    // 提取 stockId 用于按股票粒度清除缓存
-    // Transaction/Dividend 有 stockId 字段，Stock 用 id 作为 stockId
     const stockId = item.stockId != null ? item.stockId : item.id
     markDataDirty(dirtyTags, stockId)
   }
-  return item
+  return index >= 0 ? list[index] : item
 }
 
 /**

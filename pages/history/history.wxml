@@ -94,7 +94,7 @@
         </view>
 
         <!-- 左侧: 类型色条 -->
-        <view class="record-type-bar {{record.type === 'BUY' ? 'bar-buy' : record.type === 'SELL' ? 'bar-sell' : 'bar-dividend'}}"></view>
+        <view class="{{record.typeBarClass}}"></view>
 
         <!-- 主内容 -->
         <view class="record-main">
@@ -105,7 +105,7 @@
               <text class="record-code">{{record.code}}</text>
               <text class="record-name">{{record.name}}</text>
             </view>
-            <view class="tag type-tag {{record.type === 'BUY' ? 'tag-buy' : record.type === 'SELL' ? 'tag-sell' : 'tag-dividend'}}">
+            <view class="{{record.typeTagClass}}">
               {{record.typeText}}
             </view>
             <text class="record-time">{{record.time}}</text>
@@ -116,14 +116,14 @@
             <text class="detail-price mono-num">¥{{record.priceText}}</text>
             <text class="detail-multiply">×</text>
             <text class="detail-quantity">{{record.quantity}}股</text>
-            <text class="detail-amount mono-num {{record.type === 'SELL' ? 'profit' : 'loss'}}">
+            <text class="{{record.amountClass}}">
               {{record.amountText}}
             </text>
           </view>
 
           <!-- 分红: 金额 (右) -->
           <view wx:if="{{record.type === 'DIVIDEND'}}" class="record-detail">
-            <text class="detail-amount mono-num dividend">{{record.amountText}}</text>
+            <text class="{{record.amountClass}}">{{record.amountText}}</text>
           </view>
 
           <!-- 策略标签 -->
@@ -148,7 +148,7 @@
   </scroll-view>
 
   <!-- 搜索无结果 -->
-  <view wx:elif="{{searchKeyword && allGroupedHistory.length > 0 && groupedHistory.length === 0}}" class="search-empty animate-stagger stagger-delay-5">
+  <view wx:elif="{{searchKeyword && recordCount > 0 && groupedHistory.length === 0}}" class="search-empty animate-stagger stagger-delay-5">
     <text class="search-empty-icon">🔍</text>
     <text class="search-empty-text">未找到"{{searchKeyword}}"相关记录</text>
   </view>

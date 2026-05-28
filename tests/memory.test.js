@@ -134,11 +134,11 @@ describe('Storage LRU Cache', () => {
 })
 
 describe('Cache Size Constants', () => {
-  test('MAX_MEM_CACHE in core.js is 50', () => {
+  test('mem cache uses LRUCache from cacheManager', () => {
     const coreContent = require('fs').readFileSync(
       require('path').join(__dirname, '../utils/storageCore/core.js'), 'utf8'
     )
-    expect(coreContent).toContain('const MAX_MEM_CACHE = 50')
+    expect(coreContent).toContain('const _memCache = caches.mem')
   })
 
   test('cacheManager position cache max size is 100', () => {

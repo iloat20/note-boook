@@ -36,11 +36,11 @@ function decodeGBK(arrayBuffer) {
   }
   // 降级：按字节转 latin-1 字符串（中文会乱，但不会崩溃）
   const bytes = new Uint8Array(arrayBuffer)
-  let str = ''
+  const chars = new Array(bytes.length)
   for (let i = 0; i < bytes.length; i++) {
-    str += String.fromCharCode(bytes[i])
+    chars[i] = String.fromCharCode(bytes[i])
   }
-  return str
+  return chars.join('')
 }
 
 // A股代码前缀映射

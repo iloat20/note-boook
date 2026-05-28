@@ -464,7 +464,7 @@ page {
   border: 1px solid var(--xhs-divider-strong);
   background: var(--xhs-bg-secondary);
   color: var(--xhs-body);
-  transition: all 150ms ease;
+  transition: background-color 150ms ease, border-color 150ms ease, transform 150ms ease;
 }
 
 .tag-item:active {
@@ -540,10 +540,7 @@ page {
   font-weight: var(--xhs-weight-semibold);
   background: var(--xhs-primary);
   border-radius: 20px;
-  transition: all 150ms ease;
-}
-
-.picker-done:active {
+  transition: opacity 150ms ease, transform 150ms ease;
   opacity: 0.85;
   transform: scale(0.95);
 }
@@ -644,7 +641,7 @@ page {
   font-size: 16px;
   font-weight: var(--xhs-weight-semibold);
   border-radius: 12px;
-  transition: all 200ms ease;
+  transition: opacity 200ms ease, transform 200ms ease;
   pointer-events: auto;
 }
 

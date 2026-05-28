@@ -17,7 +17,7 @@ Page({
       { key: 'MONTH', label: '月' },
       { key: 'YEAR', label: '年' }
     ],
-    stats: {},
+    stats: null,
     detailItems: [],
     heatmapData: [],
     heatmapYear: new Date().getFullYear(),
@@ -35,9 +35,10 @@ Page({
 
   async onShow() {
     pageMixin.setTabSelected(this, 2)
-    // dirty 标记在 loadStats 完成后再消费，避免异步期间新标记丢失
     const wasDirty = pageMixin.consumeDirtyFlag()
-    await this.loadStats()
+    if (wasDirty || !this.data.stats) {
+      await this.loadStats()
+    }
   },
 
   switchPeriod: function (e) {
@@ -92,11 +93,14 @@ Page({
       const fee = parseFloat(t.fee) || 0
       const amount = price * quantity
       const dateObj = new Date(t.date)
+      const isBuy = t.type === 'BUY'
       const item = {
         id: t.id,
         stockId: t.stockId,
         type: t.type,
-        typeText: t.type === 'BUY' ? '买入' : '卖出',
+        typeText: isBuy ? '买入' : '卖出',
+        typeTagClass: 'tag type-tag ' + (isBuy ? 'tag-buy' : 'tag-sell'),
+        amountClass: 'detail-d-amount mono-num ' + (isBuy ? 'xhs-loss' : 'xhs-profit'),
         dateText: t.date ? fmtDate(dateObj) : '-',
         _sortKey: dateObj.getTime(),
         price: price,
@@ -121,6 +125,8 @@ Page({
         stockId: d.stockId,
         type: 'DIVIDEND',
         typeText: '分红',
+        typeTagClass: 'tag type-tag tag-dividend',
+        amountClass: 'detail-d-amount mono-num xhs-profit',
         dateText: d.date ? fmtDate(dateObj) : '-',
         _sortKey: dateObj.getTime(),
         amountText: fmt(d.totalAmount),
@@ -216,7 +222,7 @@ Page({
     var yearPnL = yearRecovery - yearInvestment
     var yearPnLPercent = yearInvestment > 0 ? parseFloat((yearPnL / yearInvestment * 100).toFixed(2)) : 0
 
-    const periodList = getPeriodStatsList('MONTH', 120)
+    const periodList = getPeriodStatsList('MONTH', 12)
     const monthlyPnL = []
     for (let m = 1; m <= 12; m++) {
       const label = yearPrefix + String(m).padStart(2, '0')
@@ -260,18 +266,17 @@ Page({
     })
 
     let yearXIRR = null
-    try {
-      const { calcXIRRForRange } = require('../../utils/helpers/xirr')
-      yearXIRR = await calcXIRRForRange(yearStart, yearEnd)
-    } catch (e) {
-      console.error('年度报告 XIRR 计算失败:', e)
-    }
-
     let totalXIRR = null
     try {
-      totalXIRR = await getTotalXIRR()
+      const { calcXIRRForRange } = require('../../utils/helpers/xirr')
+      const [yrXIRR, totXIRR] = await Promise.all([
+        calcXIRRForRange(yearStart, yearEnd).catch(function () { return null }),
+        getTotalXIRR().catch(function () { return null })
+      ])
+      yearXIRR = yrXIRR
+      totalXIRR = totXIRR
     } catch (e) {
-      console.error('总 XIRR 计算失败:', e)
+      console.error('XIRR 计算失败:', e)
     }
 
     this.setData({

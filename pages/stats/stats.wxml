@@ -110,7 +110,7 @@
           <view wx:for="{{completeTrades}}" wx:key="id" class="detail-item">
             <view class="detail-row-single">
               <view class="detail-info">
-                <view class="tag type-tag {{item.type === 'BUY' ? 'tag-buy' : item.type === 'SELL' ? 'tag-sell' : 'tag-dividend'}}">{{item.typeText}}</view>
+                <view class="{{item.typeTagClass}}">{{item.typeText}}</view>
                 <text class="detail-code">{{item.code}}</text>
                 <text class="detail-name">{{item.name}}</text>
               </view>
@@ -120,12 +120,12 @@
               <text class="detail-d-price mono-num">¥{{item.priceText || '0.00'}}</text>
               <text class="detail-d-multiply">×</text>
               <text class="detail-d-shares">{{item.quantity || 0}}股</text>
-              <text class="detail-d-amount mono-num {{item.type === 'SELL' ? 'xhs-profit' : 'xhs-loss'}}">
+              <text class="{{item.amountClass}}">
                 ¥{{item.amountText || '0.00'}}
               </text>
             </view>
             <view wx:if="{{item.type === 'DIVIDEND'}}" class="detail-row-detail">
-              <text class="detail-d-amount mono-num xhs-profit">¥{{item.amountText}}</text>
+              <text class="{{item.amountClass}}">¥{{item.amountText || '0.00'}}</text>
             </view>
           </view>
         </view>

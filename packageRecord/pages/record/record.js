@@ -73,6 +73,7 @@ Page({
     const transaction = transactions.find(function (t) { return t.id === id })
     if (!transaction) return
     const stock = Stock.getById(transaction.stockId)
+    if (!stock) return
     const date = new Date(transaction.date)
     const hasJournal = !!(transaction.reason || (transaction.strategies && transaction.strategies.length))
     this.setData({

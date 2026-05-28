@@ -41,7 +41,7 @@
         </view>
         <view style="width: calc(50% - 6px);">
           <text class="caption">现价</text>
-          <view wx:if="{{!editMode}}" class="body" style="color: var(--xhs-title); margin-top: 2px;">{{position.currentPrice ? position.currentPrice : '--'}}</view>
+          <view wx:if="{{!editMode}}" class="body" style="color: var(--xhs-title); margin-top: 2px;">{{formatCurrentPrice}}</view>
           <view wx:else style="margin-top: 2px; display: flex; align-items: center;">
             <text class="caption">{{marketLabel === 'A股' ? '¥' : marketLabel === '港股' ? 'HK$' : '$'}}</text>
             <input class="edit-input" type="digit" placeholder="0.00" value="{{editCurrentPrice}}" bindinput="onEditCurrentPriceInput" style="margin-left: 4px;"/>
@@ -78,7 +78,7 @@
         </view>
         <view style="width: calc(50% - 6px);">
           <text class="caption">分红收益</text>
-          <view class="body profit" style="font-weight: var(--xhs-weight-semibold); margin-top: 2px;">+{{formatDividendIncome}}</view>
+          <view class="body profit" style="font-weight: var(--xhs-weight-semibold); margin-top: 2px;">{{formatDividendIncome}}</view>
         </view>
       </view>
       <view style="display: flex; justify-content: space-between; padding-top: 16px; margin-top: 12px; border-top: 1px solid var(--xhs-divider);">

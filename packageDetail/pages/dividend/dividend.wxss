@@ -148,7 +148,7 @@
   font-size: var(--xhs-font-md);
   color: var(--xhs-title);
   box-sizing: border-box;
-  transition: all 200ms ease;
+  transition: border-color 200ms ease, box-shadow 200ms ease;
 }
 
 .record-input:focus {

@@ -1,0 +1,37 @@
+name: Claude Code
+
+on:
+  # PR 评论中 @claude 时触发
+  issue_comment:
+    types: [created]
+  # PR 创建/更新时自动 review
+  pull_request:
+    types: [opened, synchronize]
+  # Issue 中 @claude 时触发
+  issues:
+    types: [opened]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  id-token: write
+
+jobs:
+  claude:
+    # issue_comment: 只在 @claude 提及且非 bot 自身时运行
+    if: |
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude') && github.event.comment.user.login != 'github-actions[bot]') ||
+      (github.event_name == 'pull_request') ||
+      (github.event_name == 'issues' && contains(github.event.issue.body, '@claude'))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # 可选：自定义触发关键词
+          trigger_phrase: "@claude"
+          # 可选：Claude 模型
+          model: "claude-sonnet-4-6"
+          # 可选：允许 Claude 执行的工具
+          allowed_tools: "Bash(npm test),Bash(npx jest)"

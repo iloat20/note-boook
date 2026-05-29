@@ -38,7 +38,15 @@ function hideLoading() {
  * 用法：catchError(err) 或 catchError(err, '加载失败')
  */
 function catchError(err, defaultMsg) {
-  let msg = (err && err.message) ? err.message.substring(0, 50) : (defaultMsg || '操作失败')
+  let msg = defaultMsg || '操作失败'
+  if (err) {
+    if (err.code && err.message) {
+      msg = '[' + err.code + '] ' + err.message
+    } else if (err.message) {
+      msg = err.message
+    }
+    if (msg.length > 50) msg = msg.substring(0, 50)
+  }
   wx.showToast({ title: msg, icon: 'none' })
 }
 

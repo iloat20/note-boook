@@ -106,25 +106,24 @@ Page({ ...touchGestureMixin,
       const filtered = this.data.currentMarket
         ? newPositions.filter(p => p.market === this.data.currentMarket)
         : newPositions
-      this.setData({ positions: filtered, displayPositions: filtered.slice(0, this.data.displayCount) })
+      const mapped = filtered.map(p => p.marketLabel == null ? Object.assign({}, p, { marketLabel: getMarketLabel(p.market) }) : p)
+      this.setData({ positions: mapped, displayPositions: mapped.slice(0, this.data.displayCount) })
     })
 
     // 等待数据加载完成后再获取现价
     await this._loadData()
 
     // 只在交易时段或持仓无现价时（首次进入）获取行情
-    var allPos = this.data._allPositions || this.data.positions
-    var hasNoPrice = allPos.some(function (p) { return !p.currentPrice || p.currentPrice <= 0 })
+    const allPos = this.data._allPositions || this.data.positions
+    const hasNoPrice = allPos.some(function (p) { return !p.currentPrice || p.currentPrice <= 0 })
     if (isTradingTime() || hasNoPrice) {
       this._fetchPrices({ silent: true })
     }
   },
   
   async onShow() {
-    pageMixin.setTabSelected(this, 0)
-
     // 如果数据过期，先刷新持仓数据
-    if (pageMixin.consumeDirtyFlag()) {
+    if (pageMixin.onShowMixin(this, 0)) {
       await this._loadData()
       // 添加/修改交易后自动获取一次现价，不区分交易时段，强制忽略缓存
       if (this.data.positions && this.data.positions.length > 0) {
@@ -185,7 +184,7 @@ Page({ ...touchGestureMixin,
 
       // 已实现盈亏和分红收入从所有持仓（含已清仓）计算
       allPositions.forEach(p => {
-        var rate = getRate(p.market, rates)
+        let rate = getRate(p.market, rates)
         totalRealizedPnL += (p.realizedPnL || 0) * rate
         totalDividendIncome += (p.dividendIncome || 0) * rate
       })
@@ -198,7 +197,7 @@ Page({ ...touchGestureMixin,
 
       // 浮动盈亏和市值仅统计当前持仓
       positions.forEach(p => {
-        var rate = getRate(p.market, rates)
+        let rate = getRate(p.market, rates)
         totalFloatingPnL += (p.floatingPnL || 0) * rate
         if (p.currentPrice) {
           totalMarketValue += p.currentPrice * p.quantity * rate
@@ -217,7 +216,7 @@ Page({ ...touchGestureMixin,
 
       allTransactions.forEach(t => {
         if (allStockIds.has(t.stockId) && t.type === 'BUY') {
-          var tRate = getRate(positionMap.get(t.stockId)?.market, rates)
+          let tRate = getRate(positionMap.get(t.stockId)?.market, rates)
           totalInvestment += (t.price * t.quantity + t.fee) * tRate
         }
       })
@@ -249,7 +248,7 @@ Page({ ...touchGestureMixin,
         const currency = getMarketCurrency(p.market)
 
         // Pre-compute card class to avoid ternary in WXML
-        var cardClass = 'position-card'
+        const cardClass = 'position-card'
         if (newIds.has(p.id)) cardClass += ' position-card-entering'
         if (priceFlashClass) cardClass += ' ' + priceFlashClass
 
@@ -275,7 +274,7 @@ Page({ ...touchGestureMixin,
         const delay = Math.max(TIMING_CONFIG.PRICE_FLASH_CLEAR_DELAY, TIMING_CONFIG.ENTER_ANIM_DELAY)
         this._cleanupTimer = setTimeout(() => {
           const cleaned = this.data.positions.map(p => {
-            var result = Object.assign({}, p)
+            const result = Object.assign({}, p)
             if (hasFlash) result.priceFlashClass = ''
             if (hasEntering) result.entering = false
             return result
@@ -298,9 +297,9 @@ Page({ ...touchGestureMixin,
       const allTx = Transaction.getAll()
       allTx.forEach(function (t) {
         if (t.type === 'BUY') {
-          var pos = positionMap.get(t.stockId)
+          const pos = positionMap.get(t.stockId)
           if (pos) {
-            var tRate = getRate(pos.market, rates)
+            const tRate = getRate(pos.market, rates)
             marketInvestment[pos.market] = (marketInvestment[pos.market] || 0) + (t.price * t.quantity + t.fee) * tRate
           }
         }
@@ -539,8 +538,8 @@ Page({ ...touchGestureMixin,
   
   // ========== 获取行情 ==========
   async _fetchPrices(opts) {
-    var silent = opts && opts.silent
-    var force = opts && opts.force
+    const silent = opts && opts.silent
+    const force = opts && opts.force
     // 使用 _allPositions 确保所有市场的股票都能获取行情（不只是当前 tab 筛选的）
     const positions = this.data._allPositions || this.data.positions
     if (!positions || positions.length === 0) return

@@ -1,6 +1,6 @@
-/**
+﻿/**
  * 页面 Mixin 工具
- * 提取 tab 页公共逻辑（NavBar 初始化、TabBar 选中状态）
+ * 提取 tab 页面公共逻辑（NavBar 初始化、TabBar 选中状态、dirty 标记消费）
  */
 
 /**
@@ -22,6 +22,17 @@ function initPageData(pageData = {}) {
  */
 function onLoadMixin(page) {
   page.setData(getApp().getNavBarInfo())
+}
+
+/**
+ * Tab 页面 onShow 公共逻辑：设置 TabBar 选中 + 检查 dirty 标记
+ * @param {Object} page - 页面实例（this）
+ * @param {number} tabIndex - tab 索引
+ * @returns {boolean} 数据是否需要刷新
+ */
+function onShowMixin(page, tabIndex) {
+  setTabSelected(page, tabIndex)
+  return consumeDirtyFlag()
 }
 
 /**
@@ -51,6 +62,7 @@ function consumeDirtyFlag() {
 module.exports = {
   initPageData,
   onLoadMixin,
+  onShowMixin,
   setTabSelected,
   consumeDirtyFlag
 }

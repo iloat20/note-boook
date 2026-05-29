@@ -51,16 +51,14 @@ Component({
   methods: {
     // ──── 生命周期 ────
     _onVisibleChange: function (visible) {
-      if (visible) {
-        var now = new Date()
+      if (visible) { now = new Date()
         this.setData({
           qrDate: now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0'),
           qrTime: String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0'),
           qrCodeFocus: true,
           showQrMore: false
         })
-        // 重新聚焦输入框
-        var that = this
+        // 重新聚焦输入框 that = this
         setTimeout(function () { that.setData({ qrCodeFocus: true }) }, 350)
       } else {
         this._resetForm()
@@ -82,9 +80,7 @@ Component({
     },
 
     // ──── 代码输入 + 自动获取 ────
-    onQrCodeInput: function (e) {
-      var value = (e.detail.value || '').trim()
-      var market = this._detectMarket(value)
+    onQrCodeInput: function (e) { value = (e.detail.value || '').trim() market = this._detectMarket(value)
       this.setData({
         qrCode: value,
         qrMarket: market,
@@ -94,8 +90,7 @@ Component({
       })
 
       // 本地联想搜索
-      if (value.length >= 1) {
-        var results = searchStocks(value, market, 8)
+      if (value.length >= 1) { results = searchStocks(value, market, 8)
         this.setData({ qrSuggestions: results, showQrSuggestions: results.length > 0 })
       } else {
         this.setData({ qrSuggestions: [], showQrSuggestions: false })
@@ -105,16 +100,13 @@ Component({
       this._scheduleAutoFetch(value)
     },
 
-    onQrCodeBlur: function () {
-      var that = this
+    onQrCodeBlur: function () { that = this
       setTimeout(function () { that.setData({ showQrSuggestions: false }) }, 200)
       // 失焦时立即尝试获取
       this._tryAutoFetch(this.data.qrCode)
     },
 
-    onQrSelectSuggestion: function (e) {
-      var item = e.currentTarget.dataset.item
-      var that = this
+    onQrSelectSuggestion: function (e) { item = e.currentTarget.dataset.item that = this
       this.setData({
         qrCode: item.code,
         qrName: item.name,
@@ -131,25 +123,19 @@ Component({
     // ──── 自动获取（防抖） ────
     _scheduleAutoFetch: function (code) {
       if (this._afTimer) { clearTimeout(this._afTimer); this._afTimer = null }
-      if (!code || !validateStockCode(code, this.data.qrMarket)) return
-      var that = this
+      if (!code || !validateStockCode(code, this.data.qrMarket)) return that = this
       this._afTimer = setTimeout(function () { that._tryAutoFetch(code) }, 500)
     },
 
     _tryAutoFetch: function (code) {
       if (!code || !validateStockCode(code, this.data.qrMarket)) return
       if (this._afFetching === code) return
-      this._afFetching = code
-      var that = this
+      this._afFetching = code that = this
       this.setData({ qrFetching: true })
 
       fetchStockPrice(this.data.qrMarket, code).then(function (data) {
         if (data && data.name && that.data.qrCode === code) {
-          // 优先用本地数据库名字（UTF-8 不会乱码），API 名字仅作兜底
-          var localResults = searchStocks(code, that.data.qrMarket, 1)
-          var localName = localResults.length > 0 ? localResults[0].name : null
-          var finalName = localName || data.name
-          var updates = { qrName: finalName, qrFetching: false }
+          // 优先用本地数据库名字（UTF-8 不会乱码），API 名字仅作兜底 localResults = searchStocks(code, that.data.qrMarket, 1) localName = localResults.length > 0 ? localResults[0].name : null finalName = localName || data.name updates = { qrName: finalName, qrFetching: false }
           if (!that.data.qrPrice || parseFloat(that.data.qrPrice) === 0) {
             updates.qrPrice = String(data.currentPrice)
           }
@@ -176,23 +162,20 @@ Component({
       this._calcQrFee()
     },
 
-    onQrQtyMinus: function () {
-      var qty = Math.max(0, (parseInt(this.data.qrQuantity) || 0) - 100)
+    onQrQtyMinus: function () { qty = Math.max(0, (parseInt(this.data.qrQuantity) || 0) - 100)
       this.setData({ qrQuantity: qty > 0 ? String(qty) : '0' })
       this._calcQrFee()
       wx.vibrateShort({ type: 'light' })
     },
 
-    onQrQtyPlus: function () {
-      var qty = (parseInt(this.data.qrQuantity) || 0) + 100
+    onQrQtyPlus: function () { qty = (parseInt(this.data.qrQuantity) || 0) + 100
       this.setData({ qrQuantity: String(qty) })
       this._calcQrFee()
       wx.vibrateShort({ type: 'light' })
     },
 
     // ──── 数量快捷预设 ────
-    onQrQtyPreset: function (e) {
-      var qty = parseInt(e.currentTarget.dataset.qty) || 0
+    onQrQtyPreset: function (e) { qty = parseInt(e.currentTarget.dataset.qty) || 0
       if (qty === 0) {
         // 全仓：TODO 后续可接持仓数据
         wx.showToast({ title: '全仓功能开发中', icon: 'none' })
@@ -217,11 +200,7 @@ Component({
     },
 
     // ──── 费用 ────
-    _calcQrFee: function () {
-      var d = this.data
-      var fee = calculateFee(d.qrMarket, d.qrType, d.qrPrice, d.qrQuantity)
-      var tradeAmount = (parseFloat(d.qrPrice) || 0) * (parseInt(d.qrQuantity) || 0)
-      var actualAmount = d.qrType === 'BUY' ? tradeAmount + fee : tradeAmount - fee
+    _calcQrFee: function () { d = this.data fee = calculateFee(d.qrMarket, d.qrType, d.qrPrice, d.qrQuantity) tradeAmount = (parseFloat(d.qrPrice) || 0) * (parseInt(d.qrQuantity) || 0) actualAmount = d.qrType === 'BUY' ? tradeAmount + fee : tradeAmount - fee
 
       this.setData({
         qrFee: fee,
@@ -240,23 +219,17 @@ Component({
     },
 
     // ──── 提交 ────
-    submitQuickRecord: function () {
-      var d = this.data
-      var code = formatStockCode(d.qrCode, d.qrMarket)
-      var name = d.qrName
+    submitQuickRecord: function () { d = this.data code = formatStockCode(d.qrCode, d.qrMarket) name = d.qrName
 
       if (!code) { wx.showToast({ title: '请输入股票代码', icon: 'none' }); return }
       if (!name) { wx.showToast({ title: '请从列表中选择或等待自动识别', icon: 'none' }); return }
       if (!d.qrPrice || parseFloat(d.qrPrice) <= 0) { wx.showToast({ title: '请输入有效价格', icon: 'none' }); return }
       if (!d.qrQuantity || parseInt(d.qrQuantity) <= 0) { wx.showToast({ title: '请输入有效数量', icon: 'none' }); return }
 
-      wx.vibrateShort({ type: 'medium' })
-
-      var stock = Stock.getByCode(code, d.qrMarket)
+      wx.vibrateShort({ type: 'medium' }) stock = Stock.getByCode(code, d.qrMarket)
 
       if (d.qrType === 'SELL') {
-        if (!stock) { wx.showToast({ title: '暂无可卖持仓', icon: 'none' }); return }
-        var sellableQuantity = getSellableQuantity(stock.id)
+        if (!stock) { wx.showToast({ title: '暂无可卖持仓', icon: 'none' }); return } sellableQuantity = getSellableQuantity(stock.id)
         if (parseInt(d.qrQuantity) > sellableQuantity) {
           wx.showToast({ title: '卖出数量超过持仓', icon: 'none' })
           return
@@ -266,10 +239,7 @@ Component({
       if (!stock) {
         stock = Stock.create(code, name, d.qrMarket)
         Stock.save(stock)
-      }
-
-      var dateTimeStr = d.qrDate + 'T' + (d.qrTime || '00:00') + ':00'
-      var tx = Transaction.create(stock.id, d.qrType, d.qrPrice, d.qrQuantity, d.qrFee, new Date(dateTimeStr).toISOString())
+      } dateTimeStr = d.qrDate + 'T' + (d.qrTime || '00:00') + ':00' tx = Transaction.create(stock.id, d.qrType, d.qrPrice, d.qrQuantity, d.qrFee, new Date(dateTimeStr).toISOString())
       Transaction.save(tx)
 
       wx.showToast({ title: '添加成功', icon: 'success' })

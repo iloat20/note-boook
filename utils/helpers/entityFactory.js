@@ -6,6 +6,8 @@
  * ID 由调用方传入，便于测试和复用。
  */
 
+const { ValidationError } = require('../errors')
+
 let VALID_MARKETS = { A_SHARE: 1, HK_SHARE: 1, US_SHARE: 1 }
 let VALID_TX_TYPES = { BUY: 1, SELL: 1 }
 let VALID_DIV_TYPES = { CASH: 1, SHARE: 1 }
@@ -51,13 +53,13 @@ function createTransaction(stockId, type, price, quantity, fee, date, note, reas
   if (!VALID_TX_TYPES[type]) throw makeError('Transaction', 'invalid type: ' + type)
   if (price == null || isNaN(parseFloat(price)) || parseFloat(price) <= 0) throw makeError('Transaction', 'price must be positive')
   
-  var qty = parseInt(quantity, 10)
+  let qty = parseInt(quantity, 10)
   if (isNaN(qty) || qty <= 0 || !Number.isInteger(qty)) throw makeError('Transaction', 'quantity must be positive integer, got: ' + JSON.stringify(quantity))
   
-  var feeNum = parseFloat(fee)
+  const feeNum = parseFloat(fee)
   if (isNaN(feeNum) || feeNum < 0) throw makeError('Transaction', 'fee must be >= 0')
 
-  var dateStr = date instanceof Date ? date.toISOString() : String(date)
+  let dateStr = date instanceof Date ? date.toISOString() : String(date)
   if (!dateStr || isNaN(new Date(dateStr).getTime())) throw makeError('Transaction', 'invalid date')
 
   return {
@@ -90,17 +92,17 @@ function createDividend(stockId, perShareAmount, quantity, date, note, type, sha
   if (!stockId || stockId <= 0) throw makeError('Dividend', 'invalid stockId')
   if (perShareAmount == null || isNaN(parseFloat(perShareAmount)) || parseFloat(perShareAmount) < 0) throw makeError('Dividend', 'perShareAmount must be >= 0')
   
-  var qty = parseInt(quantity, 10)
+  const qty = parseInt(quantity, 10)
   if (isNaN(qty) || qty <= 0 || !Number.isInteger(qty)) throw makeError('Dividend', 'quantity must be positive integer, got: ' + JSON.stringify(quantity))
 
-  var divType = type || 'CASH'
+  let divType = type || 'CASH'
   if (!VALID_DIV_TYPES[divType]) throw makeError('Dividend', 'invalid type: ' + divType)
 
-  var dateStr = date instanceof Date ? date.toISOString() : String(date)
+  const dateStr = date instanceof Date ? date.toISOString() : String(date)
   if (!dateStr || isNaN(new Date(dateStr).getTime())) throw makeError('Dividend', 'invalid date')
 
-  var shareQty = parseInt(shareQuantity, 10) || 0
-  var totalAmount = divType === 'CASH' ? parseFloat(perShareAmount) * qty : 0
+  const shareQty = parseInt(shareQuantity, 10) || 0
+  const totalAmount = divType === 'CASH' ? parseFloat(perShareAmount) * qty : 0
 
   return {
     id: id,
@@ -116,7 +118,7 @@ function createDividend(stockId, perShareAmount, quantity, date, note, type, sha
 }
 
 function makeError(model, msg) {
-  return new Error('[' + model + '] ' + msg)
+  return new ValidationError(model, msg)
 }
 
 module.exports = {

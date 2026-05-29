@@ -48,8 +48,7 @@ Page({
   },
 
   onShow() {
-    pageMixin.setTabSelected(this, 1)
-    if (pageMixin.consumeDirtyFlag() || !this._allGroupedHistory) {
+    if (pageMixin.onShowMixin(this, 1) || !this._allGroupedHistory) {
       this.loadHistory()
     }
   },

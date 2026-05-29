@@ -34,8 +34,7 @@ Page({
   },
 
   async onShow() {
-    pageMixin.setTabSelected(this, 2)
-    const wasDirty = pageMixin.consumeDirtyFlag()
+    const wasDirty = pageMixin.onShowMixin(this, 2)
     if (wasDirty || !this.data.stats) {
       await this.loadStats()
     }
@@ -197,8 +196,8 @@ Page({
 
     let yearBuyAmount = 0, yearSellAmount = 0, yearBuyFee = 0, yearSellFee = 0
     yearTx.forEach(function (t) {
-      var r = getRate(stockMarket[t.stockId], rates)
-      var amt = t.price * t.quantity
+      let r = getRate(stockMarket[t.stockId], rates)
+      const amt = t.price * t.quantity
       if (t.type === 'BUY') {
         yearBuyAmount += amt * r
         yearBuyFee += t.fee * r
@@ -208,19 +207,19 @@ Page({
       }
     })
 
-    var yearDivTotal = 0
+    const yearDivTotal = 0
     Dividend.getAll().forEach(function (d) {
-      var dd = new Date(d.date)
+      const dd = new Date(d.date)
       if (dd >= yearStart && dd <= yearEnd) {
-        var r = getRate(stockMarket[d.stockId], rates)
+        let r = getRate(stockMarket[d.stockId], rates)
         yearDivTotal += d.totalAmount * r
       }
     })
 
-    var yearInvestment = yearBuyAmount + yearBuyFee
-    var yearRecovery = yearSellAmount - yearSellFee + yearDivTotal
-    var yearPnL = yearRecovery - yearInvestment
-    var yearPnLPercent = yearInvestment > 0 ? parseFloat((yearPnL / yearInvestment * 100).toFixed(2)) : 0
+    const yearInvestment = yearBuyAmount + yearBuyFee
+    const yearRecovery = yearSellAmount - yearSellFee + yearDivTotal
+    const yearPnL = yearRecovery - yearInvestment
+    const yearPnLPercent = yearInvestment > 0 ? parseFloat((yearPnL / yearInvestment * 100).toFixed(2)) : 0
 
     const periodList = getPeriodStatsList('MONTH', 12)
     const monthlyPnL = []
@@ -241,20 +240,20 @@ Page({
     }))
     const stockPnL = {}
     allPositions.forEach(function (p) {
-      var key = p.code
-      var r = getRate(p.market, rates)
+      const key = p.code
+      const r = getRate(p.market, rates)
       if (!stockPnL[key]) {
         stockPnL[key] = { code: p.code, name: p.name, market: p.market, totalPnL: 0 }
       }
       stockPnL[key].totalPnL += ((p.realizedPnL || 0) + (p.floatingPnL || 0) + (p.dividendIncome || 0)) * r
     })
-    var stockList = Object.values(stockPnL).map(function (s) {
+    const stockList = Object.values(stockPnL).map(function (s) {
       s.totalPnL = parseFloat(s.totalPnL.toFixed(2))
       s.totalPnLText = fmt(Math.abs(s.totalPnL))
       return s
     }).sort(function (a, b) { return b.totalPnL - a.totalPnL })
-    var topStocks = stockList.slice(0, 5)
-    var bottomStocks = stockList.filter(function (s) { return s.totalPnL < 0 })
+    const topStocks = stockList.slice(0, 5)
+    const bottomStocks = stockList.filter(function (s) { return s.totalPnL < 0 })
       .slice(-5).reverse()
       .map(function (s) { s.totalPnLText = fmt(Math.abs(s.totalPnL)); return s })
 

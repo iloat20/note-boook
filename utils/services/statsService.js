@@ -11,6 +11,7 @@ const { caches } = require('../cache/cacheManager')
 const { calcXIRRForRange, getTotalXIRR } = require('../helpers/xirr')
 const { getRate, getRates } = require('./exchangeRate')
 const { fmt } = require('../helpers/format')
+const { getByPeriod } = require('../helpers/dateRange')
 
 // 周期统计数据缓存
 
@@ -136,32 +137,7 @@ function getTotalStats() {
  * @returns {Object} 周期统计数据
  */
 function getStatsByPeriod(period) {
-  const now = new Date()
-  let startDate, endDate
-  
-  switch (period) {
-    case 'DAY':
-      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-      endDate = new Date(startDate.getTime() + 24 * 60 * 60 * 1000 - 1)
-      break
-    case 'WEEK': {
-      const dayOfWeek = now.getDay() || 7
-      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek + 1)
-      endDate = new Date(startDate.getTime() + 7 * 24 * 60 * 60 * 1000 - 1)
-      break
-    }
-    case 'MONTH':
-      startDate = new Date(now.getFullYear(), now.getMonth(), 1)
-      endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999)
-      break
-    case 'YEAR':
-      startDate = new Date(now.getFullYear(), 0, 1)
-      endDate = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999)
-      break
-    default:
-      startDate = new Date(0)
-      endDate = now
-  }
+  const { startDate, endDate } = getByPeriod(period);
   
   const transactions = Transaction.getByDateRange(startDate, endDate)
   const dividends = Dividend.getAll().filter(d => {

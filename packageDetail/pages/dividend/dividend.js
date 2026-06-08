@@ -1,5 +1,6 @@
 const { Stock, Dividend } = require('../../../utils/models/index')
 const { fmt } = require('../../../utils/helpers/format')
+const { toast, success } = require('../../../utils/ui/feedback')
 
 Page({
   data: {
@@ -87,26 +88,26 @@ Page({
   submit() {
     const op = this.data.stockOptions[this.data.stockIdx]
     const s = op?.stock
-    if (!s) { wx.showToast({ title: '请选择股票', icon: 'none' }); return }
+    if (!s) { toast('请选择股票'); return }
     const { divType, perShare:ps, qty:q, shareQty:sq, date:d, note:nt } = this.data
-    if (!d) { wx.showToast({ title: '请选择日期', icon: 'none' }); return }
+    if (!d) { toast('请选择日期'); return }
 
     if (divType === 'SHARE') {
-      if (!sq || parseInt(sq) <= 0) { wx.showToast({ title: '请输入有效送股数量', icon: 'none' }); return }
-      if (!q || parseInt(q) <= 0) { wx.showToast({ title: '请输入有效持股数量', icon: 'none' }); return }
+      if (!sq || parseInt(sq) <= 0) { toast('请输入有效送股数量'); return }
+      if (!q || parseInt(q) <= 0) { toast('请输入有效持股数量'); return }
       // SHARE 类型：perShareAmount=0, type='SHARE', shareQuantity=送股数
       const dv = Dividend.create(s.id, 0, q, new Date(`${d}T00:00:00`).toISOString(), nt, 'SHARE', sq)
       if (this._isEdit) dv.id = this._editId
       Dividend.save(dv)
     } else {
-      if (!ps || parseFloat(ps) <= 0) { wx.showToast({ title: '请输入有效分红金额', icon: 'none' }); return }
-      if (!q || parseInt(q) <= 0) { wx.showToast({ title: '请输入有效数量', icon: 'none' }); return }
+      if (!ps || parseFloat(ps) <= 0) { toast('请输入有效分红金额'); return }
+      if (!q || parseInt(q) <= 0) { toast('请输入有效数量'); return }
       const dv = Dividend.create(s.id, ps, q, new Date(`${d}T00:00:00`).toISOString(), nt)
       if (this._isEdit) dv.id = this._editId
       Dividend.save(dv)
     }
 
-    wx.showToast({ title: this._isEdit ? '已修改' : '已添加', icon: 'success' })
+    success(this._isEdit ? '已修改' : '已添加')
     setTimeout(() => wx.navigateBack(), 800)
   },
 })

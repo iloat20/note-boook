@@ -6,6 +6,7 @@ const { fmt, fmtShortDate, fmtTime } = require("../../../utils/helpers/format")
 const { calcFloatingPercent } = require('../../../utils/helpers/positionCalculator')
 const { getMarketLabel, getMarketColor, getMarketCurrency } = require("../../../utils/constants/market")
 const pageMixin = require('../../../utils/ui/pageMixin')
+const { toast, success: fbSuccess } = require('../../../utils/ui/feedback')
 
 Page({
   data: {
@@ -299,19 +300,19 @@ Page({
     const currentPrice = parseFloat(this.data.editCurrentPrice) || 0
 
     if (quantity <= 0) {
-      wx.showToast({ title: '请输入有效持仓数量', icon: 'none' })
+      toast('请输入有效持仓数量')
       return
     }
 
     if (avgCost <= 0) {
-      wx.showToast({ title: '请输入有效成本价', icon: 'none' })
+      toast('请输入有效成本价')
       return
     }
 
     const transactions = this._rawTransactions || Transaction.getByStockId(stockId)
     const dividends = Dividend.getByStockId(stockId)
     if (transactions.length === 0) {
-      wx.showToast({ title: '暂无交易记录，无法调整持仓', icon: 'none' })
+      toast('暂无交易记录，无法调整持仓')
       return
     }
 
@@ -343,7 +344,7 @@ Page({
     const syntheticFee = Math.abs(diff) * feeRate
 
     if (Math.abs(diff) < avgBuyPrice * 0.5) {
-      wx.showToast({ title: '持仓已是最新的', icon: 'none' })
+      toast('持仓已是最新的')
       this.setData({ editMode: false })
       return
     }
@@ -364,7 +365,7 @@ Page({
       PriceCache.set(stockId, currentPrice)
     }
 
-    wx.showToast({ title: '持仓已更新', icon: 'success' })
+    fbSuccess('持仓已更新')
     this.setData({ editMode: false })
     this.loadData()
   }

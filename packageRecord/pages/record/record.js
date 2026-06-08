@@ -305,19 +305,19 @@ Page({
     const time = data.time
     const note = data.note
 
-    if (!code || !name) { wx.showToast({ title: "请填写代码和名称", icon: "none" }); return }
-    if (!validateStockCode(code, market)) { wx.showToast({ title: "代码格式错误", icon: "none" }); return }
-    if (!price || parseFloat(price) <= 0) { wx.showToast({ title: "请输入有效价格", icon: "none" }); return }
-    if (!quantity || parseInt(quantity) <= 0) { wx.showToast({ title: "请输入有效数量", icon: "none" }); return }
-    if (!date || !time) { wx.showToast({ title: "请选择日期时间", icon: "none" }); return }
+    if (!code || !name) { toast("请填写代码和名称"); return }
+    if (!validateStockCode(code, market)) { toast("代码格式错误"); return }
+    if (!price || parseFloat(price) <= 0) { toast("请输入有效价格"); return }
+    if (!quantity || parseInt(quantity) <= 0) { toast("请输入有效数量"); return }
+    if (!date || !time) { toast("请选择日期时间"); return }
 
     let stock = Stock.getByCode(code, market)
     if (type === 'SELL') {
-      if (!stock) { wx.showToast({ title: '暂无可卖持仓', icon: 'none' }); return }
+      if (!stock) { toast('暂无可卖持仓'); return }
       const ignoredTransactionId = this._isEdit ? this._editId : null
       const sellableQuantity = getSellableQuantity(stock.id, ignoredTransactionId)
       if (parseInt(quantity) > sellableQuantity) {
-        wx.showToast({ title: '卖出数量超过持仓', icon: 'none' })
+        toast('卖出数量超过持仓')
         return
       }
     }
@@ -332,7 +332,7 @@ Page({
     const transaction = Transaction.create(stock.id, type, price, quantity, fee, new Date(date + "T" + time + ":00").toISOString(), note, data.reason, data.strategies)
     if (this._isEdit) transaction.id = this._editId
     Transaction.save(transaction)
-    wx.showToast({ title: this._isEdit ? "已修改" : "已添加", icon: "success" })
+    success(this._isEdit ? "已修改" : "已添加")
     setTimeout(function () { wx.navigateBack() }, TIMING_CONFIG.NAVIGATE_BACK_DELAY)
   }
 })

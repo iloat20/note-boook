@@ -131,6 +131,66 @@ function getTotalStats() {
   }
 }
 
+
+/**
+ * 生成指定周期类型的时间区间列表
+ * @param {string} periodType - DAY|WEEK|MONTH|YEAR
+ * @param {Date} firstDate - 起始日期
+ * @param {Date} now - 当前日期
+ * @returns {Array<{start: Date, end: Date, label: string}>}
+ */
+function _generatePeriods(periodType, firstDate, now) {
+  const periods = []
+  
+  switch (periodType) {
+    case 'WEEK': {
+      let weekStart = new Date(firstDate)
+      const dayOfWeek = weekStart.getDay() || 7
+      weekStart = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() - dayOfWeek + 1)
+      
+      while (weekStart <= now) {
+        const weekEnd = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000 - 1)
+        const weekLabel = weekStart.getFullYear() + 'W' + Math.ceil((weekStart.getDate() + 6) / 7)
+        periods.push({ start: weekStart, end: weekEnd, label: weekLabel })
+        weekStart = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000)
+      }
+      break
+    }
+    case 'MONTH': {
+      let monthStart = new Date(firstDate.getFullYear(), firstDate.getMonth(), 1)
+      
+      while (monthStart <= now) {
+        const monthEnd = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0, 23, 59, 59, 999)
+        const monthLabel = monthStart.getFullYear() + '-' + String(monthStart.getMonth() + 1).padStart(2, '0')
+        periods.push({ start: monthStart, end: monthEnd, label: monthLabel })
+        monthStart = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 1)
+      }
+      break
+    }
+    case 'YEAR': {
+      let yearStart = new Date(firstDate.getFullYear(), 0, 1)
+      
+      while (yearStart <= now) {
+        const yearEnd = new Date(yearStart.getFullYear(), 11, 31, 23, 59, 59, 999)
+        periods.push({ start: yearStart, end: yearEnd, label: String(yearStart.getFullYear()) })
+        yearStart = new Date(yearStart.getFullYear() + 1, 0, 1)
+      }
+      break
+    }
+    default: {
+      let dayStart = new Date(firstDate.getFullYear(), firstDate.getMonth(), firstDate.getDate())
+      
+      while (dayStart <= now) {
+        const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000 - 1)
+        periods.push({ start: dayStart, end: dayEnd, label: (dayStart.getMonth() + 1) + '/' + dayStart.getDate() })
+        dayStart = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000)
+      }
+    }
+  }
+  
+  return periods
+}
+
 /**
  * 按周期获取统计数据
  * @param {string} period - 周期类型（DAY|WEEK|MONTH|YEAR）
@@ -206,70 +266,12 @@ function getPeriodStatsList(periodType, count = 12) {
   const now = new Date()
   
   const result = []
-  let currentStart, currentEnd, label
+  const periods = _generatePeriods(periodType, firstDate, now)
   
-  switch (periodType) {
-    case 'WEEK': {
-      let weekStart = new Date(firstDate)
-      const dayOfWeek = weekStart.getDay() || 7
-      weekStart = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() - dayOfWeek + 1)
-      
-      while (weekStart <= now) {
-        const weekEnd = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000 - 1)
-        const weekLabel = `${weekStart.getFullYear()}W${Math.ceil((weekStart.getDate() + 6) / 7)}`
-        
-        const item = calcStatsForRange(transactions, dividends, weekStart, weekEnd, weekLabel)
-        if (item) result.push(item)
-        
-        weekStart = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000)
-      }
-      break
-    }
-      
-    case 'MONTH': {
-      let monthStart = new Date(firstDate.getFullYear(), firstDate.getMonth(), 1)
-      
-      while (monthStart <= now) {
-        const monthEnd = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0, 23, 59, 59, 999)
-        const monthLabel = `${monthStart.getFullYear()}-${String(monthStart.getMonth() + 1).padStart(2, '0')}`
-        
-        const item = calcStatsForRange(transactions, dividends, monthStart, monthEnd, monthLabel)
-        if (item) result.push(item)
-        
-        monthStart = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 1)
-      }
-      break
-    }
-      
-    case 'YEAR': {
-      let yearStart = new Date(firstDate.getFullYear(), 0, 1)
-      
-      while (yearStart <= now) {
-        const yearEnd = new Date(yearStart.getFullYear(), 11, 31, 23, 59, 59, 999)
-        const yearLabel = `${yearStart.getFullYear()}`
-        
-        const item = calcStatsForRange(transactions, dividends, yearStart, yearEnd, yearLabel)
-        if (item) result.push(item)
-        
-        yearStart = new Date(yearStart.getFullYear() + 1, 0, 1)
-      }
-      break
-    }
-      
-    default: {
-      let dayStart = new Date(firstDate.getFullYear(), firstDate.getMonth(), firstDate.getDate())
-      
-      while (dayStart <= now) {
-        const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000 - 1)
-        const dayLabel = `${dayStart.getMonth() + 1}/${dayStart.getDate()}`
-        
-        const item = calcStatsForRange(transactions, dividends, dayStart, dayEnd, dayLabel)
-        if (item) result.push(item)
-        
-        dayStart = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000)
-      }
-    }
-  }
+  periods.forEach(function (p) {
+    const item = calcStatsForRange(transactions, dividends, p.start, p.end, p.label)
+    if (item) result.push(item)
+  });
   
   const finalResult = result.slice(-count)
   caches.periodStats.set(cacheKey, finalResult.slice())

@@ -1,10 +1,10 @@
 {
-  "desc": "隐私保护指引",
-  "version": "1.0.0",
-  "privacyItems": [
-    {
-      "key": "scope.album",
-      "text": "用于保存持仓截图到相册"
-    }
-  ]
+	"desc": "隐私保护指引",
+	"version": "1.0.0",
+	"privacyItems": [
+		{
+			"key": "scope.album",
+			"text": "用于保存持仓截图到相册"
+		}
+	]
 }

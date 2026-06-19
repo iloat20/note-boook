@@ -22,43 +22,47 @@
  */
 
 function createStore(config) {
-  const state = config.state || {}
-  const mutations = config.mutations || {}
-  const _listeners = {}
+	const state = config.state || {};
+	const mutations = config.mutations || {};
+	const _listeners = {};
 
-  function _notify(key, value) {
-    if (!_listeners[key]) return
-    _listeners[key].forEach(function (cb) {
-      try { cb(value) } catch (e) { console.error('[store] notify error:', e) }
-    })
-  }
+	function _notify(key, value) {
+		if (!_listeners[key]) return;
+		_listeners[key].forEach((cb) => {
+			try {
+				cb(value);
+			} catch (e) {
+				console.error("[store] notify error:", e);
+			}
+		});
+	}
 
-  return {
-    /** 获取状态，传 key 取子集，不传取全部 */
-    getState(key) {
-      return key ? state[key] : state
-    },
+	return {
+		/** 获取状态，传 key 取子集，不传取全部 */
+		getState(key) {
+			return key ? state[key] : state;
+		},
 
-    /** 提交 mutation，同步修改状态并通知订阅者 */
-    commit(type, payload) {
-      if (typeof mutations[type] === 'function') {
-        mutations[type](state, payload)
-        _notify(type, payload)
-        _notify('*', { type: type, payload: payload })
-      } else {
-        console.warn('[store] unknown mutation:', type)
-      }
-    },
+		/** 提交 mutation，同步修改状态并通知订阅者 */
+		commit(type, payload) {
+			if (typeof mutations[type] === "function") {
+				mutations[type](state, payload);
+				_notify(type, payload);
+				_notify("*", { type: type, payload: payload });
+			} else {
+				console.warn("[store] unknown mutation:", type);
+			}
+		},
 
-    /** 订阅状态变更，返回取消订阅函数 */
-    subscribe(key, callback) {
-      if (!_listeners[key]) _listeners[key] = []
-      _listeners[key].push(callback)
-      return function unsubscribe() {
-        _listeners[key] = _listeners[key].filter(function (cb) { return cb !== callback })
-      }
-    }
-  }
+		/** 订阅状态变更，返回取消订阅函数 */
+		subscribe(key, callback) {
+			if (!_listeners[key]) _listeners[key] = [];
+			_listeners[key].push(callback);
+			return function unsubscribe() {
+				_listeners[key] = _listeners[key].filter((cb) => cb !== callback);
+			};
+		},
+	};
 }
 
-module.exports = { createStore }
+module.exports = { createStore };

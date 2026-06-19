@@ -11,50 +11,50 @@
  * @returns {Promise}
  */
 function request(options) {
-  return new Promise((resolve, reject) => {
-    const config = {
-      url: options.url,
-      method: options.method || 'GET',
-      data: options.data || {},
-      header: {
-        'Content-Type': 'application/json',
-        ...options.header
-      },
-      timeout: options.timeout || 10000,
-      responseType: options.responseType || 'text'
-    }
+	return new Promise((resolve, reject) => {
+		const config = {
+			url: options.url,
+			method: options.method || "GET",
+			data: options.data || {},
+			header: {
+				"Content-Type": "application/json",
+				...options.header,
+			},
+			timeout: options.timeout || 10000,
+			responseType: options.responseType || "text",
+		};
 
-    wx.request({
-      ...config,
-      success: (res) => {
-        if (res.statusCode >= 200 && res.statusCode < 300) {
-          resolve(res.data)
-        } else {
-          reject({ statusCode: res.statusCode, data: res.data })
-        }
-      },
-      fail: (err) => {
-        reject({ statusCode: 0, error: err })
-      }
-    })
-  })
+		wx.request({
+			...config,
+			success: (res) => {
+				if (res.statusCode >= 200 && res.statusCode < 300) {
+					resolve(res.data);
+				} else {
+					reject({ statusCode: res.statusCode, data: res.data });
+				}
+			},
+			fail: (err) => {
+				reject({ statusCode: 0, error: err });
+			},
+		});
+	});
 }
 
 // 便捷方法
 request.get = (url, data, options) => {
-  return request({ ...options, url, method: 'GET', data })
-}
+	return request({ ...options, url, method: "GET", data });
+};
 
 request.post = (url, data, options) => {
-  return request({ ...options, url, method: 'POST', data })
-}
+	return request({ ...options, url, method: "POST", data });
+};
 
 request.put = (url, data, options) => {
-  return request({ ...options, url, method: 'PUT', data })
-}
+	return request({ ...options, url, method: "PUT", data });
+};
 
 request.delete = (url, data, options) => {
-  return request({ ...options, url, method: 'DELETE', data })
-}
+	return request({ ...options, url, method: "DELETE", data });
+};
 
-module.exports = { request }
+module.exports = { request };

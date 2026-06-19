@@ -7,21 +7,21 @@
  *   getState(key)
  */
 
-const { createStore } = require('./store')
+const { createStore } = require("./store");
 
 const positionStore = createStore({
-  state: {
-    positions: [],
-    summary: null
-  },
-  mutations: {
-    SET_POSITIONS: function (state, payload) {
-      state.positions = payload
-    },
-    SET_SUMMARY: function (state, payload) {
-      state.summary = payload
-    }
-  }
-})
+	state: {
+		positions: [],
+		summary: null,
+	},
+	mutations: {
+		SET_POSITIONS: (state, payload) => {
+			state.positions = payload;
+		},
+		SET_SUMMARY: (state, payload) => {
+			state.summary = payload;
+		},
+	},
+});
 
-module.exports = positionStore
+module.exports = positionStore;

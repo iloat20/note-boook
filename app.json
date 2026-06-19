@@ -1,64 +1,55 @@
 {
-  "pages": [
-    "pages/index/index",
-    "pages/history/history",
-    "pages/stats/stats"
-  ],
-  "subpackages": [
-    {
-      "root": "packageDetail",
-      "pages": [
-        "pages/detail/detail",
-        "pages/dividend/dividend"
-      ]
-    },
-    {
-      "root": "packageRecord",
-      "pages": [
-        "pages/record/record"
-      ]
-    }
-  ],
-  "preloadRule": {
-    "pages/index/index": {
-      "packages": ["packageDetail", "packageRecord"]
-    },
-    "pages/history/history": {
-      "packages": ["packageDetail", "packageRecord"]
-    },
-    "pages/stats/stats": {
-      "packages": ["packageRecord", "packageDetail"]
-    }
-  },
-  "window": {
-    "backgroundTextStyle": "light",
-    "backgroundColor": "#F5F5F7",
-    "enablePullDownRefresh": true,
-    "onReachBottomDistance": 50,
-    "navigationStyle": "custom"
-  },
-  "tabBar": {
-    "custom": true,
-    "color": "#86868B",
-    "selectedColor": "#1D1D1F",
-    "backgroundColor": "#FFFFFF",
-    "borderStyle": "white",
-    "list": [
-      {
-        "pagePath": "pages/index/index",
-        "text": "持仓"
-      },
-      {
-        "pagePath": "pages/history/history",
-        "text": "流水"
-      },
-      {
-        "pagePath": "pages/stats/stats",
-        "text": "统计"
-      }
-    ]
-  },
-  "lazyCodeLoading": "requiredComponents",
-  "componentFramework": "glass-easel",
-  "sitemapLocation": "sitemap.json"
+	"pages": ["pages/index/index", "pages/history/history", "pages/stats/stats"],
+	"subpackages": [
+		{
+			"root": "packageDetail",
+			"pages": ["pages/detail/detail", "pages/dividend/dividend"]
+		},
+		{
+			"root": "packageRecord",
+			"pages": ["pages/record/record"]
+		}
+	],
+	"preloadRule": {
+		"pages/index/index": {
+			"packages": ["packageDetail", "packageRecord"]
+		},
+		"pages/history/history": {
+			"packages": ["packageDetail", "packageRecord"]
+		},
+		"pages/stats/stats": {
+			"packages": ["packageRecord", "packageDetail"]
+		}
+	},
+	"window": {
+		"backgroundTextStyle": "light",
+		"backgroundColor": "#F5F5F7",
+		"enablePullDownRefresh": true,
+		"onReachBottomDistance": 50,
+		"navigationStyle": "custom"
+	},
+	"tabBar": {
+		"custom": true,
+		"color": "#86868B",
+		"selectedColor": "#1D1D1F",
+		"backgroundColor": "#FFFFFF",
+		"borderStyle": "white",
+		"list": [
+			{
+				"pagePath": "pages/index/index",
+				"text": "持仓"
+			},
+			{
+				"pagePath": "pages/history/history",
+				"text": "流水"
+			},
+			{
+				"pagePath": "pages/stats/stats",
+				"text": "统计"
+			}
+		]
+	},
+	"lazyCodeLoading": "requiredComponents",
+	"componentFramework": "glass-easel",
+	"sitemapLocation": "sitemap.json"
 }

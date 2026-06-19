@@ -9,11 +9,11 @@
  * @returns {Object} 合并后的数据
  */
 function initPageData(pageData = {}) {
-  return {
-    statusBarHeight: 0,
-    navBarHeight: 44,
-    ...pageData
-  }
+	return {
+		statusBarHeight: 0,
+		navBarHeight: 44,
+		...pageData,
+	};
 }
 
 /**
@@ -21,7 +21,7 @@ function initPageData(pageData = {}) {
  * @param {Object} page - 页面实例（this）
  */
 function onLoadMixin(page) {
-  page.setData(getApp().getNavBarInfo())
+	page.setData(getApp().getNavBarInfo());
 }
 
 /**
@@ -31,8 +31,8 @@ function onLoadMixin(page) {
  * @returns {boolean} 数据是否需要刷新
  */
 function onShowMixin(page, tabIndex) {
-  setTabSelected(page, tabIndex)
-  return consumeDirtyFlag()
+	setTabSelected(page, tabIndex);
+	return consumeDirtyFlag();
 }
 
 /**
@@ -41,9 +41,9 @@ function onShowMixin(page, tabIndex) {
  * @param {number} tabIndex - tab 索引
  */
 function setTabSelected(page, tabIndex) {
-  if (typeof page.getTabBar === 'function' && page.getTabBar()) {
-    page.getTabBar().setData({ selected: tabIndex })
-  }
+	if (typeof page.getTabBar === "function" && page.getTabBar()) {
+		page.getTabBar().setData({ selected: tabIndex });
+	}
 }
 
 /**
@@ -51,18 +51,18 @@ function setTabSelected(page, tabIndex) {
  * @returns {boolean} 数据是否过期
  */
 function consumeDirtyFlag() {
-  const appStore = require('../state/appStore')
-  if (appStore.getState('dataDirty')) {
-    appStore.commit('MARK_CLEAN')
-    return true
-  }
-  return false
+	const appStore = require("../state/appStore");
+	if (appStore.getState("dataDirty")) {
+		appStore.commit("MARK_CLEAN");
+		return true;
+	}
+	return false;
 }
 
 module.exports = {
-  initPageData,
-  onLoadMixin,
-  onShowMixin,
-  setTabSelected,
-  consumeDirtyFlag
-}
+	initPageData,
+	onLoadMixin,
+	onShowMixin,
+	setTabSelected,
+	consumeDirtyFlag,
+};

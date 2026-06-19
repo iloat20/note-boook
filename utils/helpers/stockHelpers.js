@@ -8,9 +8,11 @@
  * @returns {Object} { stockId: stock, ... } 映射
  */
 function buildStockMap(stocks) {
-  const map = {}
-  stocks.forEach(function (s) { map[s.id] = s })
-  return map
+	const map = {};
+	stocks.forEach((s) => {
+		map[s.id] = s;
+	});
+	return map;
 }
 
-module.exports = { buildStockMap }
+module.exports = { buildStockMap };

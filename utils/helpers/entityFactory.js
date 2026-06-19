@@ -6,11 +6,11 @@
  * ID 由调用方传入，便于测试和复用。
  */
 
-const { ValidationError } = require('../errors')
+const { ValidationError } = require("../errors");
 
-let VALID_MARKETS = { A_SHARE: 1, HK_SHARE: 1, US_SHARE: 1 }
-let VALID_TX_TYPES = { BUY: 1, SELL: 1 }
-let VALID_DIV_TYPES = { CASH: 1, SHARE: 1 }
+const VALID_MARKETS = { A_SHARE: 1, HK_SHARE: 1, US_SHARE: 1 };
+const VALID_TX_TYPES = { BUY: 1, SELL: 1 };
+const VALID_DIV_TYPES = { CASH: 1, SHARE: 1 };
 
 /**
  * 创建股票实体
@@ -21,17 +21,20 @@ let VALID_DIV_TYPES = { CASH: 1, SHARE: 1 }
  * @returns {Object}
  */
 function createStock(code, name, market, id) {
-  if (!code || typeof code !== 'string') throw makeError('Stock', 'code is required')
-  if (!name || typeof name !== 'string') throw makeError('Stock', 'name is required')
-  if (!VALID_MARKETS[market]) throw makeError('Stock', 'invalid market: ' + market)
+	if (!code || typeof code !== "string")
+		throw makeError("Stock", "code is required");
+	if (!name || typeof name !== "string")
+		throw makeError("Stock", "name is required");
+	if (!VALID_MARKETS[market])
+		throw makeError("Stock", "invalid market: " + market);
 
-  return {
-    id: id,
-    code: code.trim(),
-    name: name.trim(),
-    market: market,
-    createdAt: new Date().toISOString()
-  }
+	return {
+		id: id,
+		code: code.trim(),
+		name: name.trim(),
+		market: market,
+		createdAt: new Date().toISOString(),
+	};
 }
 
 /**
@@ -48,32 +51,52 @@ function createStock(code, name, market, id) {
  * @param {number} id
  * @returns {Object}
  */
-function createTransaction(stockId, type, price, quantity, fee, date, note, reason, strategies, id) {
-  if (!stockId || stockId <= 0) throw makeError('Transaction', 'invalid stockId')
-  if (!VALID_TX_TYPES[type]) throw makeError('Transaction', 'invalid type: ' + type)
-  if (price == null || isNaN(parseFloat(price)) || parseFloat(price) <= 0) throw makeError('Transaction', 'price must be positive')
-  
-  let qty = parseInt(quantity, 10)
-  if (isNaN(qty) || qty <= 0 || !Number.isInteger(qty)) throw makeError('Transaction', 'quantity must be positive integer, got: ' + JSON.stringify(quantity))
-  
-  const feeNum = parseFloat(fee)
-  if (isNaN(feeNum) || feeNum < 0) throw makeError('Transaction', 'fee must be >= 0')
+function createTransaction(
+	stockId,
+	type,
+	price,
+	quantity,
+	fee,
+	date,
+	note,
+	reason,
+	strategies,
+	id,
+) {
+	if (!stockId || stockId <= 0)
+		throw makeError("Transaction", "invalid stockId");
+	if (!VALID_TX_TYPES[type])
+		throw makeError("Transaction", "invalid type: " + type);
+	if (price == null || isNaN(parseFloat(price)) || parseFloat(price) <= 0)
+		throw makeError("Transaction", "price must be positive");
 
-  let dateStr = date instanceof Date ? date.toISOString() : String(date)
-  if (!dateStr || isNaN(new Date(dateStr).getTime())) throw makeError('Transaction', 'invalid date')
+	const qty = parseInt(quantity, 10);
+	if (isNaN(qty) || qty <= 0 || !Number.isInteger(qty))
+		throw makeError(
+			"Transaction",
+			"quantity must be positive integer, got: " + JSON.stringify(quantity),
+		);
 
-  return {
-    id: id,
-    stockId: stockId,
-    type: type,
-    price: parseFloat(price),
-    quantity: qty,
-    fee: feeNum,
-    date: dateStr,
-    note: note || '',
-    reason: reason || '',
-    strategies: Array.isArray(strategies) ? strategies : []
-  }
+	const feeNum = parseFloat(fee);
+	if (isNaN(feeNum) || feeNum < 0)
+		throw makeError("Transaction", "fee must be >= 0");
+
+	const dateStr = date instanceof Date ? date.toISOString() : String(date);
+	if (!dateStr || isNaN(new Date(dateStr).getTime()))
+		throw makeError("Transaction", "invalid date");
+
+	return {
+		id: id,
+		stockId: stockId,
+		type: type,
+		price: parseFloat(price),
+		quantity: qty,
+		fee: feeNum,
+		date: dateStr,
+		note: note || "",
+		reason: reason || "",
+		strategies: Array.isArray(strategies) ? strategies : [],
+	};
 }
 
 /**
@@ -88,41 +111,61 @@ function createTransaction(stockId, type, price, quantity, fee, date, note, reas
  * @param {number} id
  * @returns {Object}
  */
-function createDividend(stockId, perShareAmount, quantity, date, note, type, shareQuantity, id) {
-  if (!stockId || stockId <= 0) throw makeError('Dividend', 'invalid stockId')
-  if (perShareAmount == null || isNaN(parseFloat(perShareAmount)) || parseFloat(perShareAmount) < 0) throw makeError('Dividend', 'perShareAmount must be >= 0')
-  
-  const qty = parseInt(quantity, 10)
-  if (isNaN(qty) || qty <= 0 || !Number.isInteger(qty)) throw makeError('Dividend', 'quantity must be positive integer, got: ' + JSON.stringify(quantity))
+function createDividend(
+	stockId,
+	perShareAmount,
+	quantity,
+	date,
+	note,
+	type,
+	shareQuantity,
+	id,
+) {
+	if (!stockId || stockId <= 0) throw makeError("Dividend", "invalid stockId");
+	if (
+		perShareAmount == null ||
+		isNaN(parseFloat(perShareAmount)) ||
+		parseFloat(perShareAmount) < 0
+	)
+		throw makeError("Dividend", "perShareAmount must be >= 0");
 
-  let divType = type || 'CASH'
-  if (!VALID_DIV_TYPES[divType]) throw makeError('Dividend', 'invalid type: ' + divType)
+	const qty = parseInt(quantity, 10);
+	if (isNaN(qty) || qty <= 0 || !Number.isInteger(qty))
+		throw makeError(
+			"Dividend",
+			"quantity must be positive integer, got: " + JSON.stringify(quantity),
+		);
 
-  const dateStr = date instanceof Date ? date.toISOString() : String(date)
-  if (!dateStr || isNaN(new Date(dateStr).getTime())) throw makeError('Dividend', 'invalid date')
+	const divType = type || "CASH";
+	if (!VALID_DIV_TYPES[divType])
+		throw makeError("Dividend", "invalid type: " + divType);
 
-  const shareQty = parseInt(shareQuantity, 10) || 0
-  const totalAmount = divType === 'CASH' ? parseFloat(perShareAmount) * qty : 0
+	const dateStr = date instanceof Date ? date.toISOString() : String(date);
+	if (!dateStr || isNaN(new Date(dateStr).getTime()))
+		throw makeError("Dividend", "invalid date");
 
-  return {
-    id: id,
-    stockId: stockId,
-    perShareAmount: parseFloat(perShareAmount),
-    quantity: qty,
-    totalAmount: parseFloat(totalAmount.toFixed(2)),
-    date: dateStr,
-    note: note || '',
-    type: divType,
-    shareQuantity: shareQty
-  }
+	const shareQty = parseInt(shareQuantity, 10) || 0;
+	const totalAmount = divType === "CASH" ? parseFloat(perShareAmount) * qty : 0;
+
+	return {
+		id: id,
+		stockId: stockId,
+		perShareAmount: parseFloat(perShareAmount),
+		quantity: qty,
+		totalAmount: parseFloat(totalAmount.toFixed(2)),
+		date: dateStr,
+		note: note || "",
+		type: divType,
+		shareQuantity: shareQty,
+	};
 }
 
 function makeError(model, msg) {
-  return new ValidationError(model, msg)
+	return new ValidationError(model, msg);
 }
 
 module.exports = {
-  createStock,
-  createTransaction,
-  createDividend
-}
+	createStock,
+	createTransaction,
+	createDividend,
+};

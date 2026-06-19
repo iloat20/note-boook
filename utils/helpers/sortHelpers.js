@@ -10,11 +10,13 @@
  * @returns {Array} 排序后的持仓数组
  */
 function sortByTotalPnL(positions) {
-  return (positions || []).slice().sort((a, b) => {
-    const aTotal = (a.realizedPnL || 0) + (a.floatingPnL || 0) + (a.dividendIncome || 0)
-    const bTotal = (b.realizedPnL || 0) + (b.floatingPnL || 0) + (b.dividendIncome || 0)
-    return bTotal - aTotal
-  })
+	return (positions || []).slice().sort((a, b) => {
+		const aTotal =
+			(a.realizedPnL || 0) + (a.floatingPnL || 0) + (a.dividendIncome || 0);
+		const bTotal =
+			(b.realizedPnL || 0) + (b.floatingPnL || 0) + (b.dividendIncome || 0);
+		return bTotal - aTotal;
+	});
 }
 
 /**
@@ -23,9 +25,9 @@ function sortByTotalPnL(positions) {
  * @returns {Array} 排序后的持仓数组
  */
 function sortByCode(positions) {
-  return (positions || []).slice().sort((a, b) => {
-    return (a.code || '').localeCompare(b.code || '')
-  })
+	return (positions || []).slice().sort((a, b) => {
+		return (a.code || "").localeCompare(b.code || "");
+	});
 }
 
 /**
@@ -34,9 +36,9 @@ function sortByCode(positions) {
  * @returns {Array} 排序后的交易记录数组（不修改原始数组）
  */
 function sortByDateDesc(transactions) {
-  return (transactions || []).slice().sort((a, b) => {
-    return new Date(b.date || 0) - new Date(a.date || 0)
-  })
+	return (transactions || []).slice().sort((a, b) => {
+		return (b.date || "").localeCompare(a.date || "");
+	});
 }
 
 /**
@@ -45,14 +47,14 @@ function sortByDateDesc(transactions) {
  * @returns {Array} 排序后的交易记录数组（不修改原始数组）
  */
 function sortByDateAsc(transactions) {
-  return (transactions || []).slice().sort((a, b) => {
-    return new Date(a.date || 0) - new Date(b.date || 0)
-  })
+	return (transactions || []).slice().sort((a, b) => {
+		return (a.date || "").localeCompare(b.date || "");
+	});
 }
 
 module.exports = {
-  sortByTotalPnL,
-  sortByCode,
-  sortByDateDesc,
-  sortByDateAsc
-}
+	sortByTotalPnL,
+	sortByCode,
+	sortByDateDesc,
+	sortByDateAsc,
+};

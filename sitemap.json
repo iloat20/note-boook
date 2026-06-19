@@ -1,21 +1,21 @@
 {
-  "desc": "微信小程序搜索索引配置",
-  "rules": [
-    {
-      "action": "allow",
-      "page": "pages/index/index"
-    },
-    {
-      "action": "disallow",
-      "page": "pages/record/*"
-    },
-    {
-      "action": "disallow",
-      "page": "pages/detail/*"
-    },
-    {
-      "action": "disallow",
-      "page": "packageDetail/pages/*"
-    }
-  ]
+	"desc": "微信小程序搜索索引配置",
+	"rules": [
+		{
+			"action": "allow",
+			"page": "pages/index/index"
+		},
+		{
+			"action": "disallow",
+			"page": "pages/record/*"
+		},
+		{
+			"action": "disallow",
+			"page": "pages/detail/*"
+		},
+		{
+			"action": "disallow",
+			"page": "packageDetail/pages/*"
+		}
+	]
 }

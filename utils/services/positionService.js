@@ -2,13 +2,17 @@
  * PositionService - 持仓计算服务
  */
 
-const Stock = require('../models/stock')
-const Transaction = require('../models/transaction')
-const Dividend = require('../models/dividend')
-const PriceCache = require('../models/priceCache')
-const { calcPosition, batchCalcPositions } = require('../helpers/positionCalculator')
-const { sortByTotalPnL } = require('../helpers/sortHelpers')
-const { caches } = require('../cache/cacheManager')
+const Stock = require("../models/stock");
+const Transaction = require("../models/transaction");
+const Dividend = require("../models/dividend");
+const PriceCache = require("../models/priceCache");
+const {
+	calcPosition,
+	batchCalcPositions,
+	calcFloatingPercent,
+} = require("../helpers/positionCalculator");
+const { sortByTotalPnL } = require("../helpers/sortHelpers");
+const { caches } = require("../cache/cacheManager");
 
 /**
  * 计算指定股票的持仓信息（带缓存）
@@ -16,17 +20,17 @@ const { caches } = require('../cache/cacheManager')
  * @returns {Object} 持仓信息
  */
 function calculatePosition(stockId) {
-  if (caches.position.has(stockId)) {
-    return caches.position.get(stockId)
-  }
-  
-  const transactions = Transaction.getByStockId(stockId)
-  const dividends = Dividend.getByStockId(stockId)
-  const currentPrice = PriceCache.get(stockId)
-  const result = calcPosition(stockId, transactions, dividends, currentPrice)
-  
-  caches.position.set(stockId, result)
-  return result
+	if (caches.position.has(stockId)) {
+		return caches.position.get(stockId);
+	}
+
+	const transactions = Transaction.getByStockId(stockId);
+	const dividends = Dividend.getByStockId(stockId);
+	const currentPrice = PriceCache.get(stockId);
+	const result = calcPosition(stockId, transactions, dividends, currentPrice);
+
+	caches.position.set(stockId, result);
+	return result;
 }
 
 /**
@@ -36,26 +40,26 @@ function calculatePosition(stockId) {
  * @returns {number} 可卖出数量
  */
 function getSellableQuantity(stockId, ignoredTransactionId) {
-  const transactions = Transaction.getByStockId(stockId)
-  const dividends = Dividend.getByStockId(stockId)
-  let buyQuantity = 0
-  let sellQuantity = 0
-  let shareDividendQty = 0
+	const transactions = Transaction.getByStockId(stockId);
+	const dividends = Dividend.getByStockId(stockId);
+	let buyQuantity = 0;
+	let sellQuantity = 0;
+	let shareDividendQty = 0;
 
-  transactions.forEach(function (t) {
-    if (ignoredTransactionId && t.id === ignoredTransactionId) return
-    if (t.type === 'BUY') {
-      buyQuantity += t.quantity || 0
-    } else {
-      sellQuantity += t.quantity || 0
-    }
-  })
+	transactions.forEach((t) => {
+		if (ignoredTransactionId && t.id === ignoredTransactionId) return;
+		if (t.type === "BUY") {
+			buyQuantity += t.quantity || 0;
+		} else {
+			sellQuantity += t.quantity || 0;
+		}
+	});
 
-  dividends.forEach(function (d) {
-    if (d.type === 'SHARE') shareDividendQty += d.shareQuantity || 0
-  })
+	dividends.forEach((d) => {
+		if (d.type === "SHARE") shareDividendQty += d.shareQuantity || 0;
+	});
 
-  return buyQuantity + shareDividendQty - sellQuantity
+	return buyQuantity + shareDividendQty - sellQuantity;
 }
 
 /**
@@ -63,19 +67,23 @@ function getSellableQuantity(stockId, ignoredTransactionId) {
  * @param {Array} stockIds - 股票 ID 数组
  */
 function batchCalculatePositions(stockIds) {
-  const needCalc = stockIds.filter(id => !caches.position.has(id))
-  if (needCalc.length === 0) return
-  
-  const allTransactions = Transaction.getAll()
-  const allDividends = Dividend.getAll()
-  
-  const results = batchCalcPositions(needCalc, allTransactions, allDividends, function (id) {
-    return PriceCache.get(id)
-  })
-  
-  needCalc.forEach(function (stockId) {
-    caches.position.set(stockId, results[stockId])
-  })
+	const needCalc = stockIds.filter((id) => !caches.position.has(id));
+
+	const allTransactions = Transaction.getAll();
+	const allDividends = Dividend.getAll();
+
+	if (needCalc.length > 0) {
+		const results = batchCalcPositions(
+			needCalc,
+			allTransactions,
+			allDividends,
+			(id) => PriceCache.get(id),
+		);
+
+		needCalc.forEach((stockId) => {
+			caches.position.set(stockId, results[stockId]);
+		});
+	}
 }
 
 /**
@@ -86,36 +94,26 @@ function batchCalculatePositions(stockIds) {
  * @returns {Array} 合并后的持仓数组
  */
 function mergePositions(stocks, filterFn, sortFn) {
-  var stockIds = stocks.map(s => s.id)
-  var allTransactions = Transaction.getAll()
-  var allDividends = Dividend.getAll()
+	const stockIds = stocks.map((s) => s.id);
+	batchCalculatePositions(stockIds);
 
-  var needCalc = stockIds.filter(id => !caches.position.has(id))
-  if (needCalc.length > 0) {
-    var results = batchCalcPositions(needCalc, allTransactions, allDividends, function (id) {
-      return PriceCache.get(id)
-    })
-    needCalc.forEach(function (stockId) {
-      caches.position.set(stockId, results[stockId])
-    })
-  }
+	let positions = stocks.map((stock) => {
+		const pos = caches.position.get(stock.id);
+		return {
+			...stock,
+			...pos,
+		};
+	});
 
-  var positions = stocks.map(stock => {
-    var pos = caches.position.get(stock.id)
-    if (!pos) {
-      var tx = allTransactions.filter(t => t.stockId === stock.id)
-      var div = allDividends.filter(d => d.stockId === stock.id)
-      var price = PriceCache.get(stock.id)
-      pos = calcPosition(stock.id, tx, div, price)
-      caches.position.set(stock.id, pos)
-    }
-    return Object.assign({}, stock, pos)
-  })
+	if (filterFn) {
+		positions = positions.filter(filterFn);
+	}
 
-  if (filterFn) positions = positions.filter(filterFn)
-  if (sortFn) positions.sort(sortFn)
+	if (sortFn) {
+		positions.sort(sortFn);
+	}
 
-  return positions
+	return positions;
 }
 
 /**
@@ -123,14 +121,16 @@ function mergePositions(stocks, filterFn, sortFn) {
  * @param {boolean} forceRefresh - 是否强制刷新缓存
  * @returns {Array} 所有持仓列表
  */
-function getAllPositions(forceRefresh) {
-  forceRefresh = forceRefresh || false
-  var stocks = Stock.getAll()
-  if (forceRefresh) {
-    caches.position.clear()
-  }
+function getAllPositions(forceRefresh = false) {
+	const stocks = Stock.getAll();
+	const stockIds = stocks.map((s) => s.id);
+	if (forceRefresh) {
+		stockIds.forEach((id) => {
+			caches.position.delete(id);
+		});
+	}
 
-  return sortByTotalPnL(mergePositions(stocks))
+	return sortByTotalPnL(mergePositions(stocks));
 }
 
 /**
@@ -139,14 +139,17 @@ function getAllPositions(forceRefresh) {
  * @returns {Array} 持仓列表
  */
 function getPortfolioPositions(market = null) {
-  const stocks = market ? Stock.getByMarket(market) : Stock.getAll()
-  
-  return sortByTotalPnL(mergePositions(
-    stocks,
-    function (p) {
-      return p.quantity > 0 || Math.abs(p.realizedPnL) > 0.01 || Math.abs(p.dividendIncome) > 0.01
-    }
-  ))
+	const stocks = market ? Stock.getByMarket(market) : Stock.getAll();
+
+	return sortByTotalPnL(
+		mergePositions(
+			stocks,
+			(p) =>
+				p.quantity > 0 ||
+				Math.abs(p.realizedPnL) > 0.01 ||
+				Math.abs(p.dividendIncome) > 0.01,
+		),
+	);
 }
 
 /**
@@ -154,18 +157,16 @@ function getPortfolioPositions(market = null) {
  * @param {string} market - 市场类型（可选）
  * @returns {Array} 持仓汇总列表
  */
-function getPositionSummary(market) {
-  var stocks = market ? Stock.getByMarket(market) : Stock.getAll()
+function getPositionSummary(market = null) {
+	const stocks = market ? Stock.getByMarket(market) : Stock.getAll();
 
-  return mergePositions(
-    stocks,
-    function (p) { return p.quantity > 0 },
-    function (a, b) {
-      var aRatio = a.avgCost > 0 && a.quantity > 0 ? a.floatingPnL / (a.avgCost * a.quantity) : 0
-      var bRatio = b.avgCost > 0 && b.quantity > 0 ? b.floatingPnL / (b.avgCost * b.quantity) : 0
-      return bRatio - aRatio
-    }
-  )
+	return mergePositions(
+		stocks,
+		(p) => p.quantity > 0,
+		(a, b) => {
+			return parseFloat(calcFloatingPercent(b)) - parseFloat(calcFloatingPercent(a));
+		},
+	);
 }
 
 /**
@@ -173,21 +174,24 @@ function getPositionSummary(market) {
  * @returns {Array} 已清仓持仓列表
  */
 function getClearedPositions() {
-  const stocks = Stock.getAll()
-  
-  return mergePositions(
-    stocks,
-    p => p.quantity === 0 && (Math.abs(p.realizedPnL) > 0.01 || Math.abs(p.dividendIncome) > 0.01),
-    (a, b) => (b.realizedPnL + b.dividendIncome) - (a.realizedPnL + a.dividendIncome)
-  )
+	const stocks = Stock.getAll();
+
+	return mergePositions(
+		stocks,
+		(p) =>
+			p.quantity === 0 &&
+			(Math.abs(p.realizedPnL) > 0.01 || Math.abs(p.dividendIncome) > 0.01),
+		(a, b) =>
+			b.realizedPnL + b.dividendIncome - (a.realizedPnL + a.dividendIncome),
+	);
 }
 
 module.exports = {
-  calculatePosition,
-  getSellableQuantity,
-  batchCalculatePositions,
-  getAllPositions,
-  getPortfolioPositions,
-  getPositionSummary,
-  getClearedPositions
-}
+	calculatePosition,
+	getSellableQuantity,
+	batchCalculatePositions,
+	getAllPositions,
+	getPortfolioPositions,
+	getPositionSummary,
+	getClearedPositions,
+};

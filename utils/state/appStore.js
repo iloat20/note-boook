@@ -6,21 +6,21 @@
  * 提交 MARK_DIRTY mutation，页面 onShow 时检查并消费。
  */
 
-const { createStore } = require('./store')
+const { createStore } = require("./store");
 
 const appStore = createStore({
-  state: {
-    /** 是否有数据变更需要页面重新加载 */
-    dataDirty: false
-  },
-  mutations: {
-    MARK_DIRTY: function (state) {
-      state.dataDirty = true
-    },
-    MARK_CLEAN: function (state) {
-      state.dataDirty = false
-    }
-  }
-})
+	state: {
+		/** 是否有数据变更需要页面重新加载 */
+		dataDirty: false,
+	},
+	mutations: {
+		MARK_DIRTY: (state) => {
+			state.dataDirty = true;
+		},
+		MARK_CLEAN: (state) => {
+			state.dataDirty = false;
+		},
+	},
+});
 
-module.exports = appStore
+module.exports = appStore;

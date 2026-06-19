@@ -1,54 +1,114 @@
 /**
- * dateRange.js — 日期范围计算
+ * dateRange.js — 日期范围计算工具
+ *
+ * 统一所有统计页面的日期范围计算逻辑，消除重复代码。
+ * 每个函数返回 { startDate, endDate }，时间精确到毫秒。
  */
 
-var PERIOD_DAYS = { WEEK: 7, MONTH: 30, YEAR: 365 }
-
-function getByPeriod(period) {
-  var endDate = new Date()
-  var days = PERIOD_DAYS[period] || 30
-  var startDate = new Date(endDate.getTime() - days * 24 * 60 * 60 * 1000)
-  return { startDate: startDate, endDate: endDate }
-}
-
+/**
+ * 获取今天的日期范围（00:00:00.000 ~ 23:59:59.999）
+ * @returns {{ startDate: Date, endDate: Date }}
+ */
 function today() {
-  var d = new Date()
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate())
+	const now = new Date();
+	const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+	const end = new Date(start.getTime() + 86400000 - 1);
+	return { startDate: start, endDate: end };
 }
 
-function weekRange(date) {
-  date = date || new Date()
-  var d = new Date(date)
-  var day = d.getDay()
-  var diff = d.getDate() - day + (day === 0 ? -6 : 1)
-  var start = new Date(d.setDate(diff))
-  start.setHours(0, 0, 0, 0)
-  var end = new Date(start)
-  end.setDate(end.getDate() + 6)
-  end.setHours(23, 59, 59, 999)
-  return { startDate: start, endDate: end }
+/**
+ * 获取本周的日期范围（周一 00:00:00.000 ~ 周日 23:59:59.999）
+ * @returns {{ startDate: Date, endDate: Date }}
+ */
+function thisWeek() {
+	const now = new Date();
+	const dayOfWeek = now.getDay() || 7; // 周日=0 → 7
+	const start = new Date(
+		now.getFullYear(),
+		now.getMonth(),
+		now.getDate() - dayOfWeek + 1,
+	);
+	const end = new Date(start.getTime() + 604800000 - 1); // 7天 - 1ms
+	return { startDate: start, endDate: end };
 }
 
-function monthRange(date) {
-  date = date || new Date()
-  var d = new Date(date)
-  var start = new Date(d.getFullYear(), d.getMonth(), 1)
-  var end = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999)
-  return { startDate: start, endDate: end }
+/**
+ * 获取本月的日期范围（1日 00:00:00.000 ~ 末日 23:59:59.999）
+ * @returns {{ startDate: Date, endDate: Date }}
+ */
+function thisMonth() {
+	const now = new Date();
+	const start = new Date(now.getFullYear(), now.getMonth(), 1);
+	const end = new Date(
+		now.getFullYear(),
+		now.getMonth() + 1,
+		0,
+		23,
+		59,
+		59,
+		999,
+	);
+	return { startDate: start, endDate: end };
 }
 
+/**
+ * 获取今年的日期范围（1月1日 00:00:00.000 ~ 今天 23:59:59.999）
+ * 使用"年至今"语义，而非全年（避免未来日期影响缓存）
+ * @returns {{ startDate: Date, endDate: Date }}
+ */
+function yearToDate() {
+	const now = new Date();
+	const start = new Date(now.getFullYear(), 0, 1);
+	const end = new Date(
+		now.getFullYear(),
+		now.getMonth(),
+		now.getDate(),
+		23,
+		59,
+		59,
+		999,
+	);
+	return { startDate: start, endDate: end };
+}
+
+/**
+ * 获取指定年份的完整日期范围
+ * @param {number} year - 年份
+ * @returns {{ startDate: Date, endDate: Date }}
+ */
 function fullYear(year) {
-  year = year || new Date().getFullYear()
-  return {
-    startDate: new Date(year, 0, 1),
-    endDate: new Date(year, 11, 31, 23, 59, 59, 999)
-  }
+	const start = new Date(year, 0, 1);
+	const end = new Date(year, 11, 31, 23, 59, 59, 999);
+	return { startDate: start, endDate: end };
+}
+
+/**
+ * 根据周期类型获取日期范围
+ * @param {string} period - 'DAY' | 'WEEK' | 'MONTH' | 'YEAR'
+ * @returns {{ startDate: Date, endDate: Date }}
+ */
+function getByPeriod(period) {
+	switch (period) {
+		case "DAY":
+			return today();
+		case "WEEK":
+			return thisWeek();
+		case "MONTH":
+			return thisMonth();
+		case "YEAR":
+			return yearToDate();
+		default: {
+			const now = new Date();
+			return { startDate: new Date(0), endDate: now };
+		}
+	}
 }
 
 module.exports = {
-  getByPeriod: getByPeriod,
-  today: today,
-  weekRange: weekRange,
-  monthRange: monthRange,
-  fullYear: fullYear
-}
+	today,
+	thisWeek,
+	thisMonth,
+	yearToDate,
+	fullYear,
+	getByPeriod,
+};

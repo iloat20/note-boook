@@ -1,10 +1,9 @@
 {
-  "navigationStyle": "custom",
-  "navigationBarTitleText": "详情",
-  "usingComponents": {
-    "market-tag": "/components/market-tag/index",
-    "strategy-tags": "/components/strategy-tags/index",
-    "empty-state": "/components/empty-state/index"
-  },
-  "styleIsolation": "apply-shared"
+	"navigationBarTitleText": "详情",
+	"usingComponents": {
+		"market-tag": "/components/market-tag/index",
+		"strategy-tags": "/components/strategy-tags/index",
+		"empty-state": "/components/empty-state/index"
+	},
+	"styleIsolation": "apply-shared"
 }

@@ -1,54 +1,54 @@
 {
-  "setting": {
-    "es6": true,
-    "postcss": true,
-    "minified": true,
-    "uglifyFileName": false,
-    "enhance": true,
-    "urlCheck": true,
-    "useCompilerPlugins": false,
-    "minifyWXML": true,
-    "minifyWXSS": true,
-    "autoAudit": true,
-    "showShadowRootInWxmlPanel": true,
-    "packNpmManually": false,
-    "packNpmRelationList": [],
-    "showES6CompileOption": false,
-    "checkInvalidKey": true,
-    "checkSiteMap": true,
-    "uploadWithSourceMap": true,
-    "compileHotReload": false,
-    "lazyloadPlaceholderEnable": false,
-    "useMultiFrameRuntime": true,
-    "useApiHook": true,
-    "useApiHostProcess": true,
-    "babelSetting": {
-      "ignore": [],
-      "disablePlugins": [],
-      "outputPath": ""
-    },
-    "enableEngineNative": false,
-    "useIsolateContext": true,
-    "userConfirmedBundleSwitch": false,
-    "packNpmMode": "npm",
-    "minifyWASM": false,
-    "showStaticServerLog": true,
-    "useCachingCompiler": true,
-    "ignoreUploadUnusedFiles": true,
-    "nodeModules": false,
-    "useSrcMode": false
-  },
-  "compileType": "miniprogram",
-  "simulatorPluginLibVersion": {},
-  "packOptions": {
-    "ignore": [],
-    "include": []
-  },
-  "appid": "wxba8f2431319cc32e",
-  "projectname": "股票交易记录",
-  "condition": {},
-  "editorSetting": {
-    "tabIndent": "insertSpaces",
-    "tabSize": 2
-  }
+	"setting": {
+		"es6": true,
+		"postcss": true,
+		"minified": true,
+		"uglifyFileName": false,
+		"enhance": false,
+		"urlCheck": true,
+		"useCompilerPlugins": false,
+		"minifyWXML": true,
+		"minifyWXSS": true,
+		"autoAudit": true,
+		"showShadowRootInWxmlPanel": true,
+		"packNpmManually": false,
+		"packNpmRelationList": [],
+		"showES6CompileOption": false,
+		"checkInvalidKey": true,
+		"checkSiteMap": true,
+		"uploadWithSourceMap": true,
+		"compileHotReload": false,
+		"lazyloadPlaceholderEnable": false,
+		"useMultiFrameRuntime": true,
+		"useApiHook": true,
+		"useApiHostProcess": true,
+		"babelSetting": {
+			"ignore": [],
+			"disablePlugins": [],
+			"outputPath": ""
+		},
+		"enableEngineNative": false,
+		"useIsolateContext": true,
+		"userConfirmedBundleSwitch": false,
+		"packNpmMode": "npm",
+		"minifyWASM": false,
+		"showStaticServerLog": true,
+		"useCachingCompiler": true,
+		"ignoreUploadUnusedFiles": true,
+		"nodeModules": false,
+		"useSrcMode": false
+	},
+	"compileType": "miniprogram",
+	"simulatorPluginLibVersion": {},
+	"packOptions": {
+		"ignore": [],
+		"include": []
+	},
+	"appid": "wxba8f2431319cc32e",
+	"projectname": "茄子笔记本",
+	"condition": {},
+	"editorSetting": {
+		"tabIndent": "insertSpaces",
+		"tabSize": 2
+	}
 }

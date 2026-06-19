@@ -1,11 +1,11 @@
 Component({
-  options: {
-    multipleSlots: true
-  },
-  properties: {
-    title: {
-      type: String,
-      value: ''
-    }
-  }
-})
+	options: {
+		multipleSlots: true,
+	},
+	properties: {
+		title: {
+			type: String,
+			value: "",
+		},
+	},
+});

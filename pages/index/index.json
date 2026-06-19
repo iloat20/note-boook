@@ -1,10 +1,10 @@
 {
-  "navigationBarTitleText": "持仓",
-  "usingComponents": {
-    "quick-record": "../../components/quick-record/quick-record",
-    "market-tag": "../../components/market-tag/index",
-    "liquid-slider": "../../components/liquid-slider/index",
-    "empty-state": "../../components/empty-state/index"
-  },
-  "styleIsolation": "apply-shared"
+	"navigationBarTitleText": "持仓",
+	"usingComponents": {
+		"quick-record": "../../components/quick-record/quick-record",
+		"market-tag": "../../components/market-tag/index",
+		"liquid-slider": "../../components/liquid-slider/index",
+		"empty-state": "../../components/empty-state/index"
+	},
+	"styleIsolation": "apply-shared"
 }

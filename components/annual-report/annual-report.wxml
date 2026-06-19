@@ -133,7 +133,7 @@
     </view>
 
     <view class="ar-footer">
-      <text class="ar-footer-text">股票记账 · {{data.year}}年度报告</text>
+      <text class="ar-footer-text">茄子笔记本 · {{data.year}}年度报告</text>
     </view>
 
     <view style="height: 40px;"></view>

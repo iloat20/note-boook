@@ -1,0 +1,18 @@
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--xhs-space-md);
+}
+
+.title {
+  font-size: var(--xhs-font-xl);
+  font-weight: var(--xhs-weight-semibold);
+  color: var(--xhs-title);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--xhs-space-xs);
+}

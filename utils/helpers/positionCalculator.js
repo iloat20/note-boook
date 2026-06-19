@@ -44,27 +44,30 @@ function calcPosition(stockId, transactions, dividends, currentPrice) {
   })
 
   let positionQuantity = totalBuyQuantity + shareDividendQty - totalSellQuantity
-  let avgCost = (totalBuyQuantity + shareDividendQty) > 0
-    ? (totalBuyAmount + totalBuyFee) / (totalBuyQuantity + shareDividendQty)
+  let avgCost = totalBuyQuantity > 0
+    ? (totalBuyAmount + totalBuyFee) / totalBuyQuantity
     : 0
 
-  let realizedPnL = (totalBuyQuantity + shareDividendQty) > 0
+  let realizedPnL = totalBuyQuantity > 0
     ? totalSellAmount - totalSellFee - avgCost * totalSellQuantity
     : totalSellAmount - totalSellFee
 
-  let floatingPnL = currentPrice && positionQuantity > 0
+  let floatingPnL = (currentPrice != null && currentPrice > 0 && positionQuantity > 0)
     ? (currentPrice - avgCost) * positionQuantity
     : 0
+
+  function r2(v) { return Math.round(v * 100) / 100 }
+  function r4(v) { return Math.round(v * 10000) / 10000 }
 
   return {
     stockId: stockId,
     quantity: positionQuantity,
-    avgCost: parseFloat(avgCost.toFixed(4)),
-    realizedPnL: parseFloat(realizedPnL.toFixed(2)),
-    dividendIncome: parseFloat(dividendIncome.toFixed(2)),
-    currentPrice: currentPrice ? parseFloat(currentPrice.toFixed(2)) : null,
-    floatingPnL: parseFloat(floatingPnL.toFixed(2)),
-    totalPnL: parseFloat((realizedPnL + floatingPnL + dividendIncome).toFixed(2))
+    avgCost: avgCost ? r4(avgCost) : 0,
+    realizedPnL: r2(realizedPnL),
+    dividendIncome: r2(dividendIncome),
+    currentPrice: currentPrice != null && currentPrice > 0 ? r2(currentPrice) : null,
+    floatingPnL: r2(floatingPnL),
+    totalPnL: r2(realizedPnL + floatingPnL + dividendIncome)
   }
 }
 

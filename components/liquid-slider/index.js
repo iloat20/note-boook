@@ -33,29 +33,28 @@ Component({
     },
 
     _updateSliderPosition() {
-      const tabs = this.data.tabs
-      const currentKey = this.data.currentKey
+      var tabs = this.data.tabs
+      var currentKey = this.data.currentKey
       if (!tabs || tabs.length === 0) return
 
-      const activeIndex = tabs.findIndex(t => {
-        // 同时支持 null 和字符串比较
+      var activeIndex = tabs.findIndex(function (t) {
         if (currentKey === null && t.key === null) return true
         return t.key === currentKey
       })
       if (activeIndex < 0) return
 
-      const query = this.createSelectorQuery()
+      var query = this.createSelectorQuery()
       query.selectAll('.liquid-slider-item').boundingClientRect()
       query.select('.liquid-slider').boundingClientRect()
-      query.exec((res) => {
-        const rects = res[0]
-        const containerRect = res[1]
+      query.exec(function (res) {
+        var rects = res[0]
+        var containerRect = res[1]
         if (!rects || !rects[activeIndex] || !containerRect) return
         this.setData({
           sliderLeft: rects[activeIndex].left - containerRect.left,
           sliderWidth: rects[activeIndex].width
         })
-      })
+      }.bind(this))
     }
   },
 

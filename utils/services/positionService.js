@@ -86,25 +86,35 @@ function batchCalculatePositions(stockIds) {
  * @returns {Array} 合并后的持仓数组
  */
 function mergePositions(stocks, filterFn, sortFn) {
-  const stockIds = stocks.map(s => s.id)
-  batchCalculatePositions(stockIds)
-  
-  let positions = stocks.map(stock => {
-    const pos = calculatePosition(stock.id)
-    return {
-      ...stock,
-      ...pos
+  var stockIds = stocks.map(s => s.id)
+  var allTransactions = Transaction.getAll()
+  var allDividends = Dividend.getAll()
+
+  var needCalc = stockIds.filter(id => !caches.position.has(id))
+  if (needCalc.length > 0) {
+    var results = batchCalcPositions(needCalc, allTransactions, allDividends, function (id) {
+      return PriceCache.get(id)
+    })
+    needCalc.forEach(function (stockId) {
+      caches.position.set(stockId, results[stockId])
+    })
+  }
+
+  var positions = stocks.map(stock => {
+    var pos = caches.position.get(stock.id)
+    if (!pos) {
+      var tx = allTransactions.filter(t => t.stockId === stock.id)
+      var div = allDividends.filter(d => d.stockId === stock.id)
+      var price = PriceCache.get(stock.id)
+      pos = calcPosition(stock.id, tx, div, price)
+      caches.position.set(stock.id, pos)
     }
+    return Object.assign({}, stock, pos)
   })
-  
-  if (filterFn) {
-    positions = positions.filter(filterFn)
-  }
-  
-  if (sortFn) {
-    positions.sort(sortFn)
-  }
-  
+
+  if (filterFn) positions = positions.filter(filterFn)
+  if (sortFn) positions.sort(sortFn)
+
   return positions
 }
 
@@ -113,13 +123,13 @@ function mergePositions(stocks, filterFn, sortFn) {
  * @param {boolean} forceRefresh - 是否强制刷新缓存
  * @returns {Array} 所有持仓列表
  */
-function getAllPositions(forceRefresh = false) {
-  const stocks = Stock.getAll()
-  const stockIds = stocks.map(s => s.id)
+function getAllPositions(forceRefresh) {
+  forceRefresh = forceRefresh || false
+  var stocks = Stock.getAll()
   if (forceRefresh) {
-    stockIds.forEach(id => { caches.position.delete(id) })
+    caches.position.clear()
   }
-  
+
   return sortByTotalPnL(mergePositions(stocks))
 }
 
@@ -144,15 +154,15 @@ function getPortfolioPositions(market = null) {
  * @param {string} market - 市场类型（可选）
  * @returns {Array} 持仓汇总列表
  */
-function getPositionSummary(market = null) {
-  const stocks = market ? Stock.getByMarket(market) : Stock.getAll()
-  
+function getPositionSummary(market) {
+  var stocks = market ? Stock.getByMarket(market) : Stock.getAll()
+
   return mergePositions(
     stocks,
-    p => p.quantity > 0,
-    (a, b) => {
-      const aRatio = a.avgCost > 0 && a.quantity > 0 ? a.floatingPnL / (a.avgCost * a.quantity) : 0
-      const bRatio = b.avgCost > 0 && b.quantity > 0 ? b.floatingPnL / (b.avgCost * b.quantity) : 0
+    function (p) { return p.quantity > 0 },
+    function (a, b) {
+      var aRatio = a.avgCost > 0 && a.quantity > 0 ? a.floatingPnL / (a.avgCost * a.quantity) : 0
+      var bRatio = b.avgCost > 0 && b.quantity > 0 ? b.floatingPnL / (b.avgCost * b.quantity) : 0
       return bRatio - aRatio
     }
   )

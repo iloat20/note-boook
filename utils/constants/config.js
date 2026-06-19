@@ -1,0 +1,37 @@
+var config = {
+  API: {
+    STOCK_PRICE: 'https://qt.gtimg.cn/q=',
+    DEFAULT_TIMEOUT: 10000,
+    BATCH_TIMEOUT: 15000
+  },
+  STOCK_PRICE: {
+    MAX_CONCURRENT: 5,
+    REQUEST_DELAY: 100,
+    BATCH_SIZE: 40,
+    RETRY_DELAYS: [1000, 3000]
+  },
+  XIRR: {
+    MAX_ITERATIONS: 100,
+    BISECTION_BOUNDS: { lo: -0.99, hi: 10 }
+  },
+  CACHE: {
+    POSITION_MAX: 100,
+    HEATMAP_MAX: 50,
+    PERIOD_STATS_MAX: 50,
+    MEM_MAX: 50
+  },
+  VALIDATION: {
+    MAX_QUANTITY: 100000000,
+    MAX_PRICE: 1000000
+  },
+  TIMING: {
+    PRICE_FLASH_CLEAR_DELAY: 1500,
+    ENTER_ANIM_DELAY: 600,
+    TAB_SWITCH_ANIM_DELAY: 200,
+    SEARCH_DEBOUNCE: 300,
+    PAGE_LOAD_COUNT: 20,
+    PRICE_TTL_MINUTES: 5
+  }
+}
+
+module.exports = config

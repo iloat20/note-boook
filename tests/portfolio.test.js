@@ -41,11 +41,13 @@ describe('Portfolio calculations', () => {
   })
 
   test('should mark data dirty via appStore when price cache changes', () => {
-    const appStore = require('../utils/state/appStore')
+    var appStore = require('../utils/state/appStore')
     appStore.commit('MARK_CLEAN')
     expect(appStore.getState('dataDirty')).toBe(false)
 
-    PriceCache.set(1, 12.34)
+    // re-require PriceCache after resetModules to get fresh module references
+    var freshPriceCache = require('../utils/models').PriceCache
+    freshPriceCache.set(1, 12.34)
 
     expect(appStore.getState('dataDirty')).toBe(true)
   })

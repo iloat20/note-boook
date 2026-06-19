@@ -1,7 +1,7 @@
-<view class="xhs-slider" style="position: relative;">
-  <view class="xhs-slider-bg" style="left: {{sliderLeft}}px; width: {{sliderWidth}}px;"></view>
+<view class="liquid-slider" style="position: relative;">
+  <view class="liquid-slider-bg" style="left: {{sliderLeft}}px; width: {{sliderWidth}}px;"></view>
   <view wx:for="{{tabs}}" wx:key="key"
-        class="xhs-slider-item {{currentKey === item.key ? 'active' : ''}}"
+        class="liquid-slider-item {{currentKey === item.key ? 'active' : ''}}"
         bindtap="onTap"
         data-key="{{item.key}}">
     {{item.label}}

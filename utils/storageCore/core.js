@@ -20,38 +20,6 @@ const _memCache = caches.mem
 let _lastTimestamp = 0
 let _seq = 0
 
-// 写操作队列，串行化所有 read-modify-write 操作，防止数据竞争
-let _writeQueue = Promise.resolve()
-
-/**
- * 将写操作加入队列，确保同一时刻只有一个写操作在执行
- * @param {Function} operation - 返回 Promise 的写操作
- * @returns {Promise} 操作结果
- */
-function enqueueWrite(operation) {
-  _writeQueue = _writeQueue.then(function () { return operation() }).catch(function (err) {
-    console.error('[storageCore] write error:', err)
-    throw err
-  })
-  return _writeQueue
-}
-
-/**
- * 清空写队列（仅用于测试）
- * @returns {void}
- */
-function clearWriteQueue() {
-  _writeQueue = Promise.resolve()
-}
-
-/**
- * 等待所有排队的写操作完成（仅用于测试）
- * @returns {Promise<void>}
- */
-function flushWriteQueue() {
-  return _writeQueue
-}
-
 /**
  * 生成唯一 ID
  * 基于时间戳 + 序列号，避免冲突
@@ -75,8 +43,13 @@ function getNextId() {
  * @param {any} data - 数据
  */
 function saveData(key, data) {
-  wx.setStorageSync(key, data)
-  // LRU: 删除后重新插入，保证最近使用的在末尾
+  try {
+    wx.setStorageSync(key, data)
+  } catch (e) {
+    console.error('[storageCore] saveData error for key', key, e)
+    wx.showToast({ title: '存储空间不足', icon: 'none' })
+    return
+  }
   _memCache.delete(key)
   _memCache.set(key, data)
 }
@@ -87,12 +60,15 @@ function saveData(key, data) {
  * @returns {any} 数据
  */
 function getData(key) {
-  if (_memCache.has(key)) {
-    return _memCache.get(key)
+  var data = _memCache.get(key)
+  if (data !== undefined) return data
+  try {
+    data = wx.getStorageSync(key)
+  } catch (e) {
+    console.error('[storageCore] getData error for key', key, e)
+    data = null
   }
-  let data = wx.getStorageSync(key)
   if (!data || (Array.isArray(data) && data.length === 0)) {
-    // 如果是价格缓存，返回对象而不是数组
     if (key === PRICE_KEY) {
       data = {}
     } else {
@@ -188,8 +164,5 @@ module.exports = {
   clearMemCache,
   markDataDirty,
   upsertAndSave,
-  deleteAndSave,
-  enqueueWrite,
-  clearWriteQueue,
-  flushWriteQueue
+  deleteAndSave
 }

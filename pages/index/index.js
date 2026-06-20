@@ -186,7 +186,7 @@ Page({
 
 			// 获取汇率（港股/美股 → 人民币换算）
 			_ensureNetworkModules();
-			const rates = await __getRates();
+			const rates = await _getRates();
 			this._rates = rates;
 
 			// [优化] 单次遍历 allPositions：同时完成指标聚合 + positionMap 构建

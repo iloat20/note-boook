@@ -50,7 +50,7 @@
         </view>
         <view class="summary-stat">
           <text class="stat-label">持仓</text>
-          <text class="stat-value">{{positions.length}}只</text>
+          <text class="stat-value">{{positionCount}}只</text>
         </view>
       </view>
       
@@ -71,7 +71,7 @@
     />
 
     <!-- 持仓列表 -->
-    <scroll-view wx:if="{{positions.length > 0}}" class="scroll-container {{tabAnimating ? 'tab-content-exit' : ''}} {{entranceDone ? '' : 'animate-stagger stagger-delay-4'}}" scroll-y style="height: {{scrollHeight}}px;" bindscrolltolower="loadMorePositions">
+    <scroll-view wx:if="{{positionCount > 0}}" class="scroll-container {{tabAnimating ? 'tab-content-exit' : ''}} {{entranceDone ? '' : 'animate-stagger stagger-delay-4'}}" scroll-y style="height: {{scrollHeight}}px;" bindscrolltolower="loadMorePositions">
       <view wx:for="{{displayPositions}}" wx:key="id" class="swipe-container">
         <view class="swipe-actions {{item.swipeOpen ? 'swipe-actions-open' : ''}}">
           <view class="swipe-action-btn swipe-action-edit" data-stock-id="{{item.id}}" catchtap="onSwipeEdit">
@@ -98,7 +98,8 @@
           data-stock-id="{{item.id}}"
           data-index="{{index}}">
           <view class="position-header-row">
-            <market-tag market="{{item.market}}" label="{{item.marketLabel}}" />
+            <!-- [优化] 内联 market-tag 组件，减少组件实例化开销 -->
+            <view class="{{item.marketClass}}">{{item.marketLabel}}</view>
             <text class="stock-code">{{item.code}}</text>
             <text class="stock-name">{{item.name}}</text>
           </view>
@@ -115,8 +116,8 @@
             <view style="flex: 1;">
               <text class="caption">现价</text>
               <view class="mono-num" style="color: var(--xhs-title); display: flex; align-items: center; gap: var(--xhs-space-xs);">
-                <text wx:if="{{item.currentPrice > 0}}">{{item.currentPriceText}}</text>
-                <text wx:else style="color: var(--xhs-caption);">--</text>
+                <!-- [优化] 预计算 displayPriceText，消除 wx:if/wx:else -->
+                <text>{{item.displayPriceText}}</text>
                 <view
                   class="refresh-btn"
                   data-stock-id="{{item.id}}"
@@ -143,7 +144,7 @@
 
     <!-- 空状态 -->
     <empty-state
-      wx:if="{{positions.length === 0}}"
+      wx:if="{{positionCount === 0}}"
       class="{{entranceDone ? '' : 'animate-stagger stagger-delay-4'}}"
       icon="📈"
       title="开始您的投资之旅"

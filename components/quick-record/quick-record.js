@@ -68,12 +68,8 @@ Component({
 						String(now.getHours()).padStart(2, "0") +
 						":" +
 						String(now.getMinutes()).padStart(2, "0"),
-					qrCodeFocus: true,
 					showQrMore: false,
 				});
-				setTimeout(() => {
-					this.setData({ qrCodeFocus: true });
-				}, 350);
 			} else {
 				this._resetForm();
 			}
@@ -89,7 +85,7 @@ Component({
 		// ──── 类型切换 ────
 		onQrTypeSelect: function (e) {
 			this.setData({ qrType: e.currentTarget.dataset.type });
-			this._calcQrFee();
+			this._scheduleCalcFee();
 			wx.vibrateShort({ type: "light" });
 		},
 
@@ -97,26 +93,27 @@ Component({
 		onQrCodeInput: function (e) {
 			const value = (e.detail.value || "").trim();
 			const market = this._detectMarket(value);
-			this.setData({
+
+			// [优化] 合并 setData：一次调用完成所有更新
+			const updates = {
 				qrCode: value,
 				qrMarket: market,
 				qrMarketLabel: getMarketLabel(market),
 				qrName: "",
 				qrPrice: "",
-			});
+			};
 
-			// 本地联想搜索
 			if (value.length >= 1) {
 				const results = searchStocks(value, market, 8);
-				this.setData({
-					qrSuggestions: results,
-					showQrSuggestions: results.length > 0,
-				});
+				updates.qrSuggestions = results;
+				updates.showQrSuggestions = results.length > 0;
 			} else {
-				this.setData({ qrSuggestions: [], showQrSuggestions: false });
+				updates.qrSuggestions = [];
+				updates.showQrSuggestions = false;
 			}
 
-			this._calcQrFee();
+			this.setData(updates);
+			this._scheduleCalcFee();
 			this._scheduleAutoFetch(value);
 		},
 
@@ -140,7 +137,7 @@ Component({
 			});
 			// 选中后自动拉取现价
 			this._tryAutoFetch(item.code);
-			this._calcQrFee();
+			this._scheduleCalcFee();
 		},
 
 		// ──── 自动获取（防抖） ────
@@ -173,7 +170,7 @@ Component({
 							updates.qrPrice = String(data.currentPrice);
 						}
 						this.setData(updates);
-						this._calcQrFee();
+						this._scheduleCalcFee();
 					} else {
 						this.setData({ qrFetching: false });
 					}
@@ -188,25 +185,25 @@ Component({
 		// ──── 价格/数量 ────
 		onQrPriceInput: function (e) {
 			this.setData({ qrPrice: e.detail.value });
-			this._calcQrFee();
+			this._scheduleCalcFee();
 		},
 
 		onQrQuantityInput: function (e) {
 			this.setData({ qrQuantity: e.detail.value });
-			this._calcQrFee();
+			this._scheduleCalcFee();
 		},
 
 		onQrQtyMinus: function () {
 			const qty = Math.max(0, (parseInt(this.data.qrQuantity) || 0) - 100);
 			this.setData({ qrQuantity: qty > 0 ? String(qty) : "0" });
-			this._calcQrFee();
+			this._scheduleCalcFee();
 			wx.vibrateShort({ type: "light" });
 		},
 
 		onQrQtyPlus: function () {
 			const qty = (parseInt(this.data.qrQuantity) || 0) + 100;
 			this.setData({ qrQuantity: String(qty) });
-			this._calcQrFee();
+			this._scheduleCalcFee();
 			wx.vibrateShort({ type: "light" });
 		},
 
@@ -219,7 +216,7 @@ Component({
 				return;
 			}
 			this.setData({ qrQuantity: String(qty) });
-			this._calcQrFee();
+			this._scheduleCalcFee();
 			wx.vibrateShort({ type: "light" });
 		},
 
@@ -234,6 +231,15 @@ Component({
 
 		onQrTimeChange: function (e) {
 			this.setData({ qrTime: e.detail.value });
+		},
+
+		// ──── [优化] 防抖费用计算 ────
+		_scheduleCalcFee: function () {
+			if (this._feeTimer) clearTimeout(this._feeTimer);
+			this._feeTimer = setTimeout(() => {
+				this._feeTimer = null;
+				this._calcQrFee();
+			}, 80);
 		},
 
 		// ──── 费用 ────
@@ -324,6 +330,10 @@ Component({
 				clearTimeout(this._afTimer);
 				this._afTimer = null;
 			}
+			if (this._feeTimer) {
+				clearTimeout(this._feeTimer);
+				this._feeTimer = null;
+			}
 			this._afFetching = null;
 			this.setData({
 				qrType: "BUY",
@@ -333,8 +343,6 @@ Component({
 				qrMarketLabel: "",
 				qrPrice: "",
 				qrQuantity: "100",
-				qrDate: "",
-				qrTime: "",
 				qrFee: 0,
 				qrFeeText: "0.00",
 				qrActualText: "0.00",
@@ -343,7 +351,6 @@ Component({
 				showQrSuggestions: false,
 				qrFetching: false,
 				showQrMore: false,
-				qrCodeFocus: false,
 			});
 		},
 	},

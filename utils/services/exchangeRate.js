@@ -1,14 +1,17 @@
 /**
  * 汇率模块
- * 自动从 exchangerate-api.com 获取 USD/HKD → CNY 汇率
+ * 使用腾讯财经 API（qt.gtimg.cn）获取 USD/HKD → CNY 汇率
  * 支持本地缓存（当天有效），API 失败时使用兜底值
+ *
+ * 腾讯 forex 符号：fx_usr（美元/人民币）、fx_hkd（港币/人民币）
+ * qt.gtimg.cn 已在 request 白名单中
  */
 
 const { request } = require("../../api/request");
 const { TIMING_CONFIG } = require("../../utils/constants/index");
 
-// 汇率 API（免费，无需 key）
-const API_URL = "https://api.exchangerate-api.com/v4/latest/CNY";
+// 腾讯财经 API 获取汇率（批量查询 USD/CNY + HKD/CNY）
+const API_URL = "https://qt.gtimg.cn/q=fx_usr,fx_hkd";
 
 // 缓存 key
 const CACHE_KEY = "exchange_rate_cache";
@@ -27,30 +30,55 @@ let _memCachedRates = null;
 let _memCachedAt = 0;
 
 /**
+ * 解析腾讯财经 API 的汇率数据
+ * 返回格式：v_fx_usr="...~...~...~价格~..."
+ */
+function parseRateResponse(responseText) {
+	const results = {};
+
+	// 匹配所有 v_fx_xxx="..." 格式的数据行
+	const regex = /v_fx_([^=]+)="([^"]+)"/g;
+	let match;
+	while ((match = regex.exec(responseText)) !== null) {
+		const fields = match[2].split("~");
+		if (fields.length >= 5) {
+			const price = parseFloat(fields[3]) || 0;
+			const yesterdayClose = parseFloat(fields[4]) || 0;
+			results[match[1]] = price > 0 ? price : yesterdayClose;
+		}
+	}
+	return results;
+}
+
+/**
  * 从 API 获取汇率并缓存
  * @returns {Promise<{usdToCny: number, hkdToCny: number}>}
  */
 function fetchAndCacheRates() {
 	return new Promise((resolve) => {
 		request
-			.get(API_URL, null, { timeout: 8000 })
+			.get(API_URL, null, { timeout: 8000, responseType: "arraybuffer" })
 			.then((data) => {
-				// API 以 CNY 为 base
-				// data.rates.USD = 1 CNY 兑换多少 USD
-				// data.rates.HKD = 1 CNY 兑换多少 HKD
-				// 需要取倒数：usdToCny = 1 / rates.USD
-				let usdToCny =
-					data.rates && data.rates.USD ? 1 / data.rates.USD : DEFAULTS.usdToCny;
-				let hkdToCny =
-					data.rates && data.rates.HKD ? 1 / data.rates.HKD : DEFAULTS.hkdToCny;
+				// 解码 GBK 响应
+				let decoded = "";
+				if (data && data.byteLength) {
+					const bytes = new Uint8Array(data);
+					const chars = new Array(bytes.length);
+					for (let i = 0; i < bytes.length; i++) {
+						chars[i] = String.fromCharCode(bytes[i]);
+					}
+					decoded = chars.join("");
+				} else if (typeof data === "string") {
+					decoded = data;
+				}
 
-				// 保留 4 位小数
-				usdToCny = parseFloat(usdToCny.toFixed(4));
-				hkdToCny = parseFloat(hkdToCny.toFixed(4));
+				const parsed = parseRateResponse(decoded);
+				const usdToCny = parsed.usr || DEFAULTS.usdToCny;
+				const hkdToCny = parsed.hkd || DEFAULTS.hkdToCny;
 
 				const cache = {
-					usdToCny: usdToCny,
-					hkdToCny: hkdToCny,
+					usdToCny: parseFloat(usdToCny.toFixed(4)),
+					hkdToCny: parseFloat(hkdToCny.toFixed(4)),
 					date: _today(),
 					timestamp: Date.now(),
 				};
@@ -61,7 +89,10 @@ function fetchAndCacheRates() {
 					// 缓存写入失败不影响主流程
 				}
 
-				resolve({ usdToCny: usdToCny, hkdToCny: hkdToCny });
+				resolve({
+					usdToCny: cache.usdToCny,
+					hkdToCny: cache.hkdToCny,
+				});
 			})
 			.catch(() => {
 				// API 失败，使用兜底值

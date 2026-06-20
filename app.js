@@ -1,10 +1,13 @@
 // app.js
 
+const _defer = (fn, delay) => setTimeout(fn, delay);
+
 App({
 	onLaunch() {
 		this._initSystemInfo();
-		this._checkStorageQuota();
-		this._pruneStaleData();
+		// [优化] 启动后延迟执行非关键路径，让首屏优先渲染
+		_defer(() => this._checkStorageQuota(), 3000);
+		_defer(() => this._pruneStaleData(), 5000);
 	},
 
 	_initSystemInfo() {

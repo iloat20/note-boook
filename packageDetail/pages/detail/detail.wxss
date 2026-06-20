@@ -5,81 +5,93 @@ page {
 }
 
 /* =============================
-   Hero Toolbar
-   ============================= */
-.hero-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16rpx 0;
-}
-
-.hero-back-btn {
-  width: 64rpx;
-  height: 64rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.5);
-  backdrop-filter: blur(40px);
-  -webkit-backdrop-filter: blur(40px);
-  transition: var(--xhs-transition);
-}
-
-.hero-back-btn:active {
-  opacity: 0.7;
-  transform: scale(0.92);
-}
-
-.hero-back-icon {
-  font-size: 28px;
-  color: var(--xhs-title);
-  font-weight: var(--xhs-weight-semibold);
-  line-height: 1;
-  margin-left: -2px;
-}
-
-.hero-edit-btn {
-  height: 64rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 28rpx;
-  border-radius: 32rpx;
-  background: rgba(255, 255, 255, 0.5);
-  backdrop-filter: blur(40px);
-  -webkit-backdrop-filter: blur(40px);
-  font-size: 13px;
-  font-weight: var(--xhs-weight-semibold);
-  color: var(--xhs-primary);
-  transition: var(--xhs-transition);
-}
-
-.hero-edit-btn:active {
-  opacity: 0.7;
-  transform: scale(0.95);
-}
-
-.hero-edit-btn-active {
-  background: rgba(255, 59, 48, 0.65);
-  backdrop-filter: blur(40px);
-  -webkit-backdrop-filter: blur(40px);
-  color: #fff;
-}
-
-/* =============================
    Hero Section
    ============================= */
 .hero-section {
-  padding: 24rpx 0 16rpx;
+  padding: 16rpx 0;
 }
 
 .hero-header-row {
   display: flex;
   align-items: center;
-  gap: var(--xhs-space-sm);
+  justify-content: space-between;
   margin-bottom: 8rpx;
+}
+
+.hero-info-group {
+  display: flex;
+  align-items: center;
+  gap: var(--xhs-space-sm);
+  flex: 1;
+  min-width: 0;
+}
+
+/* iOS 毛玻璃编辑按钮 */
+.hero-glass-btn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 56rpx;
+  min-width: 56rpx;
+  padding: 0 24rpx;
+  border-radius: 28rpx;
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  border: 0.5px solid rgba(255, 255, 255, 0.5);
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.04),
+    0 1px 2px rgba(0, 0, 0, 0.02);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: default;
+}
+
+.hero-glass-btn:active {
+  opacity: 0.75;
+  transform: scale(0.94);
+  box-shadow:
+    0 1px 4px rgba(0, 0, 0, 0.06),
+    0 0px 1px rgba(0, 0, 0, 0.03);
+}
+
+/* 返回按钮（与编辑按钮同款毛玻璃风格） */
+.hero-back-btn {
+  width: 56rpx;
+  height: 56rpx;
+  min-width: 56rpx;
+  padding: 0;
+  justify-content: center;
+}
+
+.hero-back-icon {
+  font-size: 28px;
+  font-weight: 300;
+  color: var(--xhs-title);
+  line-height: 1;
+  transform: translateX(2rpx);
+}
+
+.hero-glass-btn-text {
+  font-size: 13px;
+  font-weight: var(--xhs-weight-semibold);
+  color: var(--xhs-primary);
+  letter-spacing: 0.01em;
+  line-height: 1;
+}
+
+.hero-glass-btn-active {
+  background: rgba(255, 59, 48, 0.75);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  border-color: rgba(255, 59, 48, 0.3);
+  box-shadow:
+    0 2px 12px rgba(255, 59, 48, 0.25),
+    0 1px 3px rgba(255, 59, 48, 0.15);
+}
+
+.hero-glass-btn-active .hero-glass-btn-text {
+  color: #fff;
 }
 
 .hero-stock-code {

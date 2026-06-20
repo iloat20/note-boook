@@ -1,18 +1,18 @@
-<view class="page-container">
+<view class="page-container" style="padding-top: {{statusBarHeight + navBarHeight}}px;">
   <scroll-view wx:if="{{stock}}" class="scroll-container" scroll-y>
-    <view class="hero-toolbar">
-      <view bindtap="goBack" class="hero-back-btn">
-        <text class="hero-back-icon">‹</text>
-      </view>
-      <view bindtap="toggleEditMode" class="hero-edit-btn {{editMode ? 'hero-edit-btn-active' : ''}}">
-        <text>{{editMode ? '完成' : '编辑'}}</text>
-      </view>
-    </view>
-    <!-- ===== Hero Section ===== -->
+    <!-- ===== Hero Section（含毛玻璃返回/编辑按钮） ===== -->
     <view class="hero-section">
       <view class="hero-header-row">
-        <market-tag market="{{stock.market}}" label="{{marketLabel}}" />
-        <text class="hero-stock-code">{{stock.code}}</text>
+        <view bindtap="goBack" class="hero-glass-btn hero-back-btn">
+          <text class="hero-back-icon">‹</text>
+        </view>
+        <view class="hero-info-group">
+          <market-tag market="{{stock.market}}" label="{{marketLabel}}" />
+          <text class="hero-stock-code">{{stock.code}}</text>
+        </view>
+        <view bindtap="toggleEditMode" class="hero-glass-btn {{editMode ? 'hero-glass-btn-active' : ''}}">
+          <text class="hero-glass-btn-text">{{editMode ? '完成' : '编辑'}}</text>
+        </view>
       </view>
       <text class="hero-stock-name">{{stock.name}}</text>
       <text class="hero-price">{{formatCurrentPrice}}</text>

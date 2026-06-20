@@ -11,7 +11,7 @@ const { toast, success, hideLoading, loading } = require("../ui/feedback");
  * @param {Object} page - 页面实例（this）
  */
 function sharePortfolio(page) {
-	const positions = page.data.positions;
+	const positions = page._positionsCache || page.data.positions;
 	if (!positions || positions.length === 0) {
 		toast("暂无持仓数据");
 		return;

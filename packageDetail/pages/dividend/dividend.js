@@ -179,4 +179,8 @@ Page({
 		success(this._isEdit ? "已修改" : "已添加");
 		setTimeout(() => wx.navigateBack(), 800);
 	},
+
+	onUnload() {
+		if (this._deleteTimer) clearTimeout(this._deleteTimer);
+	},
 });

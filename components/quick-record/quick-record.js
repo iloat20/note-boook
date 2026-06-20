@@ -52,6 +52,14 @@ Component({
 		qrCodeFocus: false,
 	},
 
+	lifetimes: {
+		detached() {
+			if (this._afTimer) clearTimeout(this._afTimer);
+			if (this._feeTimer) clearTimeout(this._feeTimer);
+			if (this._blurTimer) clearTimeout(this._blurTimer);
+		},
+	},
+
 	methods: {
 		// ──── 生命周期 ────
 		_onVisibleChange: function (visible) {
@@ -118,7 +126,7 @@ Component({
 		},
 
 		onQrCodeBlur: function () {
-			setTimeout(() => {
+			this._blurTimer = setTimeout(() => {
 				this.setData({ showQrSuggestions: false });
 			}, 200);
 			// 失焦时立即尝试获取

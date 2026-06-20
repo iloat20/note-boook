@@ -136,13 +136,12 @@ Page({
 		// 清理定时器
 		if (this._animTimer) clearTimeout(this._animTimer);
 		if (this._cleanupTimer) clearTimeout(this._cleanupTimer);
+		if (this._tabTimer) clearTimeout(this._tabTimer);
 
 		// 取消状态订阅
 		if (this._unsubscribePositions) {
 			this._unsubscribePositions();
 		}
-
-		// (eventBus 监听已移除 — 改用 appStore + positionStore)
 	},
 
 	onPullDownRefresh() {
@@ -431,7 +430,8 @@ Page({
 		this.setData({ tabAnimating: true });
 
 		// 等待退场动画完成后切换数据
-		setTimeout(() => {
+		if (this._tabTimer) clearTimeout(this._tabTimer);
+		this._tabTimer = setTimeout(() => {
 			// 从缓存数据中筛选对应市场的持仓
 			const allPositions = this._allPositionsCache || [];
 			const filteredPositions = key ? allPositions.filter((p) => p.market === key) : allPositions;

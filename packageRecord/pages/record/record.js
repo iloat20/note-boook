@@ -453,4 +453,8 @@ Page({
 			wx.navigateBack();
 		}, TIMING_CONFIG.NAVIGATE_BACK_DELAY);
 	},
+
+	onUnload() {
+		if (this._fetchTimer) clearTimeout(this._fetchTimer);
+	},
 });

@@ -308,4 +308,8 @@ Page({
 	onCloseAnnualReport() {
 		this.setData({ showAnnualReport: false, annualReportData: null });
 	},
+
+	onUnload() {
+		this.setData({ annualReportData: null });
+	},
 });

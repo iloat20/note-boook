@@ -81,6 +81,9 @@ Component({
 						this.setData({ animating: false });
 					}, 300);
 				},
+				fail: () => {
+					this.setData({ animating: false });
+				},
 			});
 		},
 	},

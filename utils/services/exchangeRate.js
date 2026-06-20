@@ -86,8 +86,11 @@ function fetchAndCacheRates() {
 				}
 
 				const parsed = parseRateResponse(decoded);
-				const usdToCny = parsed.usr || DEFAULTS.usdToCny;
-				const hkdToCny = parsed.hkd || DEFAULTS.hkdToCny;
+				let usdToCny = parsed.usr || DEFAULTS.usdToCny;
+				let hkdToCny = parsed.hkd || DEFAULTS.hkdToCny;
+
+				if (usdToCny < 3 || usdToCny > 15) usdToCny = DEFAULTS.usdToCny;
+				if (hkdToCny < 0.05 || hkdToCny > 2) hkdToCny = DEFAULTS.hkdToCny;
 
 				const cache = {
 					usdToCny: parseFloat(usdToCny.toFixed(4)),
@@ -121,14 +124,17 @@ function fetchAndCacheRates() {
 let _inflightPromise = null;
 
 function _withTimeout(promise, ms) {
+	let timer;
 	return Promise.race([
 		promise,
 		new Promise((_, reject) => {
-			setTimeout(() => {
+			timer = setTimeout(() => {
 				reject(new Error("timeout"));
 			}, ms);
 		}),
-	]);
+	]).finally(() => {
+		clearTimeout(timer);
+	});
 }
 
 /**

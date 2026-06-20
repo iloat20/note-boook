@@ -73,7 +73,7 @@
   <!-- 记录列表/空状态 -->
   <block wx:if="{{groupedHistory.length > 0}}">
     <scroll-view class="scroll-container animate-stagger stagger-delay-5" scroll-y bindscrolltolower="loadMore" enhanced show-scrollbar="{{false}}">
-      <view wx:for="{{groupedHistory}}" wx:key="date" class="section">
+      <view wx:for="{{groupedHistory}}" wx:key="date" wx:for-index="groupIdx" class="section">
         <!-- 日期标题 (更突出) -->
         <view class="date-header">
           <view class="date-dot"></view>
@@ -81,7 +81,7 @@
         </view>
 
         <!-- 交易卡片 (XHS feed 风格) -->
-        <view wx:for="{{item.items}}" wx:key="id" wx:for-item="record"
+        <view wx:for="{{item.items}}" wx:key="id" wx:for-index="itemIdx" wx:for-item="record"
           class="record-card {{dissolvingId === record.id ? 'dissolving' : ''}} {{selectMode ? 'record-card-selectable' : ''}} {{selectMode && selectedMap[record.id] ? 'record-card-selected' : ''}}"
           data-record="{{record}}"
           data-id="{{record.id}}"

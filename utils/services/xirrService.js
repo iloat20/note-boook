@@ -1,5 +1,5 @@
 const { getRate, getRates } = require("./exchangeRate");
-const { Stock } = require("../models/index");
+const { Stock, Transaction, Dividend } = require("../models/index");
 const PriceCache = require("../models/priceCache");
 const { caches } = require("../cache/cacheManager");
 const { xirr } = require("../helpers/xirr");
@@ -87,7 +87,6 @@ async function calcXIRRForRange(startDate, endDate) {
 	});
 	const rates = await getRates();
 
-	const { Transaction, Dividend } = require("../models/index");
 	const transactions = Transaction.getByDateRange(startDate, endDate);
 	const dividends = Dividend.getAll().filter((d) => {
 		const dd = new Date(d.date);

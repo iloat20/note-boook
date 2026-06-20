@@ -5,8 +5,6 @@
 const { fmt } = require("../helpers/format");
 
 function renderPortfolioCard(ctx, _canvas, data, width, height) {
-	const _dpr = data.dpr || 2;
-
 	// ====== 背景（白底，匹配 app 风格） ======
 	ctx.fillStyle = "#FAFAFC";
 	ctx.fillRect(0, 0, width, height);
@@ -59,7 +57,11 @@ function renderPortfolioCard(ctx, _canvas, data, width, height) {
 		// 卡片背景
 		ctx.fillStyle = "#FFFFFF";
 		ctx.beginPath();
-		ctx.roundRect(16, y - 5, width - 32, 48, [8]);
+		if (typeof ctx.roundRect !== "function") {
+			ctx.rect(16, y - 5, width - 32, 48);
+		} else {
+			ctx.roundRect(16, y - 5, width - 32, 48, [8]);
+		}
 		ctx.fill();
 
 		// 市场标签圆点

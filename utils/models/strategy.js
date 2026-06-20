@@ -33,7 +33,9 @@ const Strategy = {
 		if (idx >= 0) {
 			customs.splice(idx, 1);
 			saveData(STRATEGY_KEY, customs);
+			return true;
 		}
+		return false;
 	},
 
 	getUsedStrategies() {

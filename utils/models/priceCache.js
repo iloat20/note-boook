@@ -38,6 +38,12 @@ const PriceCache = {
 		const now = Date.now();
 		const updatedIds = [];
 		entries.forEach((item) => {
+			if (
+				item.stockId == null ||
+				Number.isNaN(parseFloat(item.price)) ||
+				parseFloat(item.price) < 0
+			)
+				return;
 			prices[item.stockId] = {
 				price: parseFloat(item.price),
 				timestamp: now,
@@ -58,13 +64,8 @@ const PriceCache = {
 		const prices = this.getAll();
 		const entry = prices[stockId];
 		if (!entry) return null;
-		// 兼容旧格式（纯数字，没有 TTL 信息）
 		if (typeof entry === "number") return entry;
-		// 检查 TTL
 		if (Date.now() - entry.timestamp > PRICE_TTL) {
-			delete prices[stockId];
-			// 直接同步保存，避免竞态条件
-			saveData(PRICE_KEY, prices);
 			return null;
 		}
 		return entry.price != null ? entry.price : null;

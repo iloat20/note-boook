@@ -217,7 +217,7 @@ page {
   font-size: var(--xhs-font-md);
   font-weight: var(--xhs-weight-medium);
   height: 80rpx;
-  line-height: 78rpx;
+  line-height: 80rpx;
   text-align: center;
   transition: var(--xhs-transition);
 }

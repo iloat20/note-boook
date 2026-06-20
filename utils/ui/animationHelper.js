@@ -13,11 +13,6 @@ const { fmt } = require("../helpers/format");
  * @param {Object} targets - 目标值 { totalMarketValue: 12345, totalPnL: 678, ... }
  */
 function animateAllValues(page, targets) {
-	if (page._animTimer) {
-		clearTimeout(page._animTimer);
-		page._animTimer = null;
-	}
-
 	const updates = {};
 	Object.keys(targets).forEach((k) => {
 		updates[`displayValues.${k}`] = fmt(targets[k]);

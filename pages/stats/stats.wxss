@@ -399,7 +399,9 @@
 
 /* === Scroll === */
 .xhs-scroll {
-  height: calc(100vh - 140px);
+  height: auto;
+  flex: 1;
+  min-height: 0;
 }
 
 /* === No More === */

@@ -68,7 +68,8 @@ Page({
 	},
 
 	onUnload() {
-		if (this._deleteTimer) clearTimeout(this._deleteTimer);
+		if (this._deleteTransTimer) clearTimeout(this._deleteTransTimer);
+		if (this._deleteDivTimer) clearTimeout(this._deleteDivTimer);
 	},
 
 	loadData() {
@@ -209,7 +210,7 @@ Page({
 			formatMarketValue: currency + fmt(marketValue),
 			floatingPnLClass: floatingPnL >= 0 ? "profit" : "loss",
 			floatingPnLText: (floatingPnL >= 0 ? "+" : "") + currency + fmt(Math.abs(floatingPnL)),
-			floatingPnLPercent: parseFloat(pnlPercent.toFixed(2)),
+			floatingPnLPercent: pnlPercent.toFixed(2),
 			totalPnLClass: totalPnL >= 0 ? "profit" : "loss",
 			totalPnLText: (totalPnL >= 0 ? "+" : "") + currency + fmt(Math.abs(totalPnL)),
 			heroPnLPercentText: `${(totalPnLPercent >= 0 ? "+" : "") + totalPnLPercent.toFixed(2)}%`,
@@ -248,9 +249,9 @@ Page({
 						content: "确定要删除这笔交易记录吗？",
 						success: (modalRes) => {
 							if (modalRes.confirm) {
-								this.setData({ disTransId: id });
-								if (this._deleteTimer) clearTimeout(this._deleteTimer);
-								this._deleteTimer = setTimeout(() => {
+								this.setData({ disTransId: Number(id) });
+								if (this._deleteTransTimer) clearTimeout(this._deleteTransTimer);
+								this._deleteTransTimer = setTimeout(() => {
 									Transaction.delete(id);
 									this.loadData();
 								}, 400);
@@ -278,9 +279,9 @@ Page({
 						content: "确定要删除这笔分红记录吗？",
 						success: (modalRes) => {
 							if (modalRes.confirm) {
-								this.setData({ disDivId: id });
-								if (this._deleteTimer) clearTimeout(this._deleteTimer);
-								this._deleteTimer = setTimeout(() => {
+								this.setData({ disDivId: Number(id) });
+								if (this._deleteDivTimer) clearTimeout(this._deleteDivTimer);
+								this._deleteDivTimer = setTimeout(() => {
 									Dividend.delete(id);
 									this.loadData();
 								}, 400);
@@ -378,36 +379,46 @@ Page({
 			return;
 		}
 
-		if (diff > 0) {
-			const buyQty = Math.max(Math.round(diff / avgBuyPrice), 1);
-			const syntheticBuy = Transaction.create(
-				stockId,
-				"BUY",
-				avgBuyPrice,
-				buyQty,
-				syntheticFee,
-				new Date().toISOString(),
-				"持仓调整",
-				"手动调整持仓",
-				[],
-			);
-			Transaction.save(syntheticBuy);
-		} else if (diff < 0) {
-			const sellQuantity = Math.min(Math.round(Math.abs(diff) / avgBuyPrice), currentPosition);
-			if (sellQuantity > 0) {
-				const syntheticSell = Transaction.create(
+		if (avgBuyPrice <= 0) {
+			toast("无法计算调整价格");
+			return;
+		}
+
+		try {
+			if (diff > 0) {
+				const buyQty = Math.max(Math.round(diff / avgBuyPrice), 1);
+				const syntheticBuy = Transaction.create(
 					stockId,
-					"SELL",
+					"BUY",
 					avgBuyPrice,
-					sellQuantity,
+					buyQty,
 					syntheticFee,
 					new Date().toISOString(),
 					"持仓调整",
 					"手动调整持仓",
 					[],
 				);
-				Transaction.save(syntheticSell);
+				Transaction.save(syntheticBuy);
+			} else if (diff < 0) {
+				const sellQuantity = Math.min(Math.round(Math.abs(diff) / avgBuyPrice), currentPosition);
+				if (sellQuantity > 0) {
+					const syntheticSell = Transaction.create(
+						stockId,
+						"SELL",
+						avgBuyPrice,
+						sellQuantity,
+						syntheticFee,
+						new Date().toISOString(),
+						"持仓调整",
+						"手动调整持仓",
+						[],
+					);
+					Transaction.save(syntheticSell);
+				}
 			}
+		} catch (_e) {
+			toast("保存失败");
+			return;
 		}
 
 		if (currentPrice > 0) {

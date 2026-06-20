@@ -49,7 +49,6 @@ Component({
 		showQrSuggestions: false,
 		qrFetching: false,
 		showQrMore: false,
-		qrCodeFocus: false,
 	},
 
 	lifetimes: {

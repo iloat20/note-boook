@@ -126,6 +126,20 @@ function exportMD() {
 		const mdContent = buildMarkdown();
 		const fsm = wx.getFileSystemManager();
 		const now = new Date();
+		const cutoff = now.getTime() - 24 * 60 * 60 * 1000;
+		try {
+			const files = fsm.readdirSync(wx.env.USER_DATA_PATH);
+			files.forEach((f) => {
+				if (!f.endsWith(".md")) return;
+				try {
+					const fp = `${wx.env.USER_DATA_PATH}/${f}`;
+					const st = fsm.statSync(fp);
+					if (st.mtime.getTime() < cutoff) {
+						fsm.unlinkSync(fp);
+					}
+				} catch (_e) {}
+			});
+		} catch (_e) {}
 		const timestamp =
 			now.getFullYear() +
 			"" +

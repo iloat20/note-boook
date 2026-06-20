@@ -5,6 +5,7 @@
 
 const { renderPortfolioCard } = require("./canvasRenderer");
 const { toast, success, hideLoading, loading } = require("../ui/feedback");
+const { fmt } = require("../helpers/format");
 
 /**
  * 生成持仓分享卡片截图
@@ -53,7 +54,9 @@ function sharePortfolio(page) {
 				dpr: dpr,
 				date: dateStr,
 				totalMarketValue: page.data.totalMarketValue,
+				totalMarketValueText: fmt(page.data.totalMarketValue || 0),
 				totalPnL: page.data.totalPnL,
+				totalPnLText: fmt(page.data.totalPnL || 0),
 				totalPnLPercent: page.data.totalPnLPercent,
 				positionCount: positions.length,
 				positions: positions.slice(0, 5).map((p) => ({
@@ -66,7 +69,7 @@ function sharePortfolio(page) {
 
 			renderPortfolioCard(ctx, canvas, cardData, canvasWidth, canvasHeight);
 
-			setTimeout(() => {
+			const exportCanvas = () => {
 				wx.canvasToTempFilePath({
 					canvas: canvas,
 					x: 0,
@@ -84,7 +87,13 @@ function sharePortfolio(page) {
 						toast("生成失败");
 					},
 				});
-			}, 100);
+			};
+
+			if (typeof canvas.requestAnimationFrame === "function") {
+				canvas.requestAnimationFrame(exportCanvas);
+			} else {
+				setTimeout(exportCanvas, 200);
+			}
 		});
 }
 
@@ -122,20 +131,32 @@ function _showShareActions(imagePath) {
 					},
 				});
 			} else if (res.tapIndex === 1) {
-				wx.shareImageMessage?.({
-					imageUrl: imagePath,
-					success: () => {
-						success("分享成功");
-					},
-					fail: () => {
-						wx.saveImageToPhotosAlbum({
-							filePath: imagePath,
-							success: () => {
-								toast("已保存到相册，请手动分享");
-							},
-						});
-					},
-				});
+				if (typeof wx.shareImageMessage === "function") {
+					wx.shareImageMessage({
+						imageUrl: imagePath,
+						success: () => {
+							success("分享成功");
+						},
+						fail: () => {
+							wx.saveImageToPhotosAlbum({
+								filePath: imagePath,
+								success: () => {
+									toast("已保存到相册，请手动分享");
+								},
+							});
+						},
+					});
+				} else {
+					wx.saveImageToPhotosAlbum({
+						filePath: imagePath,
+						success: () => {
+							toast("已保存到相册，请手动分享");
+						},
+						fail: () => {
+							toast("保存失败");
+						},
+					});
+				}
 			}
 		},
 	});

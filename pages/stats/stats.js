@@ -139,19 +139,25 @@ Page({
 	},
 
 	async loadStats() {
-		const period = this.data.currentPeriod;
+		try {
+			const period = this.data.currentPeriod;
 
-		const { stats, detailItems } = await this._calcPeriodStats(period);
-		const completeTrades = this._buildTradeList();
-		const clearedPositions = this._formatClearedPositions();
+			const { stats, detailItems } = await this._calcPeriodStats(period);
+			const completeTrades = this._buildTradeList();
+			const clearedPositions = this._formatClearedPositions();
 
-		this.setData({
-			stats,
-			detailItems,
-			completeTrades,
-			clearedPositions,
-			loading: false,
-		});
+			this.setData({
+				stats,
+				detailItems,
+				completeTrades,
+				clearedPositions,
+				loading: false,
+			});
+		} catch (err) {
+			console.error("[stats] loadStats error:", err);
+			this.setData({ loading: false });
+			wx.showToast({ title: "数据加载失败", icon: "none" });
+		}
 	},
 
 	onExportMD() {
@@ -310,6 +316,6 @@ Page({
 	},
 
 	onUnload() {
-		this.setData({ annualReportData: null });
+		this._annualReportData = null;
 	},
 });

@@ -499,7 +499,9 @@
 
 /* === Scroll === */
 .scroll-container {
-  height: calc(100vh - 300px);
+  height: auto;
+  flex: 1;
+  min-height: 0;
 }
 
 /* === 搜索无结果 === */

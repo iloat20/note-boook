@@ -444,26 +444,6 @@ page {
   transform: scale(0.8) rotate(90deg);
 }
 
-/* === Stat Item === */
-.stat-item {
-  flex: 1;
-}
-
-.stat-label {
-  font-size: var(--xhs-font-xs);
-  color: var(--xhs-caption);
-  margin-bottom: var(--xhs-space-xs);
-  display: block;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-}
-
-.stat-value {
-  font-size: var(--xhs-font-lg);
-  font-weight: var(--xhs-weight-semibold);
-  color: var(--xhs-title);
-}
-
 /* === Position Header === */
 .position-header-row {
   display: flex;

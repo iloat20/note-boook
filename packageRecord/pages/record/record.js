@@ -14,6 +14,7 @@ const {
 	formatStockCode,
 } = require("../../../utils/constants/market");
 const { searchStocks } = require("../../../utils/data/stockDatabase");
+const { toast, success } = require("../../../utils/ui/feedback");
 
 Page({
 	data: {
@@ -53,6 +54,7 @@ Page({
 
 	onLoad(options) {
 		this.setData(getApp().getNavBarInfo());
+		this._feeManuallySet = false;
 
 		const now = new Date();
 		this.setData({
@@ -95,9 +97,17 @@ Page({
 	_loadEdit(id) {
 		const transactions = Transaction.getAll();
 		const transaction = transactions.find((t) => t.id === id);
-		if (!transaction) return;
+		if (!transaction) {
+			toast("交易记录不存在");
+			wx.navigateBack();
+			return;
+		}
 		const stock = Stock.getById(transaction.stockId);
-		if (!stock) return;
+		if (!stock) {
+			toast("交易记录不存在");
+			wx.navigateBack();
+			return;
+		}
 		const date = new Date(transaction.date);
 		const hasJournal = !!(transaction.reason || transaction.strategies?.length);
 		this.setData({
@@ -194,6 +204,7 @@ Page({
 		this._calcFee();
 	},
 	onFeeInput(e) {
+		this._feeManuallySet = true;
 		this.setData({ fee: e.detail.value });
 		const data = this.data;
 		const tradeAmount = (parseFloat(data.price) || 0) * (parseInt(data.quantity, 10) || 0);
@@ -298,6 +309,7 @@ Page({
 	},
 
 	_calcFee() {
+		if (this._feeManuallySet) return;
 		const data = this.data;
 		const fee = calculateFee(data.market, data.type, data.price, data.quantity);
 		const breakdown = getFeeBreakdown(data.market, data.type, data.price, data.quantity);
@@ -378,6 +390,8 @@ Page({
 	},
 
 	submit() {
+		if (this._submitting) return;
+		this._submitting = true;
 		const data = this.data;
 		const market = data.market;
 		const code = formatStockCode(data.code, market);
@@ -400,6 +414,10 @@ Page({
 		}
 		if (!price || parseFloat(price) <= 0) {
 			toast("请输入有效价格");
+			return;
+		}
+		if (quantity.includes(".")) {
+			toast("数量必须为整数");
 			return;
 		}
 		if (!quantity || parseInt(quantity, 10) <= 0) {
@@ -452,6 +470,9 @@ Page({
 		setTimeout(() => {
 			wx.navigateBack();
 		}, TIMING_CONFIG.NAVIGATE_BACK_DELAY);
+		setTimeout(() => {
+			this._submitting = false;
+		}, 1000);
 	},
 
 	onUnload() {

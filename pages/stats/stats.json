@@ -1,7 +1,6 @@
 {
 	"navigationBarTitleText": "统计",
 	"usingComponents": {
-		"annual-report": "/components/annual-report/annual-report",
-		"liquid-slider": "/components/liquid-slider/index"
+		"annual-report": "/components/annual-report/annual-report"
 	}
 }

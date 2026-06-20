@@ -88,7 +88,7 @@
           </view>
           <view class="swipe-action-btn swipe-action-delete" data-stock-id="{{item.id}}" catchtap="onSwipeDelete">删除</view>
         </view>
-        <view class="{{item.cardClass}} {{item.swipeOpen ? 'swipe-card-open' : ''}} {{item.id === deletingId ? 'position-card-deleting' : ''}}"
+        <view class="{{item.cardClass}} {{item.id === deletingId ? 'position-card-deleting' : ''}}"
           style="transform: translateX({{item.swipeOffset || 0}}px);"
           bindtouchstart="onTouchStart"
           bindtouchmove="onTouchMove"

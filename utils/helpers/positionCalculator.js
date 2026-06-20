@@ -55,12 +55,12 @@ function calcPosition(stockId, transactions, dividends, currentPrice) {
 			: totalSellAmount - totalSellFee;
 
 	const floatingPnL =
-		currentPrice && positionQuantity > 0 ? (currentPrice - avgCost) * positionQuantity : 0;
+		currentPrice != null && positionQuantity > 0 ? (currentPrice - avgCost) * positionQuantity : 0;
 
 	return {
 		stockId: stockId,
 		quantity: positionQuantity,
-		avgCost: parseFloat(avgCost.toFixed(4)),
+		avgCost: avgCost,
 		realizedPnL: parseFloat(realizedPnL.toFixed(2)),
 		dividendIncome: parseFloat(dividendIncome.toFixed(2)),
 		currentPrice: currentPrice ? parseFloat(currentPrice.toFixed(2)) : null,

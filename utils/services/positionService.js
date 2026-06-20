@@ -157,11 +157,12 @@ function getPositionSummary(market = null) {
 	const positions = mergePositions(stocks, (p) => p.quantity > 0);
 
 	// 预计算浮动盈亏百分比，避免 sort 比较器中重复调用 calcFloatingPercent
-	positions.forEach((p) => {
-		p._floatingPercent = parseFloat(calcFloatingPercent(p));
-	});
+	const withPercent = positions.map((p) => ({
+		...p,
+		_floatingPercent: parseFloat(calcFloatingPercent(p)),
+	}));
 
-	return positions.sort((a, b) => b._floatingPercent - a._floatingPercent);
+	return withPercent.sort((a, b) => b._floatingPercent - a._floatingPercent);
 }
 
 /**

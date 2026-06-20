@@ -31,7 +31,7 @@
             value="{{qrCode}}"
             bindinput="onQrCodeInput"
             bindblur="onQrCodeBlur"
-            focus="{{qrCodeFocus}}"/>
+            />
           <view wx:if="{{qrName}}" class="qr-code-info">
             <text class="qr-stock-name">{{qrName}}</text>
             <text wx:if="{{qrMarketLabel}}" class="qr-market-tag">{{qrMarketLabel}}</text>

@@ -122,9 +122,6 @@ Page({
 		const scrollHeight = windowHeight - fixedHeight;
 		this.setData({ scrollHeight: Math.max(scrollHeight, 300) });
 
-		// 订阅状态变化 — [优化] 回调不做 setData，由 _loadData 统一处理，避免重复渲染
-		this._unsubscribePositions = positionStore.subscribe("SET_POSITIONS", () => {});
-
 		// 等待数据加载完成后再获取现价
 		await this._loadData();
 
@@ -157,22 +154,15 @@ Page({
 		if (this._animTimer) clearTimeout(this._animTimer);
 		if (this._cleanupTimer) clearTimeout(this._cleanupTimer);
 		if (this._tabTimer) clearTimeout(this._tabTimer);
-
-		// 取消状态订阅
-		if (this._unsubscribePositions) {
-			this._unsubscribePositions();
-		}
 	},
 
-	onPullDownRefresh() {
-		this._loadData(true)
-			.then(() => {
-				wx.stopPullDownRefresh();
-			})
-			.catch(() => {
-				wx.stopPullDownRefresh();
-			});
-		this._fetchPrices();
+	async onPullDownRefresh() {
+		try {
+			await this._loadData(true);
+			this._fetchPrices({ silent: true });
+		} finally {
+			wx.stopPullDownRefresh();
+		}
 	},
 
 	// ========== 数据加载 ==========
@@ -327,7 +317,8 @@ Page({
 			// 防止 NaN 导致 toFixed 报错
 			const safeTotalMarketValue = Number.isNaN(totalMarketValue) ? 0 : totalMarketValue;
 			const safeTotalPnL = Number.isNaN(totalPnL) ? 0 : totalPnL;
-			const safeTotalInvestment = Number.isNaN(totalInvestment) ? 1 : totalInvestment;
+			const safeTotalInvestment =
+				Number.isNaN(totalInvestment) || totalInvestment <= 0 ? 0 : totalInvestment;
 
 			// 合并所有更新到单次 setData（减少渲染层 diff 次数）
 			const setDataUpdates = {
@@ -509,6 +500,7 @@ Page({
 	// 更新价格
 	updatePrice(e) {
 		const stockId = parseInt(e.currentTarget.dataset.stockId, 10);
+		if (Number.isNaN(stockId)) return;
 		const price = parseFloat(e.detail.value);
 
 		if (!Number.isNaN(price) && price > 0) {
@@ -566,10 +558,6 @@ Page({
 
 	// 跳转到添加交易
 	goToAddTransaction() {
-		if (this._longPressFired) {
-			this._longPressFired = false;
-			return;
-		}
 		wx.navigateTo({
 			url: "/packageRecord/pages/record/record",
 		});
@@ -577,7 +565,6 @@ Page({
 
 	// ========== 快捷记录 ==========
 	onQuickRecord() {
-		this._longPressFired = true;
 		try {
 			wx.vibrateShort({ type: "medium" });
 		} catch (_e) {}

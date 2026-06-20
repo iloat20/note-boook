@@ -69,7 +69,7 @@ class LRUCache {
 	 * 获取当前缓存大小
 	 * @returns {number} 缓存条目数
 	 */
-	size() {
+	getSize() {
 		return this.cache.size;
 	}
 

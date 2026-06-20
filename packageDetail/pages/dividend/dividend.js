@@ -56,7 +56,11 @@ Page({
 	_loadEdit(id) {
 		const ds = Dividend.getAll();
 		const d = ds.find((x) => x.id === id);
-		if (!d) return;
+		if (!d) {
+			toast("分红记录不存在");
+			wx.navigateBack();
+			return;
+		}
 		const s = Stock.getById(d.stockId);
 		const dt = new Date(d.date);
 		const idx = this.data.stockOptions.findIndex((o) => o.stock && o.stock.id === d.stockId);
@@ -129,6 +133,8 @@ Page({
 	},
 
 	submit() {
+		if (this._submitting) return;
+		this._submitting = true;
 		const op = this.data.stockOptions[this.data.stockIdx];
 		const s = op?.stock;
 		if (!s) {
@@ -178,9 +184,10 @@ Page({
 
 		success(this._isEdit ? "已修改" : "已添加");
 		setTimeout(() => wx.navigateBack(), 800);
+		setTimeout(() => {
+			this._submitting = false;
+		}, 1000);
 	},
 
-	onUnload() {
-		if (this._deleteTimer) clearTimeout(this._deleteTimer);
-	},
+	onUnload() {},
 });

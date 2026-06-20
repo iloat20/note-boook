@@ -29,12 +29,7 @@ let _writeQueue = Promise.resolve();
  * @returns {Promise} 操作结果
  */
 function enqueueWrite(operation) {
-	_writeQueue = _writeQueue
-		.then(() => operation())
-		.catch((err) => {
-			console.error("[storageCore] write error:", err);
-			throw err;
-		});
+	_writeQueue = _writeQueue.catch(() => {}).then(() => operation());
 	return _writeQueue;
 }
 
@@ -137,7 +132,7 @@ function upsertAndSave(key, item, dirtyTags) {
 		console.error("[upsertAndSave] Invalid item:", item);
 		return item;
 	}
-	const list = getData(key);
+	const list = getData(key).slice();
 	const index = list.findIndex((x) => x.id === item.id);
 	if (index >= 0) {
 		// 保留原对象的其他字段，只更新提供的字段

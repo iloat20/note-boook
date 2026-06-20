@@ -87,7 +87,7 @@ Page({
 					name: stock.name,
 					price: t.price,
 					priceText: fmt(t.price),
-					quantity: parseInt(t.quantity, 10) || 0,
+					quantity: parseFloat(t.quantity) || 0,
 					fee: t.fee,
 					feeText: fmt(t.fee),
 					amount: amount,
@@ -121,7 +121,7 @@ Page({
 					name: stock.name,
 					perShareAmount: d.perShareAmount,
 					perShareAmountText: fmt(d.perShareAmount),
-					quantity: parseInt(d.quantity, 10) || 0,
+					quantity: parseFloat(d.quantity) || 0,
 					amount: d.totalAmount,
 					amountText: fmt(d.totalAmount),
 					date: fmtDate(date),
@@ -224,6 +224,7 @@ Page({
 	},
 
 	clearSearch() {
+		if (this._searchTimer) clearTimeout(this._searchTimer);
 		this._pendingKeyword = "";
 		this.setData({ searchKeyword: "" });
 		this._applyFilters();
@@ -281,7 +282,7 @@ Page({
 		const selectedTypeMap = {};
 		const selectedIds = [];
 		if (selectAll) {
-			this.data.groupedHistory.forEach((group) => {
+			this._allGroupedHistory.forEach((group) => {
 				group.items.forEach((item) => {
 					selectedIds.push(item.id);
 					selectedTypeMap[item.id] = item.type;
@@ -380,6 +381,7 @@ Page({
 										Transaction.delete(record.id);
 									}
 									wx.showToast({ title: "删除成功", icon: "success" });
+									this.setData({ dissolvingId: null });
 									this.loadHistory();
 								}, 400);
 							}
@@ -405,7 +407,10 @@ Page({
 	},
 
 	onPullDownRefresh() {
-		this.loadHistory();
-		wx.stopPullDownRefresh();
+		try {
+			this.loadHistory();
+		} finally {
+			wx.stopPullDownRefresh();
+		}
 	},
 });

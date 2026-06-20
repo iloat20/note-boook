@@ -29,16 +29,12 @@ function xirr(cashFlows, dates, guess = 0.1) {
 	let rate = guess;
 	const maxIter = 100;
 	const tol = 1e-8;
-	let oscillating = false;
 
 	for (let iter = 0; iter < maxIter; iter++) {
 		const fVal = f(rate);
 		const dfVal = df(rate);
 
-		if (Math.abs(dfVal) < 1e-12) {
-			oscillating = true;
-			break;
-		}
+		if (Math.abs(dfVal) < 1e-12) break;
 
 		const newRate = rate - fVal / dfVal;
 
@@ -48,15 +44,7 @@ function xirr(cashFlows, dates, guess = 0.1) {
 
 		rate = newRate;
 
-		if (rate < -0.99 || rate > 10) {
-			oscillating = true;
-			break;
-		}
-	}
-
-	if (!oscillating) {
-		const finalVal = f(rate);
-		if (Math.abs(finalVal) < 1) return rate;
+		if (rate < -0.99 || rate > 10) break;
 	}
 
 	let lo = -0.99,
@@ -77,9 +65,7 @@ function xirr(cashFlows, dates, guess = 0.1) {
 		}
 	}
 
-	const finalVal = f((lo + hi) / 2);
-	if (Math.abs(finalVal) < 1) return (lo + hi) / 2;
-	return null;
+	return (lo + hi) / 2;
 }
 
 module.exports = {

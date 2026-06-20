@@ -1,53 +1,4 @@
 {
-{
-  // 文件范围与忽略
-  "files": {
-    "include": ["**/*.js", "**/*.ts", "**/*.json", "**/*.wxss", "**/*.wxml"],
-    "ignore": [
-      "node_modules",
-      "dist",
-      "miniprogram_npm",       // 小程序构建生成的 npm 包
-      ".husky",
-      "coverage"
-    ]
-  },
-
-  // Linter 配置
-  "linter": {
-    "enabled": true,
-    "rules": {
-      "recommended": true     // 开启所有推荐规则
-    }
-  },
-
-  // 格式化配置（对应 Prettier 行为）
-  "formatter": {
-    "enabled": true,
-    "indentStyle": "space",
-    "indentWidth": 2,
-    "lineWidth": 100,
-    "quoteStyle": "single",
-    "jsxQuoteStyle": "double"
-  },
-
-  // 诊断显示上限（解决你之前遇到的“超过限制”问题）
-  "diagnostics": {
-    "maxDiagnostics": 200
-  },
-
-  // 你可以单独覆盖某些规则的配置
-  "overrides": [
-    {
-      // 对 CSS/WXSS 单独设置
-      "include": ["*.wxss", "*.css"],
-      "linter": {
-        "rules": {
-          "recommended": true
-        }
-      }
-    }
-  ]
-}
 	"$schema": "https://biomejs.dev/schemas/2.5.0/schema.json",
 	"vcs": {
 		"enabled": true,
@@ -55,21 +6,26 @@
 		"useIgnoreFile": true
 	},
 	"files": {
+		"includes": ["**/*.js", "**/*.ts", "**/*.json", "**/*.wxss", "**/*.wxml"],
 		"ignoreUnknown": false
 	},
 	"formatter": {
 		"enabled": true,
-		"indentStyle": "tab"
-	},
-	"linter": {
-		"enabled": true,
-		"rules": {
-			"preset": "recommended"
-		}
+		"indentStyle": "tab",
+		"lineWidth": 100
 	},
 	"javascript": {
 		"formatter": {
 			"quoteStyle": "double"
+		}
+	},
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"preset": "recommended",
+			"suspicious": {
+				"noAssignInExpressions": "off"
+			}
 		}
 	},
 	"assist": {
@@ -79,5 +35,15 @@
 				"organizeImports": "on"
 			}
 		}
-	}
+	},
+	"overrides": [
+		{
+			"includes": ["*.wxss", "*.css"],
+			"linter": {
+				"rules": {
+					"preset": "recommended"
+				}
+			}
+		}
+	]
 }

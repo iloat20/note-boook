@@ -45,11 +45,7 @@ const Dividend = {
 	 * @returns {Object} 保存后的分红对象
 	 */
 	save(dividend) {
-		return upsertAndSave(DIVIDEND_KEY, dividend, [
-			"position",
-			"heatmap",
-			"periodStats",
-		]);
+		return upsertAndSave(DIVIDEND_KEY, dividend, ["position", "heatmap", "periodStats"]);
 	},
 
 	/**

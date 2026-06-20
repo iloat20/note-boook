@@ -6,10 +6,7 @@ const Stock = require("../models/stock");
 const Transaction = require("../models/transaction");
 const Dividend = require("../models/dividend");
 const PriceCache = require("../models/priceCache");
-const {
-	calcPosition,
-	batchCalcPositions,
-} = require("../helpers/positionCalculator");
+const { batchCalcPositions } = require("../helpers/positionCalculator");
 const { caches } = require("../cache/cacheManager");
 const { calcXIRRForRange, getTotalXIRR } = require("./xirrService");
 const { getRate, getRates } = require("./exchangeRate");
@@ -95,9 +92,7 @@ function getTotalStats() {
 	const allDiv = Dividend.getAll();
 
 	const stockIds = stocks.map((s) => s.id);
-	const positions = batchCalcPositions(stockIds, transactions, allDiv, (id) =>
-		PriceCache.get(id),
-	);
+	const positions = batchCalcPositions(stockIds, transactions, allDiv, (id) => PriceCache.get(id));
 
 	let totalRealizedPnL = 0;
 	let totalFloatingPnL = 0;
@@ -116,8 +111,7 @@ function getTotalStats() {
 
 	const totalPnL = totalRealizedPnL + totalFloatingPnL + totalDividendIncome;
 	// 使用实际持仓成本（而非累计买入总额）计算收益率，避免反复买卖膨胀分母
-	const totalPnLPercent =
-		totalCostBasis > 0 ? (totalPnL / totalCostBasis) * 100 : 0;
+	const totalPnLPercent = totalCostBasis > 0 ? (totalPnL / totalCostBasis) * 100 : 0;
 
 	return {
 		totalInvestment: parseFloat(totalInvestment.toFixed(2)),
@@ -152,24 +146,15 @@ function _generatePeriods(periodType, firstDate, now) {
 			);
 
 			while (weekStart <= now) {
-				const weekEnd = new Date(
-					weekStart.getTime() + 7 * 24 * 60 * 60 * 1000 - 1,
-				);
-				const weekLabel =
-					weekStart.getFullYear() +
-					"W" +
-					Math.ceil((weekStart.getDate() + 6) / 7);
+				const weekEnd = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000 - 1);
+				const weekLabel = `${weekStart.getFullYear()}W${Math.ceil((weekStart.getDate() + 6) / 7)}`;
 				periods.push({ start: weekStart, end: weekEnd, label: weekLabel });
 				weekStart = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000);
 			}
 			break;
 		}
 		case "MONTH": {
-			let monthStart = new Date(
-				firstDate.getFullYear(),
-				firstDate.getMonth(),
-				1,
-			);
+			let monthStart = new Date(firstDate.getFullYear(), firstDate.getMonth(), 1);
 
 			while (monthStart <= now) {
 				const monthEnd = new Date(
@@ -181,16 +166,9 @@ function _generatePeriods(periodType, firstDate, now) {
 					59,
 					999,
 				);
-				const monthLabel =
-					monthStart.getFullYear() +
-					"-" +
-					String(monthStart.getMonth() + 1).padStart(2, "0");
+				const monthLabel = `${monthStart.getFullYear()}-${String(monthStart.getMonth() + 1).padStart(2, "0")}`;
 				periods.push({ start: monthStart, end: monthEnd, label: monthLabel });
-				monthStart = new Date(
-					monthStart.getFullYear(),
-					monthStart.getMonth() + 1,
-					1,
-				);
+				monthStart = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 1);
 			}
 			break;
 		}
@@ -198,15 +176,7 @@ function _generatePeriods(periodType, firstDate, now) {
 			let yearStart = new Date(firstDate.getFullYear(), 0, 1);
 
 			while (yearStart <= now) {
-				const yearEnd = new Date(
-					yearStart.getFullYear(),
-					11,
-					31,
-					23,
-					59,
-					59,
-					999,
-				);
+				const yearEnd = new Date(yearStart.getFullYear(), 11, 31, 23, 59, 59, 999);
 				periods.push({
 					start: yearStart,
 					end: yearEnd,
@@ -217,18 +187,14 @@ function _generatePeriods(periodType, firstDate, now) {
 			break;
 		}
 		default: {
-			let dayStart = new Date(
-				firstDate.getFullYear(),
-				firstDate.getMonth(),
-				firstDate.getDate(),
-			);
+			let dayStart = new Date(firstDate.getFullYear(), firstDate.getMonth(), firstDate.getDate());
 
 			while (dayStart <= now) {
 				const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000 - 1);
 				periods.push({
 					start: dayStart,
 					end: dayEnd,
-					label: dayStart.getMonth() + 1 + "/" + dayStart.getDate(),
+					label: `${dayStart.getMonth() + 1}/${dayStart.getDate()}`,
 				});
 				dayStart = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
 			}
@@ -285,12 +251,12 @@ function getPeriodStatsList(periodType, count = 12) {
 	}
 
 	let firstDate = null;
-	transactions.forEach(function (t) {
+	transactions.forEach((t) => {
 		const d = new Date(t.date);
 		if (!firstDate || d < firstDate) firstDate = d;
 	});
 	if (!firstDate) {
-		dividends.forEach(function (d) {
+		dividends.forEach((d) => {
 			const dd = new Date(d.date);
 			if (!firstDate || dd < firstDate) firstDate = dd;
 		});
@@ -301,13 +267,7 @@ function getPeriodStatsList(periodType, count = 12) {
 	const periods = _generatePeriods(periodType, firstDate, now);
 
 	periods.forEach((p) => {
-		const item = calcStatsForRange(
-			transactions,
-			dividends,
-			p.start,
-			p.end,
-			p.label,
-		);
+		const item = calcStatsForRange(transactions, dividends, p.start, p.end, p.label);
 		if (item) result.push(item);
 	});
 
@@ -325,10 +285,9 @@ function getStrategyStats(transactions) {
 	const txList = transactions || Transaction.getAll();
 	const stats = {};
 	txList.forEach((t) => {
-		if (!t.strategies || !t.strategies.length) return;
+		if (!t.strategies?.length) return;
 		t.strategies.forEach((tag) => {
-			if (!stats[tag])
-				stats[tag] = { tag: tag, count: 0, buyAmount: 0, sellAmount: 0 };
+			if (!stats[tag]) stats[tag] = { tag: tag, count: 0, buyAmount: 0, sellAmount: 0 };
 			stats[tag].count++;
 			if (t.type === "BUY") {
 				stats[tag].buyAmount += t.price * t.quantity;
@@ -395,8 +354,7 @@ async function getPeriodStatsWithReturn(period, getDateRange) {
 	const totalInvestment = cnyBuyAmount + cnyBuyFee;
 	const totalRecovery = cnySellAmount - cnySellFee;
 	const totalPnL = totalRecovery - totalInvestment + cnyDividendIncome;
-	const totalReturnRate =
-		totalInvestment > 0 ? (totalPnL / totalInvestment) * 100 : 0;
+	const totalReturnRate = totalInvestment > 0 ? (totalPnL / totalInvestment) * 100 : 0;
 
 	// 短周期用周期收益率，长周期用 XIRR（年化）
 	let returnValue = null;
@@ -404,25 +362,19 @@ async function getPeriodStatsWithReturn(period, getDateRange) {
 	let returnLabel = "XIRR";
 
 	const daysInRange = (endDate - startDate) / (24 * 60 * 60 * 1000);
-	const usePeriodRate =
-		daysInRange < 90 || periodTx.length + periodDiv.length < 4;
+	const usePeriodRate = daysInRange < 90 || periodTx.length + periodDiv.length < 4;
 
 	if (usePeriodRate) {
-		returnLabel =
-			period === "WEEK"
-				? "周收益率"
-				: period === "MONTH"
-					? "月收益率"
-					: "收益率";
+		returnLabel = period === "WEEK" ? "周收益率" : period === "MONTH" ? "月收益率" : "收益率";
 		if (totalInvestment > 0) {
 			returnValue = parseFloat(totalReturnRate.toFixed(2));
-			returnText = (returnValue >= 0 ? "+" : "") + returnValue.toFixed(2) + "%";
+			returnText = `${(returnValue >= 0 ? "+" : "") + returnValue.toFixed(2)}%`;
 		}
 	} else {
 		try {
 			returnValue = await calcXIRRForRange(startDate, endDate);
 			if (returnValue !== null) {
-				returnText = returnValue.toFixed(2) + "%";
+				returnText = `${returnValue.toFixed(2)}%`;
 			}
 		} catch (e) {
 			console.error("XIRR 计算失败:", e);
@@ -430,7 +382,7 @@ async function getPeriodStatsWithReturn(period, getDateRange) {
 		if (returnValue === null && totalInvestment > 0) {
 			returnLabel = "收益率";
 			returnValue = parseFloat(totalReturnRate.toFixed(2));
-			returnText = (returnValue >= 0 ? "+" : "") + returnValue.toFixed(2) + "%";
+			returnText = `${(returnValue >= 0 ? "+" : "") + returnValue.toFixed(2)}%`;
 		}
 	}
 
@@ -444,8 +396,7 @@ async function getPeriodStatsWithReturn(period, getDateRange) {
 		totalInvestmentText: fmt(totalInvestment),
 		totalRecoveryText: fmt(totalRecovery),
 		totalPnLText: fmt(totalPnL),
-		totalReturnRateText:
-			(totalReturnRate >= 0 ? "+" : "") + totalReturnRate.toFixed(2) + "%",
+		totalReturnRateText: `${(totalReturnRate >= 0 ? "+" : "") + totalReturnRate.toFixed(2)}%`,
 		dividendIncomeText: fmt(cnyDividendIncome),
 		totalBuyFeeText: fmt(cnyBuyFee),
 		totalSellFeeText: fmt(cnySellFee),
@@ -462,8 +413,7 @@ async function getPeriodStatsWithReturn(period, getDateRange) {
 			label: returnLabel,
 			value: returnText !== "--" ? returnText.replace("%", "") : "--",
 			prefix: "",
-			colorClass:
-				returnValue !== null ? (returnValue >= 0 ? "profit" : "loss") : "",
+			colorClass: returnValue !== null ? (returnValue >= 0 ? "profit" : "loss") : "",
 		},
 		{
 			label: "分红收益",

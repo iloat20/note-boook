@@ -73,11 +73,8 @@ function batchCalculatePositions(stockIds) {
 	const allDividends = Dividend.getAll();
 
 	if (needCalc.length > 0) {
-		const results = batchCalcPositions(
-			needCalc,
-			allTransactions,
-			allDividends,
-			(id) => PriceCache.get(id),
+		const results = batchCalcPositions(needCalc, allTransactions, allDividends, (id) =>
+			PriceCache.get(id),
 		);
 
 		needCalc.forEach((stockId) => {
@@ -144,10 +141,7 @@ function getPortfolioPositions(market = null) {
 	return sortByTotalPnL(
 		mergePositions(
 			stocks,
-			(p) =>
-				p.quantity > 0 ||
-				Math.abs(p.realizedPnL) > 0.01 ||
-				Math.abs(p.dividendIncome) > 0.01,
+			(p) => p.quantity > 0 || Math.abs(p.realizedPnL) > 0.01 || Math.abs(p.dividendIncome) > 0.01,
 		),
 	);
 }
@@ -179,10 +173,8 @@ function getClearedPositions() {
 	return mergePositions(
 		stocks,
 		(p) =>
-			p.quantity === 0 &&
-			(Math.abs(p.realizedPnL) > 0.01 || Math.abs(p.dividendIncome) > 0.01),
-		(a, b) =>
-			b.realizedPnL + b.dividendIncome - (a.realizedPnL + a.dividendIncome),
+			p.quantity === 0 && (Math.abs(p.realizedPnL) > 0.01 || Math.abs(p.dividendIncome) > 0.01),
+		(a, b) => b.realizedPnL + b.dividendIncome - (a.realizedPnL + a.dividendIncome),
 	);
 }
 

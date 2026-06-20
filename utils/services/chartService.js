@@ -40,7 +40,7 @@ function getMixedChartData(periodType, count) {
  * @returns {Array} 热力图数据
  */
 function getHeatmapData(year, month) {
-	const cacheKey = year + "-" + month;
+	const cacheKey = `${year}-${month}`;
 	if (caches.heatmap.has(cacheKey)) return caches.heatmap.get(cacheKey);
 
 	const transactions = Transaction.getAll();

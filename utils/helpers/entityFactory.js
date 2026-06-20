@@ -21,12 +21,9 @@ const VALID_DIV_TYPES = { CASH: 1, SHARE: 1 };
  * @returns {Object}
  */
 function createStock(code, name, market, id) {
-	if (!code || typeof code !== "string")
-		throw makeError("Stock", "code is required");
-	if (!name || typeof name !== "string")
-		throw makeError("Stock", "name is required");
-	if (!VALID_MARKETS[market])
-		throw makeError("Stock", "invalid market: " + market);
+	if (!code || typeof code !== "string") throw makeError("Stock", "code is required");
+	if (!name || typeof name !== "string") throw makeError("Stock", "name is required");
+	if (!VALID_MARKETS[market]) throw makeError("Stock", `invalid market: ${market}`);
 
 	return {
 		id: id,
@@ -63,26 +60,23 @@ function createTransaction(
 	strategies,
 	id,
 ) {
-	if (!stockId || stockId <= 0)
-		throw makeError("Transaction", "invalid stockId");
-	if (!VALID_TX_TYPES[type])
-		throw makeError("Transaction", "invalid type: " + type);
-	if (price == null || isNaN(parseFloat(price)) || parseFloat(price) <= 0)
+	if (!stockId || stockId <= 0) throw makeError("Transaction", "invalid stockId");
+	if (!VALID_TX_TYPES[type]) throw makeError("Transaction", `invalid type: ${type}`);
+	if (price == null || Number.isNaN(parseFloat(price)) || parseFloat(price) <= 0)
 		throw makeError("Transaction", "price must be positive");
 
 	const qty = parseInt(quantity, 10);
-	if (isNaN(qty) || qty <= 0 || !Number.isInteger(qty))
+	if (Number.isNaN(qty) || qty <= 0 || !Number.isInteger(qty))
 		throw makeError(
 			"Transaction",
-			"quantity must be positive integer, got: " + JSON.stringify(quantity),
+			`quantity must be positive integer, got: ${JSON.stringify(quantity)}`,
 		);
 
 	const feeNum = parseFloat(fee);
-	if (isNaN(feeNum) || feeNum < 0)
-		throw makeError("Transaction", "fee must be >= 0");
+	if (Number.isNaN(feeNum) || feeNum < 0) throw makeError("Transaction", "fee must be >= 0");
 
 	const dateStr = date instanceof Date ? date.toISOString() : String(date);
-	if (!dateStr || isNaN(new Date(dateStr).getTime()))
+	if (!dateStr || Number.isNaN(new Date(dateStr).getTime()))
 		throw makeError("Transaction", "invalid date");
 
 	return {
@@ -111,37 +105,27 @@ function createTransaction(
  * @param {number} id
  * @returns {Object}
  */
-function createDividend(
-	stockId,
-	perShareAmount,
-	quantity,
-	date,
-	note,
-	type,
-	shareQuantity,
-	id,
-) {
+function createDividend(stockId, perShareAmount, quantity, date, note, type, shareQuantity, id) {
 	if (!stockId || stockId <= 0) throw makeError("Dividend", "invalid stockId");
 	if (
 		perShareAmount == null ||
-		isNaN(parseFloat(perShareAmount)) ||
+		Number.isNaN(parseFloat(perShareAmount)) ||
 		parseFloat(perShareAmount) < 0
 	)
 		throw makeError("Dividend", "perShareAmount must be >= 0");
 
 	const qty = parseInt(quantity, 10);
-	if (isNaN(qty) || qty <= 0 || !Number.isInteger(qty))
+	if (Number.isNaN(qty) || qty <= 0 || !Number.isInteger(qty))
 		throw makeError(
 			"Dividend",
-			"quantity must be positive integer, got: " + JSON.stringify(quantity),
+			`quantity must be positive integer, got: ${JSON.stringify(quantity)}`,
 		);
 
 	const divType = type || "CASH";
-	if (!VALID_DIV_TYPES[divType])
-		throw makeError("Dividend", "invalid type: " + divType);
+	if (!VALID_DIV_TYPES[divType]) throw makeError("Dividend", `invalid type: ${divType}`);
 
 	const dateStr = date instanceof Date ? date.toISOString() : String(date);
-	if (!dateStr || isNaN(new Date(dateStr).getTime()))
+	if (!dateStr || Number.isNaN(new Date(dateStr).getTime()))
 		throw makeError("Dividend", "invalid date");
 
 	const shareQty = parseInt(shareQuantity, 10) || 0;

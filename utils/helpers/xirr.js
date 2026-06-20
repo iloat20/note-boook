@@ -8,9 +8,7 @@ function xirr(cashFlows, dates, guess = 0.1) {
 	if (n !== dates.length || n < 2) return null;
 
 	const d0 = dateToNumber(dates[0]);
-	const t = dates.map(
-		(d) => (dateToNumber(d) - d0) / (365.25 * 24 * 60 * 60 * 1000),
-	);
+	const t = dates.map((d) => (dateToNumber(d) - d0) / (365.25 * 24 * 60 * 60 * 1000));
 
 	const f = (rate) => {
 		let sum = 0;

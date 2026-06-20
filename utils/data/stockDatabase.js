@@ -182,7 +182,7 @@ function searchStocks(keyword, market, limit) {
 			market: s.market,
 			isUser: true,
 		}));
-	} catch (e) {
+	} catch (_e) {
 		/* 首次加载时 model 可能未初始化 */
 	}
 
@@ -198,14 +198,14 @@ function searchStocks(keyword, market, limit) {
 	const combined = [];
 	userStocks.forEach((s) => {
 		if (market && s.market !== market) return;
-		const key = s.code + "_" + s.market;
+		const key = `${s.code}_${s.market}`;
 		if (!seen[key]) {
 			seen[key] = true;
 			combined.push(s);
 		}
 	});
 	pool.forEach((s) => {
-		const key = s.code + "_" + s.market;
+		const key = `${s.code}_${s.market}`;
 		if (!seen[key]) {
 			seen[key] = true;
 			combined.push(s);
@@ -216,8 +216,7 @@ function searchStocks(keyword, market, limit) {
 		// 如果输入了 hk 前缀，只匹配港股
 		if (hkPrefix && s.market !== "HK_SHARE") return false;
 		return (
-			s.code.toLowerCase().indexOf(keyword) !== -1 ||
-			s.name.toLowerCase().indexOf(keyword) !== -1
+			s.code.toLowerCase().indexOf(keyword) !== -1 || s.name.toLowerCase().indexOf(keyword) !== -1
 		);
 	});
 

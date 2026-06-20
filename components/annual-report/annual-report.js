@@ -1,5 +1,3 @@
-const { fmt } = require("../../utils/helpers/format");
-
 Component({
 	properties: {
 		data: {
@@ -30,7 +28,7 @@ Component({
 	methods: {
 		_processData: function () {
 			const data = this.properties.data;
-			if (!data || !data.monthlyPnL) {
+			if (!data?.monthlyPnL) {
 				this.setData({ processedMonthlyData: [] });
 				return;
 			}
@@ -53,10 +51,9 @@ Component({
 				}
 				return {
 					month: item.month,
-					monthText: item.month + "月",
+					monthText: `${item.month}月`,
 					pnL: item.pnL,
-					pnLText:
-						item.pnL >= 0 ? "+" + item.pnL.toFixed(0) : item.pnL.toFixed(0),
+					pnLText: item.pnL >= 0 ? `+${item.pnL.toFixed(0)}` : item.pnL.toFixed(0),
 					heightPercent: heightPercent,
 					isProfit: item.pnL >= 0,
 				};

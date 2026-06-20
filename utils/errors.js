@@ -27,7 +27,7 @@ class AppError extends Error {
  */
 class ValidationError extends AppError {
 	constructor(model, reason) {
-		super("VALIDATION", "[" + model + "] " + reason, { model, reason });
+		super("VALIDATION", `[${model}] ${reason}`, { model, reason });
 		this.name = "ValidationError";
 		this.model = model;
 	}
@@ -38,7 +38,7 @@ class ValidationError extends AppError {
  */
 class NotFoundError extends AppError {
 	constructor(entity, id) {
-		super("NOT_FOUND", entity + " not found: " + id, { entity, id });
+		super("NOT_FOUND", `${entity} not found: ${id}`, { entity, id });
 		this.name = "NotFoundError";
 		this.entity = entity;
 		this.entityId = id;
@@ -50,15 +50,11 @@ class NotFoundError extends AppError {
  */
 class NetworkError extends AppError {
 	constructor(url, statusCode, originalError) {
-		super(
-			"NETWORK",
-			"Request failed: " + url + " (status " + statusCode + ")",
-			{
-				url,
-				statusCode,
-				originalError,
-			},
-		);
+		super("NETWORK", `Request failed: ${url} (status ${statusCode})`, {
+			url,
+			statusCode,
+			originalError,
+		});
 		this.name = "NetworkError";
 		this.url = url;
 		this.statusCode = statusCode;
@@ -70,7 +66,7 @@ class NetworkError extends AppError {
  */
 class CalculationError extends AppError {
 	constructor(calculation, reason) {
-		super("CALCULATION", calculation + " calculation failed: " + reason, {
+		super("CALCULATION", `${calculation} calculation failed: ${reason}`, {
 			calculation,
 			reason,
 		});

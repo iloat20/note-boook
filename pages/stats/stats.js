@@ -1,14 +1,10 @@
 const {
-	getStatsByPeriod,
 	getPeriodStatsList,
 	getStrategyStats,
 	getTotalXIRR,
 	getPeriodStatsWithReturn,
 } = require("../../utils/services/statsService");
-const {
-	getClearedPositions,
-	getPositionSummary,
-} = require("../../utils/services/positionService");
+const { getClearedPositions, getPositionSummary } = require("../../utils/services/positionService");
 const { Stock, Transaction, Dividend } = require("../../utils/models/index");
 const { fmt, fmtDate } = require("../../utils/helpers/format");
 const { buildStockMap } = require("../../utils/helpers/stockHelpers");
@@ -64,10 +60,7 @@ Page({
 	},
 
 	async _calcPeriodStats(period) {
-		return getPeriodStatsWithReturn(
-			period,
-			this._getPeriodDateRange.bind(this),
-		);
+		return getPeriodStatsWithReturn(period, this._getPeriodDateRange.bind(this));
 	},
 
 	_buildTradeList() {
@@ -78,7 +71,7 @@ Page({
 		const txList = rawTx.map((t) => {
 			const stock = stockMap[t.stockId];
 			const price = parseFloat(t.price) || 0;
-			const quantity = parseInt(t.quantity) || 0;
+			const quantity = parseInt(t.quantity, 10) || 0;
 			const fee = parseFloat(t.fee) || 0;
 			const amount = price * quantity;
 			const dateObj = new Date(t.date);
@@ -88,9 +81,8 @@ Page({
 				stockId: t.stockId,
 				type: t.type,
 				typeText: isBuy ? "买入" : "卖出",
-				typeTagClass: "tag type-tag " + (isBuy ? "tag-buy" : "tag-sell"),
-				amountClass:
-					"detail-d-amount mono-num " + (isBuy ? "xhs-loss" : "xhs-profit"),
+				typeTagClass: `tag type-tag ${isBuy ? "tag-buy" : "tag-sell"}`,
+				amountClass: `detail-d-amount mono-num ${isBuy ? "xhs-loss" : "xhs-profit"}`,
 				dateText: t.date ? fmtDate(dateObj) : "-",
 				_sortKey: dateObj.getTime(),
 				price: price,
@@ -168,7 +160,7 @@ Page({
 
 	async onOpenAnnualReport() {
 		const year = new Date().getFullYear();
-		const yearPrefix = year + "-";
+		const yearPrefix = `${year}-`;
 
 		const yearStart = new Date(year, 0, 1);
 		const yearEnd = new Date(year, 11, 31, 23, 59, 59, 999);
@@ -217,9 +209,7 @@ Page({
 		const yearRecovery = yearSellAmount - yearSellFee + yearDivTotal;
 		const yearPnL = yearRecovery - yearInvestment;
 		const yearPnLPercent =
-			yearInvestment > 0
-				? parseFloat(((yearPnL / yearInvestment) * 100).toFixed(2))
-				: 0;
+			yearInvestment > 0 ? parseFloat(((yearPnL / yearInvestment) * 100).toFixed(2)) : 0;
 
 		const periodList = getPeriodStatsList("MONTH", 12);
 		const monthlyPnL = [];
@@ -230,11 +220,8 @@ Page({
 		}
 
 		const cleared = getClearedPositions();
-		const winCount = cleared.filter(
-			(p) => p.realizedPnL + p.dividendIncome > 0,
-		).length;
-		const winRate =
-			cleared.length > 0 ? Math.round((winCount / cleared.length) * 100) : 0;
+		const winCount = cleared.filter((p) => p.realizedPnL + p.dividendIncome > 0).length;
+		const winRate = cleared.length > 0 ? Math.round((winCount / cleared.length) * 100) : 0;
 
 		const allPositions = getPositionSummary().concat(
 			cleared.map((p) => Object.assign({}, p, { floatingPnL: 0 })),
@@ -252,10 +239,7 @@ Page({
 				};
 			}
 			stockPnL[key].totalPnL +=
-				((p.realizedPnL || 0) +
-					(p.floatingPnL || 0) +
-					(p.dividendIncome || 0)) *
-				r;
+				((p.realizedPnL || 0) + (p.floatingPnL || 0) + (p.dividendIncome || 0)) * r;
 		});
 		const stockList = Object.values(stockPnL)
 			.map((s) => {
@@ -275,8 +259,7 @@ Page({
 			});
 
 		let strategyStats = getStrategyStats();
-		const maxStrategyCount =
-			strategyStats.length > 0 ? strategyStats[0].count : 1;
+		const maxStrategyCount = strategyStats.length > 0 ? strategyStats[0].count : 1;
 		strategyStats = strategyStats.slice(0, 8).map((s) => {
 			s.percent = Math.round((s.count / maxStrategyCount) * 100);
 			return s;
@@ -305,9 +288,9 @@ Page({
 				sellCount: sellCount,
 				winRate: winRate,
 				yearXIRR: yearXIRR,
-				yearXIRRText: yearXIRR !== null ? yearXIRR.toFixed(2) + "%" : "--",
+				yearXIRRText: yearXIRR !== null ? `${yearXIRR.toFixed(2)}%` : "--",
 				totalXIRR: totalXIRR,
-				totalXIRRText: totalXIRR !== null ? totalXIRR.toFixed(2) + "%" : "--",
+				totalXIRRText: totalXIRR !== null ? `${totalXIRR.toFixed(2)}%` : "--",
 				totalPnL: parseFloat(yearPnL.toFixed(2)),
 				totalPnLText: fmt(Math.abs(yearPnL)),
 				totalPnLPercent: yearPnLPercent,

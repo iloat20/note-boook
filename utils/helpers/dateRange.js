@@ -23,11 +23,7 @@ function today() {
 function thisWeek() {
 	const now = new Date();
 	const dayOfWeek = now.getDay() || 7; // 周日=0 → 7
-	const start = new Date(
-		now.getFullYear(),
-		now.getMonth(),
-		now.getDate() - dayOfWeek + 1,
-	);
+	const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek + 1);
 	const end = new Date(start.getTime() + 604800000 - 1); // 7天 - 1ms
 	return { startDate: start, endDate: end };
 }
@@ -39,15 +35,7 @@ function thisWeek() {
 function thisMonth() {
 	const now = new Date();
 	const start = new Date(now.getFullYear(), now.getMonth(), 1);
-	const end = new Date(
-		now.getFullYear(),
-		now.getMonth() + 1,
-		0,
-		23,
-		59,
-		59,
-		999,
-	);
+	const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
 	return { startDate: start, endDate: end };
 }
 
@@ -59,15 +47,7 @@ function thisMonth() {
 function yearToDate() {
 	const now = new Date();
 	const start = new Date(now.getFullYear(), 0, 1);
-	const end = new Date(
-		now.getFullYear(),
-		now.getMonth(),
-		now.getDate(),
-		23,
-		59,
-		59,
-		999,
-	);
+	const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
 	return { startDate: start, endDate: end };
 }
 

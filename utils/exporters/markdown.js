@@ -14,24 +14,20 @@ function buildMarkdown() {
 	const lines = [];
 	lines.push("# 茄子笔记本明细");
 	lines.push("");
-	lines.push("> 导出时间：" + fmtDate(new Date()) + " " + fmtTime(new Date()));
+	lines.push(`> 导出时间：${fmtDate(new Date())} ${fmtTime(new Date())}`);
 	lines.push("");
 
 	// —— 交易记录 ——
 	const transactions = Transaction.getAll();
-	transactions.sort(
-		(a, b) => (b.date || "").localeCompare(a.date || "") || b.id - a.id,
-	);
+	transactions.sort((a, b) => (b.date || "").localeCompare(a.date || "") || b.id - a.id);
 
-	lines.push("## 交易记录（" + transactions.length + " 笔）");
+	lines.push(`## 交易记录（${transactions.length} 笔）`);
 	lines.push("");
 	if (transactions.length > 0) {
 		lines.push(
 			"| 日期 | 类型 | 代码 | 名称 | 市场 | 价格 | 数量 | 手续费 | 金额 | 策略 | 理由 | 备注 |",
 		);
-		lines.push(
-			"| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
-		);
+		lines.push("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |");
 		transactions.forEach((t) => {
 			const stock = stockMap[t.stockId];
 			const code = stock ? stock.code : "-";
@@ -40,8 +36,7 @@ function buildMarkdown() {
 			const typeStr = t.type === "BUY" ? "买入" : "卖出";
 			const amount = (t.price || 0) * (t.quantity || 0);
 			const dateStr = t.date ? fmtDate(new Date(t.date)) : "-";
-			const strategies =
-				t.strategies && t.strategies.length ? t.strategies.join(", ") : "-";
+			const strategies = t.strategies?.length ? t.strategies.join(", ") : "-";
 			const reason = (t.reason || "").replace(/\|/g, "\\|") || "-";
 			const note = (t.note || "").replace(/\|/g, "\\|") || "-";
 			lines.push(
@@ -78,17 +73,13 @@ function buildMarkdown() {
 
 	// —— 分红记录 ——
 	const dividends = Dividend.getAll();
-	dividends.sort(
-		(a, b) => (b.date || "").localeCompare(a.date || "") || b.id - a.id,
-	);
+	dividends.sort((a, b) => (b.date || "").localeCompare(a.date || "") || b.id - a.id);
 
 	lines.push("");
-	lines.push("## 分红记录（" + dividends.length + " 笔）");
+	lines.push(`## 分红记录（${dividends.length} 笔）`);
 	lines.push("");
 	if (dividends.length > 0) {
-		lines.push(
-			"| 日期 | 代码 | 名称 | 市场 | 每股金额 | 数量 | 总金额 | 备注 |",
-		);
+		lines.push("| 日期 | 代码 | 名称 | 市场 | 每股金额 | 数量 | 总金额 | 备注 |");
 		lines.push("| --- | --- | --- | --- | --- | --- | --- | --- |");
 		dividends.forEach((d) => {
 			const stock = stockMap[d.stockId];
@@ -143,7 +134,7 @@ function exportMD() {
 			String(now.getHours()).padStart(2, "0") +
 			String(now.getMinutes()).padStart(2, "0") +
 			String(now.getSeconds()).padStart(2, "0");
-		const filePath = wx.env.USER_DATA_PATH + "/交易记录_" + timestamp + ".md";
+		const filePath = `${wx.env.USER_DATA_PATH}/交易记录_${timestamp}.md`;
 
 		fsm.writeFileSync(filePath, mdContent, "utf8");
 
@@ -151,7 +142,7 @@ function exportMD() {
 
 		wx.shareFileMessage({
 			filePath: filePath,
-			fileName: "交易记录_" + timestamp + ".md",
+			fileName: `交易记录_${timestamp}.md`,
 			success: () => {
 				wx.showToast({ title: "导出成功", icon: "success" });
 			},
@@ -165,7 +156,7 @@ function exportMD() {
 		});
 	} catch (e) {
 		wx.hideLoading();
-		wx.showToast({ title: "导出失败: " + (e.message || ""), icon: "none" });
+		wx.showToast({ title: `导出失败: ${e.message || ""}`, icon: "none" });
 		console.error("[exportMD]", e);
 	}
 }

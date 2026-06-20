@@ -50,7 +50,7 @@ Component({
 			query.exec((res) => {
 				const rects = res[0];
 				const containerRect = res[1];
-				if (!rects || !rects[activeIndex] || !containerRect) return;
+				if (!rects?.[activeIndex] || !containerRect) return;
 				this.setData({
 					sliderLeft: rects[activeIndex].left - containerRect.left,
 					sliderWidth: rects[activeIndex].width,

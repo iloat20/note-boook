@@ -1,18 +1,9 @@
 // pages/detail/detail.js
-const {
-	Stock,
-	Transaction,
-	Dividend,
-	PriceCache,
-} = require("../../../utils/models/index");
-const {
-	calculatePosition,
-} = require("../../../utils/services/positionService");
+const { Stock, Transaction, Dividend, PriceCache } = require("../../../utils/models/index");
+const { calculatePosition } = require("../../../utils/services/positionService");
 const { getStrategyStats } = require("../../../utils/services/statsService");
 const { fmt, fmtShortDate, fmtTime } = require("../../../utils/helpers/format");
-const {
-	calcFloatingPercent,
-} = require("../../../utils/helpers/positionCalculator");
+const { calcFloatingPercent } = require("../../../utils/helpers/positionCalculator");
 const {
 	getMarketLabel,
 	getMarketColor,
@@ -64,8 +55,8 @@ Page({
 	onLoad(options) {
 		this.setData(getApp().getNavBarInfo());
 
-		if (options && options.stockId) {
-			this._stockId = parseInt(options.stockId);
+		if (options?.stockId) {
+			this._stockId = parseInt(options.stockId, 10);
 			this.loadData();
 		}
 	},
@@ -93,12 +84,8 @@ Page({
 
 		const position = calculatePosition(stock.id);
 		const rawTransactions = Transaction.getByStockId(stock.id);
-		const transactions = rawTransactions.map(
-			this._formatTransaction.bind(this),
-		);
-		const dividends = Dividend.getByStockId(stock.id).map(
-			this._formatDividend.bind(this),
-		);
+		const transactions = rawTransactions.map(this._formatTransaction.bind(this));
+		const dividends = Dividend.getByStockId(stock.id).map(this._formatDividend.bind(this));
 		const strategySummary = getStrategyStats(rawTransactions);
 
 		// Cache for reuse
@@ -109,8 +96,7 @@ Page({
 			position.currentPrice && position.quantity > 0
 				? position.currentPrice * position.quantity
 				: 0;
-		const totalPnL =
-			position.realizedPnL + position.floatingPnL + position.dividendIncome;
+		const totalPnL = position.realizedPnL + position.floatingPnL + position.dividendIncome;
 		const currency = this._currency;
 
 		const costBasis = position.avgCost * (position.quantity || 0);
@@ -132,32 +118,20 @@ Page({
 			disDivId: null,
 			strategySummary: strategySummary,
 			formatAvgCost: currency + fmt(position.avgCost),
-			formatCurrentPrice: position.currentPrice
-				? currency + fmt(position.currentPrice)
-				: "--",
+			formatCurrentPrice: position.currentPrice ? currency + fmt(position.currentPrice) : "--",
 			formatMarketValue: currency + fmt(marketValue),
 			formatDividendIncome:
-				(position.dividendIncome >= 0 ? "+" : "") +
-				currency +
-				fmt(position.dividendIncome),
+				(position.dividendIncome >= 0 ? "+" : "") + currency + fmt(position.dividendIncome),
 			floatingPnLClass: position.floatingPnL >= 0 ? "profit" : "loss",
 			floatingPnLText:
-				(position.floatingPnL >= 0 ? "+" : "") +
-				currency +
-				fmt(Math.abs(position.floatingPnL)),
+				(position.floatingPnL >= 0 ? "+" : "") + currency + fmt(Math.abs(position.floatingPnL)),
 			floatingPnLPercent: calcFloatingPercent(position),
 			realizedPnLClass: position.realizedPnL >= 0 ? "profit" : "loss",
 			realizedPnLText:
-				(position.realizedPnL >= 0 ? "+" : "") +
-				currency +
-				fmt(Math.abs(position.realizedPnL)),
+				(position.realizedPnL >= 0 ? "+" : "") + currency + fmt(Math.abs(position.realizedPnL)),
 			totalPnLClass: totalPnL >= 0 ? "profit" : "loss",
-			totalPnLText:
-				(totalPnL >= 0 ? "+" : "") + currency + fmt(Math.abs(totalPnL)),
-			heroPnLPercentText:
-				(totalPnLPercent >= 0 ? "+" : "") +
-				totalPnLPercent.toFixed(2) +
-				"%",
+			totalPnLText: (totalPnL >= 0 ? "+" : "") + currency + fmt(Math.abs(totalPnL)),
+			heroPnLPercentText: `${(totalPnLPercent >= 0 ? "+" : "") + totalPnLPercent.toFixed(2)}%`,
 		});
 	},
 
@@ -184,8 +158,7 @@ Page({
 			priceText: fmt(transaction.price),
 			feeText: fmt(transaction.fee),
 			amountText:
-				(transaction.type === "BUY" ? "-" : "+") +
-				fmt(transaction.price * transaction.quantity),
+				(transaction.type === "BUY" ? "-" : "+") + fmt(transaction.price * transaction.quantity),
 		};
 	},
 
@@ -207,7 +180,7 @@ Page({
 	updatePrice(e) {
 		const price = parseFloat(e.detail.value);
 		const stockId = this.data.stockId || this._stockId;
-		if (!isNaN(price) && price > 0) {
+		if (!Number.isNaN(price) && price > 0) {
 			PriceCache.set(stockId, price);
 			// Incremental update: only recalculate price-dependent fields
 			this._updatePriceFields(price);
@@ -220,13 +193,11 @@ Page({
 		const position = this.data.position;
 		const quantity = position.quantity || 0;
 		const avgCost = position.avgCost || 0;
-		const currency =
-			this._currency || getMarketCurrency(this.data.stock?.market);
+		const currency = this._currency || getMarketCurrency(this.data.stock?.market);
 
 		const marketValue = price * quantity;
 		const floatingPnL = quantity > 0 ? (price - avgCost) * quantity : 0;
-		const totalPnL =
-			position.realizedPnL + floatingPnL + position.dividendIncome;
+		const totalPnL = position.realizedPnL + floatingPnL + position.dividendIncome;
 		const pnlPercent = avgCost > 0 ? ((price - avgCost) / avgCost) * 100 : 0;
 		const costBasis = avgCost * quantity;
 		const totalPnLPercent = costBasis > 0 ? (totalPnL / costBasis) * 100 : 0;
@@ -237,16 +208,11 @@ Page({
 			formatCurrentPrice: currency + fmt(price),
 			formatMarketValue: currency + fmt(marketValue),
 			floatingPnLClass: floatingPnL >= 0 ? "profit" : "loss",
-			floatingPnLText:
-				(floatingPnL >= 0 ? "+" : "") + currency + fmt(Math.abs(floatingPnL)),
+			floatingPnLText: (floatingPnL >= 0 ? "+" : "") + currency + fmt(Math.abs(floatingPnL)),
 			floatingPnLPercent: parseFloat(pnlPercent.toFixed(2)),
 			totalPnLClass: totalPnL >= 0 ? "profit" : "loss",
-			totalPnLText:
-				(totalPnL >= 0 ? "+" : "") + currency + fmt(Math.abs(totalPnL)),
-			heroPnLPercentText:
-				(totalPnLPercent >= 0 ? "+" : "") +
-				totalPnLPercent.toFixed(2) +
-				"%",
+			totalPnLText: (totalPnL >= 0 ? "+" : "") + currency + fmt(Math.abs(totalPnL)),
+			heroPnLPercentText: `${(totalPnLPercent >= 0 ? "+" : "") + totalPnLPercent.toFixed(2)}%`,
 		});
 	},
 
@@ -257,14 +223,14 @@ Page({
 	goToRecord() {
 		const stockId = this.data.stockId || this._stockId;
 		wx.navigateTo({
-			url: "/packageRecord/pages/record/record?stockId=" + stockId,
+			url: `/packageRecord/pages/record/record?stockId=${stockId}`,
 		});
 	},
 
 	goToDividend() {
 		const stockId = this.data.stockId || this._stockId;
 		wx.navigateTo({
-			url: "/packageDetail/pages/dividend/dividend?stockId=" + stockId,
+			url: `/packageDetail/pages/dividend/dividend?stockId=${stockId}`,
 		});
 	},
 
@@ -275,7 +241,7 @@ Page({
 			itemList: ["编辑", "删除"],
 			success: (res) => {
 				if (res.tapIndex === 0) {
-					wx.navigateTo({ url: "/packageRecord/pages/record/record?id=" + id });
+					wx.navigateTo({ url: `/packageRecord/pages/record/record?id=${id}` });
 				} else if (res.tapIndex === 1) {
 					wx.showModal({
 						title: "确认删除",
@@ -304,7 +270,7 @@ Page({
 			success: (res) => {
 				if (res.tapIndex === 0) {
 					wx.navigateTo({
-						url: "/packageDetail/pages/dividend/dividend?id=" + id,
+						url: `/packageDetail/pages/dividend/dividend?id=${id}`,
 					});
 				} else if (res.tapIndex === 1) {
 					wx.showModal({
@@ -336,9 +302,7 @@ Page({
 			editMode: true,
 			editQuantity: String(position.quantity),
 			editAvgCost: String(position.avgCost),
-			editCurrentPrice: position.currentPrice
-				? String(position.currentPrice)
-				: "",
+			editCurrentPrice: position.currentPrice ? String(position.currentPrice) : "",
 		});
 	},
 
@@ -360,7 +324,7 @@ Page({
 
 	savePosition() {
 		const stockId = this.data.stockId || this._stockId;
-		const quantity = parseInt(this.data.editQuantity) || 0;
+		const quantity = parseInt(this.data.editQuantity, 10) || 0;
 		const avgCost = parseFloat(this.data.editAvgCost) || 0;
 		const currentPrice = parseFloat(this.data.editCurrentPrice) || 0;
 
@@ -374,8 +338,7 @@ Page({
 			return;
 		}
 
-		const transactions =
-			this._rawTransactions || Transaction.getByStockId(stockId);
+		const transactions = this._rawTransactions || Transaction.getByStockId(stockId);
 		const dividends = Dividend.getByStockId(stockId);
 		if (transactions.length === 0) {
 			toast("暂无交易记录，无法调整持仓");
@@ -430,10 +393,7 @@ Page({
 			);
 			Transaction.save(syntheticBuy);
 		} else if (diff < 0) {
-			const sellQuantity = Math.min(
-				Math.round(Math.abs(diff) / avgBuyPrice),
-				currentPosition,
-			);
+			const sellQuantity = Math.min(Math.round(Math.abs(diff) / avgBuyPrice), currentPosition);
 			if (sellQuantity > 0) {
 				const syntheticSell = Transaction.create(
 					stockId,

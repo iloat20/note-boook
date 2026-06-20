@@ -30,7 +30,7 @@ function decodeGBK(arrayBuffer) {
 	if (typeof TextDecoder !== "undefined") {
 		try {
 			return new TextDecoder("gb18030").decode(arrayBuffer);
-		} catch (e) {
+		} catch (_e) {
 			// 不支持 gb18030，fallthrough
 		}
 	}
@@ -45,7 +45,7 @@ function decodeGBK(arrayBuffer) {
 
 // A股代码前缀映射
 function getAsharePrefix(code) {
-	const codeNum = parseInt(code);
+	const codeNum = parseInt(code, 10);
 	if (codeNum >= 600000 && codeNum < 700000) return "sh"; // 上海主板 + 科创板（600xxx-688xxx）
 	if (codeNum >= 0 && codeNum < 400000) return "sz"; // 深圳主板 + 创业板（000xxx-300xxx）
 	if (codeNum >= 800000 && codeNum < 900000) return "bj"; // 北交所（8xxxxx）
@@ -59,9 +59,9 @@ function getSymbol(market, code) {
 		case "A_SHARE":
 			return getAsharePrefix(code) + code;
 		case "HK_SHARE":
-			return "r_hk" + String(code).padStart(5, "0");
+			return `r_hk${String(code).padStart(5, "0")}`;
 		case "US_SHARE":
-			return "us" + String(code).toUpperCase();
+			return `us${String(code).toUpperCase()}`;
 		default:
 			return null;
 	}
@@ -75,12 +75,8 @@ function buildUrl(market, code) {
 
 // 构建批量查询 URL（腾讯 API 支持逗号分隔多只股票）
 function buildBatchUrl(stocks) {
-	const symbols = stocks
-		.map((stock) => getSymbol(stock.market, stock.code))
-		.filter(Boolean);
-	return symbols.length > 0
-		? "https://qt.gtimg.cn/q=" + symbols.join(",")
-		: null;
+	const symbols = stocks.map((stock) => getSymbol(stock.market, stock.code)).filter(Boolean);
+	return symbols.length > 0 ? `https://qt.gtimg.cn/q=${symbols.join(",")}` : null;
 }
 
 // 解析单条腾讯财经 API 数据
@@ -100,12 +96,7 @@ function parseTencentData(data) {
 	}
 
 	const fields = match[1].split("~");
-	log(
-		"[parseTencentData] 字段数:",
-		fields.length,
-		"前5个:",
-		fields.slice(0, 5),
-	);
+	log("[parseTencentData] 字段数:", fields.length, "前5个:", fields.slice(0, 5));
 	if (fields.length < 35) {
 		warn("[parseTencentData] 字段数不足35:", fields.length);
 		return null;
@@ -113,8 +104,7 @@ function parseTencentData(data) {
 
 	const currentPrice = parseFloat(fields[3]) || 0;
 	// 现价为 0 时兜底用昨收价（非交易日/停牌场景）
-	const fallbackPrice =
-		currentPrice > 0 ? currentPrice : parseFloat(fields[4]) || 0;
+	const fallbackPrice = currentPrice > 0 ? currentPrice : parseFloat(fields[4]) || 0;
 
 	const result = {
 		code: fields[2],
@@ -122,7 +112,7 @@ function parseTencentData(data) {
 		currentPrice: fallbackPrice,
 		yesterdayClose: parseFloat(fields[4]) || 0,
 		todayOpen: parseFloat(fields[5]) || 0,
-		volume: parseInt(fields[6]) || 0,
+		volume: parseInt(fields[6], 10) || 0,
 		high: parseFloat(fields[33]) || 0,
 		low: parseFloat(fields[34]) || 0,
 		amount: parseFloat(fields[37]) || 0,
@@ -155,19 +145,14 @@ function parseBatchData(responseText) {
 				currentPrice: batchPrice,
 				yesterdayClose: parseFloat(fields[4]) || 0,
 				todayOpen: parseFloat(fields[5]) || 0,
-				volume: parseInt(fields[6]) || 0,
+				volume: parseInt(fields[6], 10) || 0,
 				high: parseFloat(fields[33]) || 0,
 				low: parseFloat(fields[34]) || 0,
 				amount: parseFloat(fields[37]) || 0,
 			};
 		}
 	}
-	log(
-		"[parseBatchData] 解析到",
-		count,
-		"条数据，有效:",
-		Object.keys(results).length,
-	);
+	log("[parseBatchData] 解析到", count, "条数据，有效:", Object.keys(results).length);
 	return results;
 }
 
@@ -205,13 +190,8 @@ function _withRetry(fn, maxRetries = MAX_RETRIES) {
 	return function attempt(remaining = maxRetries) {
 		return fn().catch((err) => {
 			if (remaining <= 0) throw err;
-			const delay =
-				RETRY_DELAYS[Math.min(maxRetries - remaining, RETRY_DELAYS.length - 1)];
-			warn(
-				"[Retry] 请求失败，" + delay + "ms 后重试，剩余重试次数:",
-				remaining - 1,
-				err,
-			);
+			const delay = RETRY_DELAYS[Math.min(maxRetries - remaining, RETRY_DELAYS.length - 1)];
+			warn(`[Retry] 请求失败，${delay}ms 后重试，剩余重试次数:`, remaining - 1, err);
 			return new Promise((resolve) => {
 				setTimeout(resolve, delay);
 			}).then(() => attempt(remaining - 1));
@@ -239,9 +219,7 @@ function fetchStockPrice(market, code) {
 							const responseData = decodeGBK(data);
 							log(
 								"[fetchStockPrice] 解析数据:",
-								typeof responseData === "string"
-									? responseData.substring(0, 200)
-									: responseData,
+								typeof responseData === "string" ? responseData.substring(0, 200) : responseData,
 							);
 							const result = parseTencentData(responseData);
 							log("[fetchStockPrice] 解析结果:", result);
@@ -257,7 +235,7 @@ function fetchStockPrice(market, code) {
 						})
 						.catch((err) => {
 							errLog("[fetchStockPrice] 请求失败", err);
-							reject(new Error("网络请求失败: " + (err.message || err.errMsg)));
+							reject(new Error(`网络请求失败: ${err.message || err.errMsg}`));
 						});
 				}),
 		),
@@ -266,8 +244,7 @@ function fetchStockPrice(market, code) {
 
 function fetchPriceBatch(stocks) {
 	const url = buildBatchUrl(stocks);
-	if (!url)
-		return Promise.resolve(stocks.map((s) => ({ stockId: s.id, price: null })));
+	if (!url) return Promise.resolve(stocks.map((s) => ({ stockId: s.id, price: null })));
 
 	// 内层：带重试的请求
 	// 外层 catch：重试全部耗尽后返回 null 价格，不阻塞整体

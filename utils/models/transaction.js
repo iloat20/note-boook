@@ -49,11 +49,7 @@ const Transaction = {
 	 * @returns {Object} 保存后的交易记录对象
 	 */
 	save(transaction) {
-		return upsertAndSave(TRANSACTION_KEY, transaction, [
-			"position",
-			"heatmap",
-			"periodStats",
-		]);
+		return upsertAndSave(TRANSACTION_KEY, transaction, ["position", "heatmap", "periodStats"]);
 	},
 
 	/**
@@ -110,9 +106,7 @@ const Transaction = {
 	 * @returns {Array} 交易记录列表
 	 */
 	getByStrategy(tag) {
-		return this.getAll().filter(
-			(t) => t.strategies && t.strategies.includes(tag),
-		);
+		return this.getAll().filter((t) => t.strategies?.includes(tag));
 	},
 
 	/**

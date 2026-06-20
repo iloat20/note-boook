@@ -40,7 +40,7 @@ const Strategy = {
 		const transactions = Transaction.getAll();
 		const countMap = {};
 		transactions.forEach((t) => {
-			if (t.strategies && t.strategies.length) {
+			if (t.strategies?.length) {
 				t.strategies.forEach((tag) => {
 					countMap[tag] = (countMap[tag] || 0) + 1;
 				});

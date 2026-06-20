@@ -20,7 +20,7 @@
 // RAF 节流辅助
 function rafThrottle(fn) {
 	let ticking = false;
-	return function(...args) {
+	return function (...args) {
 		if (!ticking) {
 			ticking = true;
 			requestAnimationFrame(() => {
@@ -56,7 +56,7 @@ module.exports = {
 
 		const index = e.currentTarget.dataset.index;
 		const positions = this.data.positions;
-		if (!positions || !positions[index]) return;
+		if (!positions?.[index]) return;
 
 		const currentOffset = positions[index].swipeOffset || 0;
 		if (currentOffset === 0 && dx > 0) return;
@@ -65,7 +65,7 @@ module.exports = {
 		const offset = Math.max(maxOffset, Math.min(0, dx));
 
 		this.setData({
-			["positions[" + index + "].swipeOffset"]: offset,
+			[`positions[${index}].swipeOffset`]: offset,
 		});
 	},
 
@@ -78,7 +78,7 @@ module.exports = {
 
 		const index = e.currentTarget.dataset.index;
 		const positions = this.data.positions;
-		if (!positions || !positions[index]) return;
+		if (!positions?.[index]) return;
 
 		const p = positions[index];
 		const offset = p.swipeOffset || 0;
@@ -87,10 +87,10 @@ module.exports = {
 
 		const updates = {};
 		if ((p.swipeOffset || 0) !== newOffset) {
-			updates["positions[" + index + "].swipeOffset"] = newOffset;
+			updates[`positions[${index}].swipeOffset`] = newOffset;
 		}
 		if (p.swipeOpen !== newOpen) {
-			updates["positions[" + index + "].swipeOpen"] = newOpen;
+			updates[`positions[${index}].swipeOpen`] = newOpen;
 		}
 
 		if (Object.keys(updates).length > 0) this.setData(updates);

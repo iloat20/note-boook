@@ -1,20 +1,12 @@
 // pages/record/record.js
 const { MARKETS, TIMING_CONFIG } = require("../../../utils/constants/index");
-const {
-	Stock,
-	Transaction,
-	Strategy,
-	PriceCache,
-} = require("../../../utils/models/index");
+const { Stock, Transaction, Strategy, PriceCache } = require("../../../utils/models/index");
 const {
 	getSellableQuantity,
 	calculatePosition,
 } = require("../../../utils/services/positionService");
 const { fetchStockPrice } = require("../../../utils/services/stockPrice");
-const {
-	calculateFee,
-	getFeeBreakdown,
-} = require("../../../utils/helpers/feeCalculator");
+const { calculateFee, getFeeBreakdown } = require("../../../utils/helpers/feeCalculator");
 const { fmt } = require("../../../utils/helpers/format");
 const {
 	getMarketLabel,
@@ -70,23 +62,20 @@ Page({
 				String(now.getMonth() + 1).padStart(2, "0") +
 				"-" +
 				String(now.getDate()).padStart(2, "0"),
-			time:
-				String(now.getHours()).padStart(2, "0") +
-				":" +
-				String(now.getMinutes()).padStart(2, "0"),
+			time: `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`,
 			allStrategies: Strategy.getAll(),
 		});
-		if (options && options.id) {
+		if (options?.id) {
 			this._isEdit = true;
-			this._editId = parseInt(options.id);
+			this._editId = parseInt(options.id, 10);
 			this._loadEdit(this._editId);
 		} else {
-			if (options && options.type) {
+			if (options?.type) {
 				this.setData({ type: options.type });
 			}
 			// 处理从持仓页跳转的新增交易
-			if (options && options.stockId) {
-				const stock = Stock.getById(parseInt(options.stockId));
+			if (options?.stockId) {
+				const stock = Stock.getById(parseInt(options.stockId, 10));
 				if (stock) {
 					this.setData({
 						market: stock.market,
@@ -110,10 +99,7 @@ Page({
 		const stock = Stock.getById(transaction.stockId);
 		if (!stock) return;
 		const date = new Date(transaction.date);
-		const hasJournal = !!(
-			transaction.reason ||
-			(transaction.strategies && transaction.strategies.length)
-		);
+		const hasJournal = !!(transaction.reason || transaction.strategies?.length);
 		this.setData({
 			isEdit: true,
 			market: stock.market,
@@ -129,10 +115,7 @@ Page({
 				String(date.getMonth() + 1).padStart(2, "0") +
 				"-" +
 				String(date.getDate()).padStart(2, "0"),
-			time:
-				String(date.getHours()).padStart(2, "0") +
-				":" +
-				String(date.getMinutes()).padStart(2, "0"),
+			time: `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`,
 			note: transaction.note || "",
 			reason: transaction.reason || "",
 			strategies: transaction.strategies || [],
@@ -213,11 +196,9 @@ Page({
 	onFeeInput(e) {
 		this.setData({ fee: e.detail.value });
 		const data = this.data;
-		const tradeAmount =
-			(parseFloat(data.price) || 0) * (parseInt(data.quantity) || 0);
+		const tradeAmount = (parseFloat(data.price) || 0) * (parseInt(data.quantity, 10) || 0);
 		const fee = parseFloat(e.detail.value) || 0;
-		const actualAmount =
-			data.type === "BUY" ? tradeAmount + fee : tradeAmount - fee;
+		const actualAmount = data.type === "BUY" ? tradeAmount + fee : tradeAmount - fee;
 		this.setData({
 			amountText: fmt(tradeAmount),
 			actualText: fmt(actualAmount),
@@ -260,7 +241,7 @@ Page({
 			return;
 		}
 		if (!validateStockCode(data.code, data.market)) {
-			this.setData({ codeError: getMarketLabel(data.market) + "代码格式错误" });
+			this.setData({ codeError: `${getMarketLabel(data.market)}代码格式错误` });
 		} else {
 			this.setData({ codeError: "" });
 		}
@@ -292,7 +273,7 @@ Page({
 		fetchStockPrice(this.data.market, code)
 			.then(
 				function (data) {
-					if (data && data.name && this.data.code === code) {
+					if (data?.name && this.data.code === code) {
 						const updates = { name: data.name };
 						// 如果价格未填或为0，自动填入现价
 						if (!this.data.price || parseFloat(this.data.price) === 0) {
@@ -319,16 +300,9 @@ Page({
 	_calcFee() {
 		const data = this.data;
 		const fee = calculateFee(data.market, data.type, data.price, data.quantity);
-		const breakdown = getFeeBreakdown(
-			data.market,
-			data.type,
-			data.price,
-			data.quantity,
-		);
-		const tradeAmount =
-			(parseFloat(data.price) || 0) * (parseInt(data.quantity) || 0);
-		const actualAmount =
-			data.type === "BUY" ? tradeAmount + fee : tradeAmount - fee;
+		const breakdown = getFeeBreakdown(data.market, data.type, data.price, data.quantity);
+		const tradeAmount = (parseFloat(data.price) || 0) * (parseInt(data.quantity, 10) || 0);
+		const actualAmount = data.type === "BUY" ? tradeAmount + fee : tradeAmount - fee;
 		this.setData({
 			fee: String(fee),
 			feePreview: breakdown.items.map((item) => ({
@@ -428,7 +402,7 @@ Page({
 			toast("请输入有效价格");
 			return;
 		}
-		if (!quantity || parseInt(quantity) <= 0) {
+		if (!quantity || parseInt(quantity, 10) <= 0) {
 			toast("请输入有效数量");
 			return;
 		}
@@ -444,11 +418,8 @@ Page({
 				return;
 			}
 			const ignoredTransactionId = this._isEdit ? this._editId : null;
-			const sellableQuantity = getSellableQuantity(
-				stock.id,
-				ignoredTransactionId,
-			);
-			if (parseInt(quantity) > sellableQuantity) {
+			const sellableQuantity = getSellableQuantity(stock.id, ignoredTransactionId);
+			if (parseInt(quantity, 10) > sellableQuantity) {
 				toast("卖出数量超过持仓");
 				return;
 			}
@@ -460,7 +431,7 @@ Page({
 
 		// 提交时把价格写入 PriceCache，回到持仓页立即可用
 		const priceNum = parseFloat(price);
-		if (stock && stock.id && priceNum > 0) {
+		if (stock?.id && priceNum > 0) {
 			PriceCache.set(stock.id, priceNum);
 		}
 
@@ -470,7 +441,7 @@ Page({
 			price,
 			quantity,
 			fee,
-			new Date(date + "T" + time + ":00").toISOString(),
+			new Date(`${date}T${time}:00`).toISOString(),
 			note,
 			data.reason,
 			data.strategies,

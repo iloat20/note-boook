@@ -160,10 +160,9 @@ Component({
 
 			fetchStockPrice(this.data.qrMarket, code)
 				.then((data) => {
-					if (data && data.name && this.data.qrCode === code) {
+					if (data?.name && this.data.qrCode === code) {
 						const localResults = searchStocks(code, this.data.qrMarket, 1);
-						const localName =
-							localResults.length > 0 ? localResults[0].name : null;
+						const localName = localResults.length > 0 ? localResults[0].name : null;
 						const finalName = localName || data.name;
 						const updates = { qrName: finalName, qrFetching: false };
 						if (!this.data.qrPrice || parseFloat(this.data.qrPrice) === 0) {
@@ -194,14 +193,14 @@ Component({
 		},
 
 		onQrQtyMinus: function () {
-			const qty = Math.max(0, (parseInt(this.data.qrQuantity) || 0) - 100);
+			const qty = Math.max(0, (parseInt(this.data.qrQuantity, 10) || 0) - 100);
 			this.setData({ qrQuantity: qty > 0 ? String(qty) : "0" });
 			this._scheduleCalcFee();
 			wx.vibrateShort({ type: "light" });
 		},
 
 		onQrQtyPlus: function () {
-			const qty = (parseInt(this.data.qrQuantity) || 0) + 100;
+			const qty = (parseInt(this.data.qrQuantity, 10) || 0) + 100;
 			this.setData({ qrQuantity: String(qty) });
 			this._scheduleCalcFee();
 			wx.vibrateShort({ type: "light" });
@@ -209,7 +208,7 @@ Component({
 
 		// ──── 数量快捷预设 ────
 		onQrQtyPreset: function (e) {
-			const qty = parseInt(e.currentTarget.dataset.qty) || 0;
+			const qty = parseInt(e.currentTarget.dataset.qty, 10) || 0;
 			if (qty === 0) {
 				// 全仓：TODO 后续可接持仓数据
 				wx.showToast({ title: "全仓功能开发中", icon: "none" });
@@ -246,10 +245,8 @@ Component({
 		_calcQrFee: function () {
 			const d = this.data;
 			const fee = calculateFee(d.qrMarket, d.qrType, d.qrPrice, d.qrQuantity);
-			const tradeAmount =
-				(parseFloat(d.qrPrice) || 0) * (parseInt(d.qrQuantity) || 0);
-			const actualAmount =
-				d.qrType === "BUY" ? tradeAmount + fee : tradeAmount - fee;
+			const tradeAmount = (parseFloat(d.qrPrice) || 0) * (parseInt(d.qrQuantity, 10) || 0);
+			const actualAmount = d.qrType === "BUY" ? tradeAmount + fee : tradeAmount - fee;
 
 			this.setData({
 				qrFee: fee,
@@ -285,7 +282,7 @@ Component({
 				wx.showToast({ title: "请输入有效价格", icon: "none" });
 				return;
 			}
-			if (!d.qrQuantity || parseInt(d.qrQuantity) <= 0) {
+			if (!d.qrQuantity || parseInt(d.qrQuantity, 10) <= 0) {
 				wx.showToast({ title: "请输入有效数量", icon: "none" });
 				return;
 			}
@@ -299,7 +296,7 @@ Component({
 					return;
 				}
 				const sellableQuantity = getSellableQuantity(stock.id);
-				if (parseInt(d.qrQuantity) > sellableQuantity) {
+				if (parseInt(d.qrQuantity, 10) > sellableQuantity) {
 					wx.showToast({ title: "卖出数量超过持仓", icon: "none" });
 					return;
 				}
@@ -309,7 +306,7 @@ Component({
 				stock = Stock.create(code, name, d.qrMarket);
 				Stock.save(stock);
 			}
-			const dateTimeStr = d.qrDate + "T" + (d.qrTime || "00:00") + ":00";
+			const dateTimeStr = `${d.qrDate}T${d.qrTime || "00:00"}:00`;
 			const tx = Transaction.create(
 				stock.id,
 				d.qrType,

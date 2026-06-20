@@ -8,7 +8,7 @@
  */
 function fmt(num) {
 	const n = parseFloat(num);
-	if (!isFinite(n)) return "0.00";
+	if (!Number.isFinite(n)) return "0.00";
 	const parts = n.toFixed(2).split(".");
 	parts[0] = parts[0].replace(/\B(?=(\d{3})+$)/g, ",");
 	return parts.join(".");
@@ -21,7 +21,7 @@ function fmt(num) {
  */
 function fmtDate(date) {
 	const d = new Date(date);
-	if (isNaN(d.getTime())) return "";
+	if (Number.isNaN(d.getTime())) return "";
 	return (
 		d.getFullYear() +
 		"-" +
@@ -38,12 +38,8 @@ function fmtDate(date) {
  */
 function fmtTime(date) {
 	const d = new Date(date);
-	if (isNaN(d.getTime())) return "";
-	return (
-		String(d.getHours()).padStart(2, "0") +
-		":" +
-		String(d.getMinutes()).padStart(2, "0")
-	);
+	if (Number.isNaN(d.getTime())) return "";
+	return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
 /**
@@ -53,8 +49,8 @@ function fmtTime(date) {
  */
 function fmtShortDate(date) {
 	const d = new Date(date);
-	if (isNaN(d.getTime())) return "";
-	return d.getMonth() + 1 + "/" + d.getDate();
+	if (Number.isNaN(d.getTime())) return "";
+	return `${d.getMonth() + 1}/${d.getDate()}`;
 }
 
 module.exports = { fmt, fmtDate, fmtTime, fmtShortDate };

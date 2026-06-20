@@ -35,7 +35,7 @@ function animateAllValues(page, targets, duration) {
 		const updates = {};
 		keys.forEach((k) => {
 			const current = startValues[k] + (targets[k] - startValues[k]) * eased;
-			updates["displayValues." + k] = fmt(parseFloat(current.toFixed(2)));
+			updates[`displayValues.${k}`] = fmt(parseFloat(current.toFixed(2)));
 		});
 
 		if (page.setData) page.setData(updates);

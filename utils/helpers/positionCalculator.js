@@ -43,8 +43,7 @@ function calcPosition(stockId, transactions, dividends, currentPrice) {
 		}
 	});
 
-	const positionQuantity =
-		totalBuyQuantity + shareDividendQty - totalSellQuantity;
+	const positionQuantity = totalBuyQuantity + shareDividendQty - totalSellQuantity;
 	const avgCost =
 		totalBuyQuantity + shareDividendQty > 0
 			? (totalBuyAmount + totalBuyFee) / (totalBuyQuantity + shareDividendQty)
@@ -56,9 +55,7 @@ function calcPosition(stockId, transactions, dividends, currentPrice) {
 			: totalSellAmount - totalSellFee;
 
 	const floatingPnL =
-		currentPrice && positionQuantity > 0
-			? (currentPrice - avgCost) * positionQuantity
-			: 0;
+		currentPrice && positionQuantity > 0 ? (currentPrice - avgCost) * positionQuantity : 0;
 
 	return {
 		stockId: stockId,
@@ -68,9 +65,7 @@ function calcPosition(stockId, transactions, dividends, currentPrice) {
 		dividendIncome: parseFloat(dividendIncome.toFixed(2)),
 		currentPrice: currentPrice ? parseFloat(currentPrice.toFixed(2)) : null,
 		floatingPnL: parseFloat(floatingPnL.toFixed(2)),
-		totalPnL: parseFloat(
-			(realizedPnL + floatingPnL + dividendIncome).toFixed(2),
-		),
+		totalPnL: parseFloat((realizedPnL + floatingPnL + dividendIncome).toFixed(2)),
 	};
 }
 
@@ -82,12 +77,7 @@ function calcPosition(stockId, transactions, dividends, currentPrice) {
  * @param {Function} priceGetter - (stockId) => number|null 获取价格
  * @returns {Object} { stockId: result, ... } 映射
  */
-function batchCalcPositions(
-	stockIds,
-	allTransactions,
-	allDividends,
-	priceGetter,
-) {
+function batchCalcPositions(stockIds, allTransactions, allDividends, priceGetter) {
 	// 按 stockId 分组
 	const txMap = {};
 	const divMap = {};
@@ -106,8 +96,7 @@ function batchCalcPositions(
 	stockIds.forEach((stockId) => {
 		const tx = txMap[stockId] || [];
 		const div = divMap[stockId] || [];
-		const price =
-			typeof priceGetter === "function" ? priceGetter(stockId) : null;
+		const price = typeof priceGetter === "function" ? priceGetter(stockId) : null;
 		results[stockId] = calcPosition(stockId, tx, div, price);
 	});
 
@@ -121,10 +110,7 @@ function batchCalcPositions(
  */
 function calcFloatingPercent(position) {
 	if (position.quantity > 0 && position.avgCost > 0) {
-		return (
-			(position.floatingPnL / (position.avgCost * position.quantity)) *
-			100
-		).toFixed(2);
+		return ((position.floatingPnL / (position.avgCost * position.quantity)) * 100).toFixed(2);
 	}
 	return "0.00";
 }

@@ -4,11 +4,7 @@
  * 提供内存缓存以减少 I/O
  */
 
-const {
-	MARKETS,
-	TRANSACTION_TYPE,
-	DEFAULT_STRATEGIES,
-} = require("../constants/index");
+const { MARKETS, TRANSACTION_TYPE, DEFAULT_STRATEGIES } = require("../constants/index");
 const { caches, markDataDirty } = require("../cache/cacheManager");
 
 const STOCK_KEY = "stock_trade_stocks";

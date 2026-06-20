@@ -29,13 +29,13 @@ Page({
 			date: `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`,
 		});
 		this._loadStocks();
-		if (o && o.id) {
+		if (o?.id) {
 			this._isEdit = true;
-			this._editId = parseInt(o.id);
-			this._loadEdit(parseInt(o.id));
-		} else if (o && o.stockId) {
+			this._editId = parseInt(o.id, 10);
+			this._loadEdit(parseInt(o.id, 10));
+		} else if (o?.stockId) {
 			const idx = this.data.stockOptions.findIndex(
-				(opt) => opt.stock && opt.stock.id === parseInt(o.stockId),
+				(opt) => opt.stock && opt.stock.id === parseInt(o.stockId, 10),
 			);
 			if (idx >= 0)
 				this.setData({
@@ -59,9 +59,7 @@ Page({
 		if (!d) return;
 		const s = Stock.getById(d.stockId);
 		const dt = new Date(d.date);
-		const idx = this.data.stockOptions.findIndex(
-			(o) => o.stock && o.stock.id === d.stockId,
-		);
+		const idx = this.data.stockOptions.findIndex((o) => o.stock && o.stock.id === d.stockId);
 		this.setData({
 			isEdit: true,
 			stockIdx: Math.max(idx, 0),
@@ -83,7 +81,7 @@ Page({
 	},
 
 	selStock(e) {
-		const i = parseInt(e.detail.value);
+		const i = parseInt(e.detail.value, 10);
 		const s = this.data.stockOptions[i]?.stock;
 		this.setData({
 			stockIdx: i,
@@ -112,15 +110,15 @@ Page({
 	_preview() {
 		const type = this.data.divType;
 		if (type === "SHARE") {
-			const sq = parseInt(this.data.shareQty) || 0;
-			const q = parseInt(this.data.qty) || 0;
+			const sq = parseInt(this.data.shareQty, 10) || 0;
+			const _q = parseInt(this.data.qty, 10) || 0;
 			this.setData({
 				perShareText: fmt(0),
-				totalText: sq > 0 ? sq + "股" : "0股",
+				totalText: sq > 0 ? `${sq}股` : "0股",
 			});
 		} else {
 			const ps = parseFloat(this.data.perShare) || 0;
-			const q = parseInt(this.data.qty) || 0;
+			const q = parseInt(this.data.qty, 10) || 0;
 			const total = ps * q;
 			this.setData({ perShareText: fmt(ps), totalText: fmt(total) });
 		}
@@ -137,25 +135,18 @@ Page({
 			toast("请选择股票");
 			return;
 		}
-		const {
-			divType,
-			perShare: ps,
-			qty: q,
-			shareQty: sq,
-			date: d,
-			note: nt,
-		} = this.data;
+		const { divType, perShare: ps, qty: q, shareQty: sq, date: d, note: nt } = this.data;
 		if (!d) {
 			toast("请选择日期");
 			return;
 		}
 
 		if (divType === "SHARE") {
-			if (!sq || parseInt(sq) <= 0) {
+			if (!sq || parseInt(sq, 10) <= 0) {
 				toast("请输入有效送股数量");
 				return;
 			}
-			if (!q || parseInt(q) <= 0) {
+			if (!q || parseInt(q, 10) <= 0) {
 				toast("请输入有效持股数量");
 				return;
 			}
@@ -176,17 +167,11 @@ Page({
 				toast("请输入有效分红金额");
 				return;
 			}
-			if (!q || parseInt(q) <= 0) {
+			if (!q || parseInt(q, 10) <= 0) {
 				toast("请输入有效数量");
 				return;
 			}
-			const dv = Dividend.create(
-				s.id,
-				ps,
-				q,
-				new Date(`${d}T00:00:00`).toISOString(),
-				nt,
-			);
+			const dv = Dividend.create(s.id, ps, q, new Date(`${d}T00:00:00`).toISOString(), nt);
 			if (this._isEdit) dv.id = this._editId;
 			Dividend.save(dv);
 		}

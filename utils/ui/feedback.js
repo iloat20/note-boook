@@ -41,7 +41,7 @@ function catchError(err, defaultMsg) {
 	let msg = defaultMsg || "操作失败";
 	if (err) {
 		if (err.code && err.message) {
-			msg = "[" + err.code + "] " + err.message;
+			msg = `[${err.code}] ${err.message}`;
 		} else if (err.message) {
 			msg = err.message;
 		}

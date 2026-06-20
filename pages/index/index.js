@@ -11,33 +11,13 @@ const touchGestureMixin = require("../../utils/ui/touchGestureMixin");
 const { animateAllValues } = require("../../utils/ui/animationHelper");
 const { sharePortfolio } = require("../../utils/render/shareHelper");
 const { fmt, fmtDate } = require("../../utils/helpers/format");
-const {
-	calcFloatingPercent,
-} = require("../../utils/helpers/positionCalculator");
-const {
-	getMarketLabel,
-	getMarketColor,
-	getMarketCurrency,
-} = require("../../utils/constants/market");
-const {
-	fetchStockPrice,
-	fetchAllPrices,
-} = require("../../utils/services/stockPrice");
+const { calcFloatingPercent } = require("../../utils/helpers/positionCalculator");
+const { getMarketLabel, getMarketColor } = require("../../utils/constants/market");
+const { fetchStockPrice, fetchAllPrices } = require("../../utils/services/stockPrice");
 const { getRates, getRate } = require("../../utils/services/exchangeRate");
 const { MARKETS, TIMING_CONFIG } = require("../../utils/constants/index");
-const {
-	Stock,
-	Transaction,
-	Dividend,
-	PriceCache,
-} = require("../../utils/models/index");
-const {
-	toast,
-	success,
-	loading,
-	hideLoading,
-	catchError,
-} = require("../../utils/ui/feedback");
+const { Stock, Transaction, Dividend, PriceCache } = require("../../utils/models/index");
+const { toast, success, loading, hideLoading, catchError } = require("../../utils/ui/feedback");
 
 // 判断是否在交易时段（任意市场）
 function isTradingTime() {
@@ -116,29 +96,22 @@ Page({
 		this.updateDate();
 
 		// 计算虚拟列表高度
-		const systemInfo =
-			getApp().globalData.systemInfo || wx.getWindowInfo() || {};
+		const systemInfo = getApp().globalData.systemInfo || wx.getWindowInfo() || {};
 		const windowHeight = systemInfo.windowHeight || 667;
-		const statusBarHeight =
-			this.data.statusBarHeight || systemInfo.statusBarHeight || 44;
+		const statusBarHeight = this.data.statusBarHeight || systemInfo.statusBarHeight || 44;
 		const fixedHeight = statusBarHeight + 180;
 		const scrollHeight = windowHeight - fixedHeight;
 		this.setData({ scrollHeight: Math.max(scrollHeight, 300) });
 
 		// 订阅状态变化 — [优化] 回调不做 setData，由 _loadData 统一处理，避免重复渲染
-		this._unsubscribePositions = positionStore.subscribe(
-			"SET_POSITIONS",
-			() => {},
-		);
+		this._unsubscribePositions = positionStore.subscribe("SET_POSITIONS", () => {});
 
 		// 等待数据加载完成后再获取现价
 		await this._loadData();
 
 		// 只在交易时段或持仓无现价时（首次进入）获取行情
 		const allPos = this._allPositionsCache || [];
-		const hasNoPrice = allPos.some(
-			(p) => !p.currentPrice || p.currentPrice <= 0,
-		);
+		const hasNoPrice = allPos.some((p) => !p.currentPrice || p.currentPrice <= 0);
 		if (isTradingTime() || hasNoPrice) {
 			this._fetchPrices({ silent: true });
 		}
@@ -254,8 +227,7 @@ Page({
 
 			if (totalInvestment <= 0) totalInvestment = totalCost + totalBuyFee;
 
-			const totalPnL =
-				totalRealizedPnL + totalFloatingPnL + totalDividendIncome;
+			const totalPnL = totalRealizedPnL + totalFloatingPnL + totalDividendIncome;
 
 			// 格式化持仓数据 + 计算市场 tab 计数（合并处理）
 			const oldPositions = this._allPositionsCache || [];
@@ -266,9 +238,9 @@ Page({
 
 			const isFirstLoad = oldPositions.length === 0;
 			const oldIdSet = !isFirstLoad ? new Set(oldPositions.map((op) => op.id)) : null;
-			const newIds = isFirstLoad ? new Set() : new Set(
-				positions.map((p) => p.id).filter((id) => !oldIdSet.has(id))
-			);
+			const newIds = isFirstLoad
+				? new Set()
+				: new Set(positions.map((p) => p.id).filter((id) => !oldIdSet.has(id)));
 
 			const marketCounts = { null: 0 };
 			const formattedPositions = positions.map((p) => {
@@ -276,22 +248,21 @@ Page({
 				const oldPrice = oldPriceMap[p.id];
 				const priceFlashClass =
 					oldPrice && p.currentPrice && oldPrice !== p.currentPrice
-						? (p.currentPrice > oldPrice ? "price-flash-profit" : "price-flash-loss")
+						? p.currentPrice > oldPrice
+							? "price-flash-profit"
+							: "price-flash-loss"
 						: "";
 
 				// Pre-compute card class
 				let cardClass = "position-card";
 				if (newIds.has(p.id)) cardClass += " position-card-entering";
-				if (priceFlashClass) cardClass += " " + priceFlashClass;
+				if (priceFlashClass) cardClass += ` ${priceFlashClass}`;
 
 				// 预计算 market tag 类名，避免 WXML 中写三元表达式
-				const marketClass =
-					"tag market-" + (p.market === "A_SHARE" ? "a" : p.market === "HK_SHARE" ? "hk" : "us");
+				const marketClass = `tag market-${p.market === "A_SHARE" ? "a" : p.market === "HK_SHARE" ? "hk" : "us"}`;
 
 				// 预计算价格显示文本，消除 WXML 中的 wx:if/wx:else
-				const displayPriceText = p.currentPrice
-					? (fmt(p.currentPrice))
-					: "--";
+				const displayPriceText = p.currentPrice ? fmt(p.currentPrice) : "--";
 
 				// 市场计数（与格式化合并）
 				marketCounts.null++;
@@ -326,24 +297,18 @@ Page({
 			// [优化] positions / _allPositions 移出 data，挂实例字段（不进渲染层 diff）
 			// 全量缓存（含已清仓，跨 tab）+ id→index Map（O(1) 查找）
 			this._allPositionsCache = formattedPositions;
-			this._allIndexById = new Map(
-				formattedPositions.map((p, i) => [p.id, i]),
-			);
+			this._allIndexById = new Map(formattedPositions.map((p, i) => [p.id, i]));
 			// 当前 tab 全量 + id→index Map
 			this._positionsCache = filteredPositions;
-			this._indexById = new Map(
-				filteredPositions.map((p, i) => [p.id, i]),
-			);
+			this._indexById = new Map(filteredPositions.map((p, i) => [p.id, i]));
 
 			const displayCount = this.data.displayCount;
 			const displaySlice = filteredPositions.slice(0, displayCount);
 
 			// 防止 NaN 导致 toFixed 报错
-			const safeTotalMarketValue = isNaN(totalMarketValue)
-				? 0
-				: totalMarketValue;
-			const safeTotalPnL = isNaN(totalPnL) ? 0 : totalPnL;
-			const safeTotalInvestment = isNaN(totalInvestment) ? 1 : totalInvestment;
+			const safeTotalMarketValue = Number.isNaN(totalMarketValue) ? 0 : totalMarketValue;
+			const safeTotalPnL = Number.isNaN(totalPnL) ? 0 : totalPnL;
+			const safeTotalInvestment = Number.isNaN(totalInvestment) ? 1 : totalInvestment;
 
 			this.setData({
 				_rates: rates,
@@ -355,9 +320,7 @@ Page({
 				totalPnLText: fmt(safeTotalPnL),
 				totalPnLPercent:
 					safeTotalInvestment > 0
-						? parseFloat(
-								((safeTotalPnL / safeTotalInvestment) * 100).toFixed(2),
-							)
+						? parseFloat(((safeTotalPnL / safeTotalInvestment) * 100).toFixed(2))
 						: 0,
 				loading: false,
 				entranceDone: true,
@@ -367,9 +330,7 @@ Page({
 				"displayValues.totalPnL": fmt(safeTotalPnL),
 				"displayValues.totalPnLPercent": fmt(
 					safeTotalInvestment > 0
-						? parseFloat(
-								((safeTotalPnL / safeTotalInvestment) * 100).toFixed(2),
-							)
+						? parseFloat(((safeTotalPnL / safeTotalInvestment) * 100).toFixed(2))
 						: 0,
 				),
 			});
@@ -378,8 +339,7 @@ Page({
 			animateAllValues(this, {
 				totalMarketValue: totalMarketValue,
 				totalPnL: totalPnL,
-				totalPnLPercent:
-					totalInvestment > 0 ? (totalPnL / totalInvestment) * 100 : 0,
+				totalPnLPercent: totalInvestment > 0 ? (totalPnL / totalInvestment) * 100 : 0,
 			});
 
 			// Schedule combined cleanup for priceFlash + entering animations
@@ -397,11 +357,11 @@ Page({
 					const updates = {};
 					for (let i = 0; i < dispLen; i++) {
 						if (hasFlash) {
-							updates["displayPositions[" + i + "].priceFlashClass"] = "";
+							updates[`displayPositions[${i}].priceFlashClass`] = "";
 							displaySlice[i].priceFlashClass = "";
 						}
 						if (hasEntering) {
-							updates["displayPositions[" + i + "].entering"] = false;
+							updates[`displayPositions[${i}].entering`] = false;
 							displaySlice[i].entering = false;
 						}
 					}
@@ -442,15 +402,12 @@ Page({
 				totalMarketValue += p.currentPrice * p.quantity * rate;
 			}
 			totalPnL +=
-				(p.floatingPnL || 0) * rate +
-				(p.realizedPnL || 0) * rate +
-				(p.dividendIncome || 0) * rate;
+				(p.floatingPnL || 0) * rate + (p.realizedPnL || 0) * rate + (p.dividendIncome || 0) * rate;
 		});
 
 		const totalInvestment = this._cachedTotalInvestment || 1;
 
-		const totalPnLPercent =
-			totalInvestment > 0 ? (totalPnL / totalInvestment) * 100 : 0;
+		const totalPnLPercent = totalInvestment > 0 ? (totalPnL / totalInvestment) * 100 : 0;
 
 		this.setData({
 			totalMarketValue: parseFloat(totalMarketValue.toFixed(2)),
@@ -489,15 +446,11 @@ Page({
 		setTimeout(() => {
 			// 从缓存数据中筛选对应市场的持仓
 			const allPositions = this._allPositionsCache || [];
-			const filteredPositions = key
-				? allPositions.filter((p) => p.market === key)
-				: allPositions;
+			const filteredPositions = key ? allPositions.filter((p) => p.market === key) : allPositions;
 
 			// [优化] positions 移出 data，挂实例字段 + 重建 id→index Map
 			this._positionsCache = filteredPositions;
-			this._indexById = new Map(
-				filteredPositions.map((p, i) => [p.id, i]),
-			);
+			this._indexById = new Map(filteredPositions.map((p, i) => [p.id, i]));
 			const displayCount = 20;
 			const displaySlice = filteredPositions.slice(0, displayCount);
 
@@ -526,8 +479,7 @@ Page({
 			} else if (cachedMI) {
 				marketInvestment = cachedMI[null] || 0;
 			}
-			const marketPnLPercent =
-				marketInvestment > 0 ? (marketPnL / marketInvestment) * 100 : 0;
+			const marketPnLPercent = marketInvestment > 0 ? (marketPnL / marketInvestment) * 100 : 0;
 
 			this.setData({
 				currentMarket: key,
@@ -550,10 +502,10 @@ Page({
 
 	// 更新价格
 	updatePrice(e) {
-		const stockId = parseInt(e.currentTarget.dataset.stockId);
+		const stockId = parseInt(e.currentTarget.dataset.stockId, 10);
 		const price = parseFloat(e.detail.value);
 
-		if (!isNaN(price) && price > 0) {
+		if (!Number.isNaN(price) && price > 0) {
 			PriceCache.set(stockId, price);
 		}
 
@@ -622,7 +574,7 @@ Page({
 		this._longPressFired = true;
 		try {
 			wx.vibrateShort({ type: "medium" });
-		} catch (e) {}
+		} catch (_e) {}
 		this.setData({ showQuickRecord: true });
 	},
 
@@ -639,16 +591,14 @@ Page({
 
 	// ========== 获取行情 ==========
 	async _fetchPrices(opts) {
-		const silent = opts && opts.silent;
-		const force = opts && opts.force;
+		const silent = opts?.silent;
+		const force = opts?.force;
 		// [优化] 行情源用 _allPositionsCache（全市场全量，含已清仓），确保跨 tab 都能抓行情
 		const positions = this._allPositionsCache || [];
 		if (!positions || positions.length === 0) return;
 
 		// 非强制时跳过 TTL 未过期的股票
-		const needFetch = force
-			? positions
-			: positions.filter((p) => !PriceCache.has(p.id));
+		const needFetch = force ? positions : positions.filter((p) => !PriceCache.has(p.id));
 
 		if (needFetch.length === 0) {
 			if (!silent) wx.showToast({ title: "行情已是最新", icon: "none" });
@@ -696,9 +646,9 @@ Page({
 						tabCache[idx].displayPriceText = priceText;
 						// 3) 渲染层：仅当前 tab 前 displayCount 条做 data path 更新
 						if (idx < displayCnt) {
-							updates["displayPositions[" + idx + "].currentPrice"] = r.price;
-							updates["displayPositions[" + idx + "].currentPriceText"] = priceText;
-							updates["displayPositions[" + idx + "].displayPriceText"] = priceText;
+							updates[`displayPositions[${idx}].currentPrice`] = r.price;
+							updates[`displayPositions[${idx}].currentPriceText`] = priceText;
+							updates[`displayPositions[${idx}].displayPriceText`] = priceText;
 						}
 					}
 				});
@@ -726,7 +676,7 @@ Page({
 					wx.showToast({ title: "获取失败", icon: "none" });
 				}
 			}
-		} catch (err) {
+		} catch (_err) {
 			if (!silent) wx.hideLoading();
 			this._loadData();
 			if (!silent) wx.showToast({ title: "获取失败", icon: "none" });
@@ -734,26 +684,17 @@ Page({
 	},
 
 	async onRefreshPrice(e) {
-		const stockId = parseInt(e.currentTarget.dataset.stockId);
+		const stockId = parseInt(e.currentTarget.dataset.stockId, 10);
 		// [优化] 用 id→index Map O(1) 查找，替代数组 find
 		const idx = this._indexById ? this._indexById.get(stockId) : undefined;
 		const position = idx != null && this._positionsCache ? this._positionsCache[idx] : null;
 		if (!position) {
-			console.error(
-				"[onRefreshPrice] 未找到持仓",
-				stockId,
-				this._positionsCache,
-			);
+			console.error("[onRefreshPrice] 未找到持仓", stockId, this._positionsCache);
 			toast("未找到该股票");
 			return;
 		}
 
-		console.log(
-			"[onRefreshPrice] 开始获取",
-			position.market,
-			position.code,
-			position.name,
-		);
+		console.log("[onRefreshPrice] 开始获取", position.market, position.code, position.name);
 		loading("获取行情中...");
 
 		try {
@@ -779,14 +720,14 @@ Page({
 	onSwipeEdit(e) {
 		const stockId = e.currentTarget.dataset.stockId;
 		wx.navigateTo({
-			url: "/packageDetail/pages/detail/detail?stockId=" + stockId,
+			url: `/packageDetail/pages/detail/detail?stockId=${stockId}`,
 		});
 	},
 
 	onSwipeSell(e) {
 		const stockId = e.currentTarget.dataset.stockId;
 		// [优化] 用 id→index Map O(1) 查找，替代数组 find（与 onRefreshPrice 对齐）
-		const stockIdNum = parseInt(stockId);
+		const stockIdNum = parseInt(stockId, 10);
 		const idx = this._indexById ? this._indexById.get(stockIdNum) : undefined;
 		const position = idx != null && this._positionsCache ? this._positionsCache[idx] : null;
 		if (!position) {
@@ -794,8 +735,7 @@ Page({
 			return;
 		}
 		wx.navigateTo({
-			url:
-				"/packageRecord/pages/record/record?stockId=" + stockId + "&type=SELL",
+			url: `/packageRecord/pages/record/record?stockId=${stockId}&type=SELL`,
 		});
 	},
 

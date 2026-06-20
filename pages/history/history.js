@@ -1,16 +1,8 @@
 const { MARKETS, TIMING_CONFIG } = require("../../utils/constants/index");
-const {
-	Stock,
-	Transaction,
-	Dividend,
-	Strategy,
-} = require("../../utils/models/index");
+const { Stock, Transaction, Dividend, Strategy } = require("../../utils/models/index");
 const { fmt, fmtDate, fmtTime } = require("../../utils/helpers/format");
 const { buildStockMap } = require("../../utils/helpers/stockHelpers");
-const {
-	getMarketLabel,
-	getMarketColor,
-} = require("../../utils/constants/market");
+const { getMarketLabel, getMarketColor } = require("../../utils/constants/market");
 const pageMixin = require("../../utils/ui/pageMixin");
 
 Page({
@@ -78,17 +70,15 @@ Page({
 			if (stock) {
 				const date = new Date(t.date);
 				const amount =
-					t.type === "BUY"
-						? -(t.price * t.quantity + t.fee)
-						: t.price * t.quantity - t.fee;
+					t.type === "BUY" ? -(t.price * t.quantity + t.fee) : t.price * t.quantity - t.fee;
 				const isBuy = t.type === "BUY";
 				allRecords.push({
 					id: t.id,
 					type: t.type,
 					typeText: isBuy ? "买入" : "卖出",
-					typeTagClass: "tag type-tag " + (isBuy ? "tag-buy" : "tag-sell"),
-					typeBarClass: "record-type-bar " + (isBuy ? "bar-buy" : "bar-sell"),
-					amountClass: "detail-amount mono-num " + (isBuy ? "loss" : "profit"),
+					typeTagClass: `tag type-tag ${isBuy ? "tag-buy" : "tag-sell"}`,
+					typeBarClass: `record-type-bar ${isBuy ? "bar-buy" : "bar-sell"}`,
+					amountClass: `detail-amount mono-num ${isBuy ? "loss" : "profit"}`,
 					stockId: t.stockId,
 					market: stock.market,
 					marketLabel: getMarketLabel(stock.market),
@@ -97,7 +87,7 @@ Page({
 					name: stock.name,
 					price: t.price,
 					priceText: fmt(t.price),
-					quantity: parseInt(t.quantity) || 0,
+					quantity: parseInt(t.quantity, 10) || 0,
 					fee: t.fee,
 					feeText: fmt(t.fee),
 					amount: amount,
@@ -107,7 +97,7 @@ Page({
 					_sortKey: date.getTime(),
 					strategies: t.strategies || [],
 					reason: t.reason || "",
-					hasJournal: !!(t.reason || (t.strategies && t.strategies.length)),
+					hasJournal: !!(t.reason || t.strategies?.length),
 				});
 			}
 		});
@@ -131,7 +121,7 @@ Page({
 					name: stock.name,
 					perShareAmount: d.perShareAmount,
 					perShareAmountText: fmt(d.perShareAmount),
-					quantity: parseInt(d.quantity) || 0,
+					quantity: parseInt(d.quantity, 10) || 0,
 					amount: d.totalAmount,
 					amountText: fmt(d.totalAmount),
 					date: fmtDate(date),
@@ -161,8 +151,7 @@ Page({
 
 		if (this.data.currentStrategy) {
 			filtered = filtered.filter(
-				(r) =>
-					r.strategies && r.strategies.indexOf(this.data.currentStrategy) >= 0,
+				(r) => r.strategies && r.strategies.indexOf(this.data.currentStrategy) >= 0,
 			);
 		}
 
@@ -171,9 +160,7 @@ Page({
 		if (keyword) {
 			const kw = keyword.toLowerCase();
 			filtered = filtered.filter(
-				(r) =>
-					r.code.toLowerCase().includes(kw) ||
-					r.name.toLowerCase().includes(kw),
+				(r) => r.code.toLowerCase().includes(kw) || r.name.toLowerCase().includes(kw),
 			);
 		}
 

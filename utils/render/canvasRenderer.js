@@ -3,10 +3,9 @@
  */
 
 const { fmt } = require("../helpers/format");
-const { getMarketLabel } = require("../constants/market");
 
-function renderPortfolioCard(ctx, canvas, data, width, height) {
-	const dpr = data.dpr || 2;
+function renderPortfolioCard(ctx, _canvas, data, width, height) {
+	const _dpr = data.dpr || 2;
 
 	// ====== 背景（白底，匹配 app 风格） ======
 	ctx.fillStyle = "#FAFAFC";
@@ -34,25 +33,21 @@ function renderPortfolioCard(ctx, canvas, data, width, height) {
 	ctx.fillStyle = "#FFFFFF";
 	ctx.font = "bold 30px sans-serif";
 	ctx.textAlign = "center";
-	ctx.fillText("¥" + (data.totalMarketValueText || "0.00"), width / 2, 115);
+	ctx.fillText(`¥${data.totalMarketValueText || "0.00"}`, width / 2, 115);
 
 	// ====== 总盈亏 ======
 	const pnlColor = data.totalPnL >= 0 ? "#FFFFFF" : "rgba(255,255,255,0.8)";
 	ctx.fillStyle = pnlColor;
 	ctx.font = "14px sans-serif";
-	const pnlText =
-		(data.totalPnL >= 0 ? "+" : "") + (data.totalPnLText || "0.00");
-	const percentText =
-		(data.totalPnLPercent >= 0 ? "+" : "") +
-		(data.totalPnLPercent || "0") +
-		"%";
-	ctx.fillText(pnlText + " (" + percentText + ")", width / 2, 145);
+	const pnlText = (data.totalPnL >= 0 ? "+" : "") + (data.totalPnLText || "0.00");
+	const percentText = `${(data.totalPnLPercent >= 0 ? "+" : "") + (data.totalPnLPercent || "0")}%`;
+	ctx.fillText(`${pnlText} (${percentText})`, width / 2, 145);
 
 	// ====== 持仓数量 ======
 	ctx.fillStyle = "#999999";
 	ctx.font = "12px sans-serif";
 	ctx.textAlign = "left";
-	ctx.fillText("持仓 " + data.positionCount + " 只", 20, 210);
+	ctx.fillText(`持仓 ${data.positionCount} 只`, 20, 210);
 
 	// ====== 持仓列表（最多 5 只）=====
 	const positions = data.positions || [];
@@ -69,11 +64,7 @@ function renderPortfolioCard(ctx, canvas, data, width, height) {
 
 		// 市场标签圆点
 		const tagColor =
-			p.market === "A_SHARE"
-				? "#007AFF"
-				: p.market === "HK_SHARE"
-					? "#FF9500"
-					: "#AF52DE";
+			p.market === "A_SHARE" ? "#007AFF" : p.market === "HK_SHARE" ? "#FF9500" : "#AF52DE";
 		ctx.fillStyle = tagColor;
 		ctx.beginPath();
 		ctx.arc(32, y + 18, 4, 0, Math.PI * 2);
@@ -102,7 +93,7 @@ function renderPortfolioCard(ctx, canvas, data, width, height) {
 	ctx.fillStyle = "#C7C7CC";
 	ctx.font = "10px sans-serif";
 	ctx.textAlign = "center";
-	ctx.fillText("茄子笔记本 · " + (data.date || ""), width / 2, height - 15);
+	ctx.fillText(`茄子笔记本 · ${data.date || ""}`, width / 2, height - 15);
 }
 
 module.exports = { renderPortfolioCard };

@@ -28,7 +28,7 @@ function sharePortfolio(page) {
 		.select("#shareCanvas")
 		.fields({ node: true, size: true })
 		.exec((res) => {
-			if (!res || !res[0] || !res[0].node) {
+			if (!res?.[0]?.node) {
 				hideLoading();
 				toast("生成失败");
 				return;
@@ -122,21 +122,20 @@ function _showShareActions(imagePath) {
 					},
 				});
 			} else if (res.tapIndex === 1) {
-				wx.shareImageMessage &&
-					wx.shareImageMessage({
-						imageUrl: imagePath,
-						success: () => {
-							success("分享成功");
-						},
-						fail: () => {
-							wx.saveImageToPhotosAlbum({
-								filePath: imagePath,
-								success: () => {
-									toast("已保存到相册，请手动分享");
-								},
-							});
-						},
-					});
+				wx.shareImageMessage?.({
+					imageUrl: imagePath,
+					success: () => {
+						success("分享成功");
+					},
+					fail: () => {
+						wx.saveImageToPhotosAlbum({
+							filePath: imagePath,
+							success: () => {
+								toast("已保存到相册，请手动分享");
+							},
+						});
+					},
+				});
 			}
 		},
 	});

@@ -11,10 +11,8 @@
  */
 function sortByTotalPnL(positions) {
 	return (positions || []).slice().sort((a, b) => {
-		const aTotal =
-			(a.realizedPnL || 0) + (a.floatingPnL || 0) + (a.dividendIncome || 0);
-		const bTotal =
-			(b.realizedPnL || 0) + (b.floatingPnL || 0) + (b.dividendIncome || 0);
+		const aTotal = (a.realizedPnL || 0) + (a.floatingPnL || 0) + (a.dividendIncome || 0);
+		const bTotal = (b.realizedPnL || 0) + (b.floatingPnL || 0) + (b.dividendIncome || 0);
 		return bTotal - aTotal;
 	});
 }

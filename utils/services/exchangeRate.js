@@ -61,7 +61,7 @@ function fetchAndCacheRates() {
 			.then((data) => {
 				// 解码 GBK 响应
 				let decoded = "";
-				if (data && data.byteLength) {
+				if (data?.byteLength) {
 					const bytes = new Uint8Array(data);
 					const chars = new Array(bytes.length);
 					for (let i = 0; i < bytes.length; i++) {
@@ -85,7 +85,7 @@ function fetchAndCacheRates() {
 
 				try {
 					wx.setStorageSync(CACHE_KEY, cache);
-				} catch (e) {
+				} catch (_e) {
 					// 缓存写入失败不影响主流程
 				}
 
@@ -132,15 +132,14 @@ function getRates() {
 		let cached = null;
 		try {
 			cached = wx.getStorageSync(CACHE_KEY);
-		} catch (e) {
+		} catch (_e) {
 			// 读取缓存失败
 		}
 
 		// 缓存有效（在 TTL 内，或当天且有旧缓存）
 		const now = Date.now();
 		const isFresh =
-			cached &&
-			cached.usdToCny &&
+			cached?.usdToCny &&
 			cached.hkdToCny &&
 			cached.timestamp &&
 			now - cached.timestamp < RATE_CACHE_TTL;
@@ -202,13 +201,7 @@ function _today() {
 	const d = new Date();
 	const m = d.getMonth() + 1;
 	const day = d.getDate();
-	return (
-		d.getFullYear() +
-		"-" +
-		(m < 10 ? "0" + m : m) +
-		"-" +
-		(day < 10 ? "0" + day : day)
-	);
+	return `${d.getFullYear()}-${m < 10 ? `0${m}` : m}-${day < 10 ? `0${day}` : day}`;
 }
 
 module.exports = { getRates, getRate, DEFAULTS };

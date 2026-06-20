@@ -22,7 +22,7 @@ function _calcAShare(type, amount) {
 	};
 }
 
-function _calcHKShare(type, amount) {
+function _calcHKShare(_type, amount) {
 	const config = FEE_CONFIG.HK_SHARE;
 	let commission = amount * config.commissionRate;
 	if (commission < config.commissionMin) commission = config.commissionMin;
@@ -30,8 +30,7 @@ function _calcHKShare(type, amount) {
 	stampDuty = Math.ceil(stampDuty);
 	const transactionLevy = amount * config.transactionLevyRate;
 	let transactionFee = amount * config.transactionFeeRate;
-	if (transactionFee < config.transactionFeeMin)
-		transactionFee = config.transactionFeeMin;
+	if (transactionFee < config.transactionFeeMin) transactionFee = config.transactionFeeMin;
 	let clearingFee = amount * config.clearingFeeRate;
 	if (clearingFee < config.clearingFeeMin) clearingFee = config.clearingFeeMin;
 	return {
@@ -81,22 +80,20 @@ function getFeeBreakdown(market, type, price, quantity) {
 					{
 						name: "佣金",
 						value: a.commission,
-						rate: (config.commissionRate * 100).toFixed(4) + "%",
+						rate: `${(config.commissionRate * 100).toFixed(4)}%`,
 						min: config.commissionMin,
 					},
 					{
 						name: "印花税",
 						value: a.stampDuty,
 						rate:
-							type === TRANSACTION_TYPE.SELL
-								? (config.stampDutyRate * 100).toFixed(2) + "%"
-								: "0%",
+							type === TRANSACTION_TYPE.SELL ? `${(config.stampDutyRate * 100).toFixed(2)}%` : "0%",
 						note: "仅卖出时收取",
 					},
 					{
 						name: "过户费",
 						value: a.transferFee,
-						rate: (config.transferFeeRate * 100).toFixed(4) + "%",
+						rate: `${(config.transferFeeRate * 100).toFixed(4)}%`,
 					},
 				],
 			};
@@ -105,40 +102,36 @@ function getFeeBreakdown(market, type, price, quantity) {
 			const config = FEE_CONFIG.HK_SHARE;
 			const h = _calcHKShare(type, amount);
 			const total =
-				h.commission +
-				h.stampDuty +
-				h.transactionLevy +
-				h.transactionFee +
-				h.clearingFee;
+				h.commission + h.stampDuty + h.transactionLevy + h.transactionFee + h.clearingFee;
 			return {
 				total: parseFloat(total.toFixed(2)),
 				items: [
 					{
 						name: "佣金",
 						value: h.commission,
-						rate: (config.commissionRate * 100).toFixed(3) + "%",
+						rate: `${(config.commissionRate * 100).toFixed(3)}%`,
 						min: config.commissionMin,
 					},
 					{
 						name: "印花税",
 						value: h.stampDuty,
-						rate: (config.stampDutyRate * 100).toFixed(2) + "%",
+						rate: `${(config.stampDutyRate * 100).toFixed(2)}%`,
 					},
 					{
 						name: "交易征费",
 						value: h.transactionLevy,
-						rate: (config.transactionLevyRate * 100).toFixed(4) + "%",
+						rate: `${(config.transactionLevyRate * 100).toFixed(4)}%`,
 					},
 					{
 						name: "交易费",
 						value: h.transactionFee,
-						rate: (config.transactionFeeRate * 100).toFixed(3) + "%",
+						rate: `${(config.transactionFeeRate * 100).toFixed(3)}%`,
 						min: config.transactionFeeMin,
 					},
 					{
 						name: "中央结算费",
 						value: h.clearingFee,
-						rate: (config.clearingFeeRate * 100).toFixed(3) + "%",
+						rate: `${(config.clearingFeeRate * 100).toFixed(3)}%`,
 						min: config.clearingFeeMin,
 					},
 				],
@@ -155,13 +148,13 @@ function getFeeBreakdown(market, type, price, quantity) {
 					{
 						name: "SEC费",
 						value: u.secFee,
-						rate: (config.secFeeRate * 100).toFixed(6) + "%",
+						rate: `${(config.secFeeRate * 100).toFixed(6)}%`,
 						note: "仅卖出时收取，上限21.84",
 					},
 					{
 						name: "TAF费",
 						value: u.tafFee,
-						note: "每股$" + config.tafFeePerShare + "，仅卖出时收取",
+						note: `每股$${config.tafFeePerShare}，仅卖出时收取`,
 					},
 				],
 			};

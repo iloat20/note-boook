@@ -5,12 +5,7 @@
  * 以触发重新获取行情。
  */
 
-const {
-	PRICE_KEY,
-	getData,
-	saveData,
-	markDataDirty,
-} = require("../storageCore/core");
+const { PRICE_KEY, getData, saveData, markDataDirty } = require("../storageCore/core");
 const { TIMING_CONFIG } = require("../constants/index");
 
 // 价格缓存 TTL：30 分钟（毫秒）
@@ -23,8 +18,7 @@ const PriceCache = {
 	 * @param {number} price - 股票价格
 	 */
 	set(stockId, price) {
-		if (stockId == null || isNaN(parseFloat(price)) || parseFloat(price) < 0)
-			return;
+		if (stockId == null || Number.isNaN(parseFloat(price)) || parseFloat(price) < 0) return;
 		const prices = this.getAll();
 		prices[stockId] = {
 			price: parseFloat(price),
@@ -152,11 +146,7 @@ const PriceCache = {
 				return;
 			}
 			// 清理过期条目
-			if (
-				entry &&
-				typeof entry.timestamp === "number" &&
-				now - entry.timestamp > PRICE_TTL
-			) {
+			if (entry && typeof entry.timestamp === "number" && now - entry.timestamp > PRICE_TTL) {
 				delete prices[key];
 				pruned++;
 			}

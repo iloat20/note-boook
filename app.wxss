@@ -38,8 +38,8 @@ page {
   --xhs-loss: #00AA00;
   --xhs-loss-bg: rgba(0, 170, 0, 0.08);
   --xhs-loss-dark: #008800;
-  --xhs-dividend: #FF9500;
-  --xhs-dividend-bg: rgba(255, 149, 0, 0.1);
+  --xhs-dividend: #FFB800;
+  --xhs-dividend-bg: rgba(255, 184, 0, 0.1);
   --xhs-dividend-dark: #E08500;
   /* Semantic aliases */
   --xhs-success: var(--xhs-loss);
@@ -52,8 +52,8 @@ page {
   /* ── Market Tags ── */
   --xhs-market-a: #007AFF;
   --xhs-market-a-bg: rgba(0, 122, 255, 0.08);
-  --xhs-market-hk: #FF9500;
-  --xhs-market-hk-bg: rgba(255, 149, 0, 0.08);
+  --xhs-market-hk: #FFB800;
+  --xhs-market-hk-bg: rgba(255, 184, 0, 0.1);
   --xhs-market-us: #AF52DE;
   --xhs-market-us-bg: rgba(175, 82, 222, 0.08);
 

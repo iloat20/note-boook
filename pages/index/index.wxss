@@ -81,6 +81,7 @@ page {
   letter-spacing: 2rpx;
   font-family: -apple-system, 'Helvetica Neue', sans-serif;
   line-height: 1.1;
+  transition: opacity 0.3s ease;
 }
 
 /* 分割线 */
@@ -154,12 +155,12 @@ page {
 
 /* === 持仓卡片 === */
 .position-card {
-  background: #FFFDF7;
+  background: linear-gradient(135deg, #FFFEFB 0%, #FFFCF5 100%);
   border-radius: var(--xhs-radius-md);
-  border: 1px solid rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(255, 184, 0, 0.08);
   box-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.04),
-    0 4px 16px rgba(0, 0, 0, 0.02);
+    0 2px 8px rgba(255, 184, 0, 0.05),
+    0 4px 16px rgba(255, 184, 0, 0.02);
   padding: var(--page-margin);
   margin-bottom: var(--xhs-space-xs);
   position: relative;

@@ -101,6 +101,29 @@ page {
   letter-spacing: 0.02em;
 }
 
+.hero-center-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  gap: 12rpx;
+  min-width: 0;
+}
+
+.hero-stock-name-inline {
+  font-size: 32rpx;
+  font-weight: var(--xhs-weight-semibold);
+  color: var(--xhs-title);
+  letter-spacing: -0.01em;
+}
+
+.hero-stock-code-inline {
+  font-size: 24rpx;
+  color: var(--xhs-caption);
+  font-weight: var(--xhs-weight-regular);
+  letter-spacing: 0.02em;
+}
+
 .hero-stock-name {
   display: block;
   font-size: 40rpx;

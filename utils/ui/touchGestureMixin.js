@@ -17,16 +17,16 @@
  *   })
  */
 
-// RAF 节流辅助
+// RAF 节流辅助（小程序无 requestAnimationFrame，用 setTimeout 兜底）
 function rafThrottle(fn) {
 	let ticking = false;
 	return function (...args) {
 		if (!ticking) {
 			ticking = true;
-			requestAnimationFrame(() => {
+			setTimeout(() => {
 				ticking = false;
 				fn.apply(this, args);
-			});
+			}, 16);
 		}
 	};
 }
@@ -55,7 +55,7 @@ module.exports = {
 		}
 
 		const index = e.currentTarget.dataset.index;
-		const positions = this.data.positions;
+		const positions = this._positionsCache;
 		if (!positions?.[index]) return;
 
 		const currentOffset = positions[index].swipeOffset || 0;
@@ -65,7 +65,7 @@ module.exports = {
 		const offset = Math.max(maxOffset, Math.min(0, dx));
 
 		this.setData({
-			[`positions[${index}].swipeOffset`]: offset,
+			[`displayPositions[${index}].swipeOffset`]: offset,
 		});
 	},
 
@@ -77,7 +77,7 @@ module.exports = {
 		if (this._swiping !== true) return;
 
 		const index = e.currentTarget.dataset.index;
-		const positions = this.data.positions;
+		const positions = this._positionsCache;
 		if (!positions?.[index]) return;
 
 		const p = positions[index];
@@ -87,10 +87,10 @@ module.exports = {
 
 		const updates = {};
 		if ((p.swipeOffset || 0) !== newOffset) {
-			updates[`positions[${index}].swipeOffset`] = newOffset;
+			updates[`displayPositions[${index}].swipeOffset`] = newOffset;
 		}
 		if (p.swipeOpen !== newOpen) {
-			updates[`positions[${index}].swipeOpen`] = newOpen;
+			updates[`displayPositions[${index}].swipeOpen`] = newOpen;
 		}
 
 		if (Object.keys(updates).length > 0) this.setData(updates);

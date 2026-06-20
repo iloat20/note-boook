@@ -6,7 +6,12 @@
         <view bindtap="goBack" class="hero-glass-btn hero-back-btn">
           <text class="hero-back-icon">‹</text>
         </view>
-        <view class="hero-info-group">
+        <view wx:if="{{stock.market === 'HK_SHARE'}}" class="hero-center-info">
+          <market-tag market="{{stock.market}}" label="{{marketLabel}}" />
+          <text class="hero-stock-name-inline">{{stock.name}}</text>
+          <text class="hero-stock-code-inline">{{stock.code}}</text>
+        </view>
+        <view wx:else class="hero-info-group">
           <market-tag market="{{stock.market}}" label="{{marketLabel}}" />
           <text class="hero-stock-code">{{stock.code}}</text>
         </view>
@@ -14,7 +19,7 @@
           <text class="hero-glass-btn-text">{{editMode ? '完成' : '编辑'}}</text>
         </view>
       </view>
-      <text class="hero-stock-name">{{stock.name}}</text>
+      <text wx:if="{{stock.market !== 'HK_SHARE'}}" class="hero-stock-name">{{stock.name}}</text>
       <text class="hero-price">{{formatCurrentPrice}}</text>
       <view class="hero-pnl-row">
         <text class="hero-pnl-amount {{totalPnLClass}}">{{totalPnLText}}</text>

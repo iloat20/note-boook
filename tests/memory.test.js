@@ -50,16 +50,16 @@ describe("Storage LRU Cache", () => {
 		expect(result).toEqual([4, 5, 6]);
 	});
 
-	test("LRU cache evicts oldest entries when exceeding MAX_MEM_CACHE (50)", () => {
+	test("LRU cache evicts oldest entries when exceeding MAX_MEM_CACHE (100)", () => {
 		// 填充 50 个条目
-		for (let i = 0; i < 50; i++) {
+		for (let i = 0; i < 100; i++) {
 			_mockStorage[`key_${i}`] = [i];
 			storage.getData(`key_${i}`);
 		}
 
-		// 第 51 个条目应该触发淘汰
-		_mockStorage["key_50"] = [50];
-		storage.getData("key_50");
+		// 第 101 个条目应该触发淘汰
+		_mockStorage["key_100"] = [100];
+		storage.getData("key_100");
 
 		// 验证最早插入的 key_0 应该被淘汰（再次读取会从 wx.getStorageSync 获取）
 		global.wx.getStorageSync.mockClear();
@@ -69,8 +69,8 @@ describe("Storage LRU Cache", () => {
 	});
 
 	test("LRU promotes accessed items to end of cache", () => {
-		// 填充 50 个条目
-		for (let i = 0; i < 50; i++) {
+		// 填充 100 个条目
+		for (let i = 0; i < 100; i++) {
 			_mockStorage[`key_${i}`] = [i];
 			storage.getData(`key_${i}`);
 		}
@@ -78,9 +78,9 @@ describe("Storage LRU Cache", () => {
 		// 访问 key_0，使其成为最近使用
 		storage.getData("key_0");
 
-		// 插入第 51 个条目，应该淘汰 key_1（而不是 key_0）
-		_mockStorage["key_50"] = [50];
-		storage.getData("key_50");
+		// 插入第 101 个条目，应该淘汰 key_1（而不是 key_0）
+		_mockStorage["key_100"] = [100];
+		storage.getData("key_100");
 
 		// key_0 应该仍在缓存中（不触发 wx.getStorageSync）
 		global.wx.getStorageSync.mockClear();

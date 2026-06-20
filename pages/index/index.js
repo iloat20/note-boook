@@ -8,7 +8,6 @@ const positionService = require("../../utils/services/positionService");
 const positionStore = require("../../utils/state/positionStore");
 const pageMixin = require("../../utils/ui/pageMixin");
 const touchGestureMixin = require("../../utils/ui/touchGestureMixin");
-const { animateAllValues } = require("../../utils/ui/animationHelper");
 const { sharePortfolio } = require("../../utils/render/shareHelper");
 const { fmt, fmtDate } = require("../../utils/helpers/format");
 const { calcFloatingPercent } = require("../../utils/helpers/positionCalculator");
@@ -310,7 +309,8 @@ Page({
 			const safeTotalPnL = Number.isNaN(totalPnL) ? 0 : totalPnL;
 			const safeTotalInvestment = Number.isNaN(totalInvestment) ? 1 : totalInvestment;
 
-			this.setData({
+			// 合并所有更新到单次 setData（减少渲染层 diff 次数）
+			const setDataUpdates = {
 				_rates: rates,
 				positionCount: filteredPositions.length,
 				displayPositions: displaySlice,
@@ -325,7 +325,7 @@ Page({
 				loading: false,
 				entranceDone: true,
 				marketTabs: updatedTabs,
-				// 直接设置 displayValues 初始值，防止 animateAllValues 失败时显示空白
+				// 直接设置终态值（animateAllValues 不再逐帧 setData）
 				"displayValues.totalMarketValue": fmt(safeTotalMarketValue),
 				"displayValues.totalPnL": fmt(safeTotalPnL),
 				"displayValues.totalPnLPercent": fmt(
@@ -333,17 +333,9 @@ Page({
 						? parseFloat(((safeTotalPnL / safeTotalInvestment) * 100).toFixed(2))
 						: 0,
 				),
-			});
+			};
 
-			// 批量数字滚动动画
-			animateAllValues(this, {
-				totalMarketValue: totalMarketValue,
-				totalPnL: totalPnL,
-				totalPnLPercent: totalInvestment > 0 ? (totalPnL / totalInvestment) * 100 : 0,
-			});
-
-			// Schedule combined cleanup for priceFlash + entering animations
-			// [优化] positions 已移出 data，只清 displayPositions（渲染层）+ 同步 cache
+			// 清除 flash + entering 动画标记（延迟后合并到单次 setData）
 			const hasFlash = formattedPositions.some((p) => p.priceFlashClass !== "");
 			const hasEntering = newIds.size > 0;
 			if (hasFlash || hasEntering) {
@@ -352,20 +344,18 @@ Page({
 					TIMING_CONFIG.ENTER_ANIM_DELAY,
 				);
 				this._cleanupTimer = setTimeout(() => {
-					// 只清进渲染层的前 displayCount 条（cache 也同步，保持一致）
 					const dispLen = Math.min(displayCount, displaySlice.length);
-					const updates = {};
+					const cleanupUpdates = {};
 					for (let i = 0; i < dispLen; i++) {
 						if (hasFlash) {
-							updates[`displayPositions[${i}].priceFlashClass`] = "";
+							cleanupUpdates[`displayPositions[${i}].priceFlashClass`] = "";
 							displaySlice[i].priceFlashClass = "";
 						}
 						if (hasEntering) {
-							updates[`displayPositions[${i}].entering`] = false;
+							cleanupUpdates[`displayPositions[${i}].entering`] = false;
 							displaySlice[i].entering = false;
 						}
 					}
-					// cache 中超出 displayCount 的部分也要同步清除标记
 					if (hasFlash) {
 						for (let i = dispLen; i < filteredPositions.length; i++) {
 							filteredPositions[i].priceFlashClass = "";
@@ -376,9 +366,11 @@ Page({
 							filteredPositions[i].entering = false;
 						}
 					}
-					if (Object.keys(updates).length > 0) this.setData(updates);
+					if (Object.keys(cleanupUpdates).length > 0) this.setData(cleanupUpdates);
 				}, delay);
 			}
+
+			this.setData(setDataUpdates);
 		} catch (err) {
 			console.error("[Index] loadData error:", err);
 			this.setData({ loading: false });
@@ -406,7 +398,6 @@ Page({
 		});
 
 		const totalInvestment = this._cachedTotalInvestment || 1;
-
 		const totalPnLPercent = totalInvestment > 0 ? (totalPnL / totalInvestment) * 100 : 0;
 
 		this.setData({
@@ -415,12 +406,9 @@ Page({
 			totalPnL: parseFloat(totalPnL.toFixed(2)),
 			totalPnLText: fmt(totalPnL),
 			totalPnLPercent: parseFloat(totalPnLPercent.toFixed(2)),
-		});
-
-		animateAllValues(this, {
-			totalMarketValue: totalMarketValue,
-			totalPnL: totalPnL,
-			totalPnLPercent: totalPnLPercent,
+			"displayValues.totalMarketValue": fmt(totalMarketValue),
+			"displayValues.totalPnL": fmt(totalPnL),
+			"displayValues.totalPnLPercent": fmt(totalPnLPercent),
 		});
 	},
 
@@ -490,12 +478,9 @@ Page({
 				totalMarketValue: parseFloat(marketValue.toFixed(2)),
 				totalPnL: parseFloat(marketPnL.toFixed(2)),
 				totalPnLPercent: parseFloat(marketPnLPercent.toFixed(2)),
-			});
-			// Use animateAllValues to update displayValues with raw numbers (not formatted strings)
-			animateAllValues(this, {
-				totalMarketValue: marketValue,
-				totalPnL: marketPnL,
-				totalPnLPercent: marketPnLPercent,
+				"displayValues.totalMarketValue": fmt(marketValue),
+				"displayValues.totalPnL": fmt(marketPnL),
+				"displayValues.totalPnLPercent": fmt(marketPnLPercent),
 			});
 		}, TIMING_CONFIG.TAB_SWITCH_ANIM_DELAY);
 	},
@@ -623,7 +608,6 @@ Page({
 				const tabIndexById = this._indexById;
 				const displayCnt = this.data.displayCount;
 				const updates = {};
-				let cacheChanged = false;
 
 				validResults.forEach((r) => {
 					if (r.price == null) return;
@@ -635,7 +619,6 @@ Page({
 						allCache[allIdx].currentPrice = r.price;
 						allCache[allIdx].currentPriceText = priceText;
 						allCache[allIdx].displayPriceText = priceText;
-						cacheChanged = true;
 					}
 
 					// 2) 当前 tab 缓存：直接内存赋值
@@ -655,13 +638,9 @@ Page({
 
 				if (Object.keys(updates).length > 0) {
 					this.setData(updates);
-				} else if (!cacheChanged) {
-					// 既无渲染更新、cache 也未命中（数据未就绪）→ 兜底全量刷新
-					this._loadData();
-					return;
+					// cache 有变化且渲染层已更新，重算汇总
+					this._updateSummary();
 				}
-				// cache 有变化（即便渲染层无需更新）也要重算汇总
-				this._updateSummary();
 			} else {
 				// 无有效结果时仍刷新持仓（可能清理过期缓存等）
 				this._loadData();

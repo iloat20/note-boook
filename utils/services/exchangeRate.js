@@ -59,15 +59,28 @@ function fetchAndCacheRates() {
 		request
 			.get(API_URL, null, { timeout: 8000, responseType: "arraybuffer" })
 			.then((data) => {
-				// 解码 GBK 响应
+				// 解码 GBK 响应（优先 TextDecoder，降级逐字节）
 				let decoded = "";
 				if (data?.byteLength) {
-					const bytes = new Uint8Array(data);
-					const chars = new Array(bytes.length);
-					for (let i = 0; i < bytes.length; i++) {
-						chars[i] = String.fromCharCode(bytes[i]);
+					if (typeof TextDecoder !== "undefined") {
+						try {
+							decoded = new TextDecoder("gb18030").decode(data);
+						} catch (_e) {
+							const bytes = new Uint8Array(data);
+							const chars = new Array(bytes.length);
+							for (let i = 0; i < bytes.length; i++) {
+								chars[i] = String.fromCharCode(bytes[i]);
+							}
+							decoded = chars.join("");
+						}
+					} else {
+						const bytes = new Uint8Array(data);
+						const chars = new Array(bytes.length);
+						for (let i = 0; i < bytes.length; i++) {
+							chars[i] = String.fromCharCode(bytes[i]);
+						}
+						decoded = chars.join("");
 					}
-					decoded = chars.join("");
 				} else if (typeof data === "string") {
 					decoded = data;
 				}

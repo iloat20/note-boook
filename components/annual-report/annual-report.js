@@ -4,6 +4,14 @@ Component({
 			type: Object,
 			value: null,
 		},
+		statusBarHeight: {
+			type: Number,
+			value: 20,
+		},
+		navBarHeight: {
+			type: Number,
+			value: 44,
+		},
 	},
 
 	data: {

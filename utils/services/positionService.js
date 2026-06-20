@@ -69,18 +69,19 @@ function getSellableQuantity(stockId, ignoredTransactionId) {
 function batchCalculatePositions(stockIds) {
 	const needCalc = stockIds.filter((id) => !caches.position.has(id));
 
+	// 缓存全命中时跳过全量读取（避免不必要的 Transaction.getAll + Dividend.getAll）
+	if (needCalc.length === 0) return;
+
 	const allTransactions = Transaction.getAll();
 	const allDividends = Dividend.getAll();
 
-	if (needCalc.length > 0) {
-		const results = batchCalcPositions(needCalc, allTransactions, allDividends, (id) =>
-			PriceCache.get(id),
-		);
+	const results = batchCalcPositions(needCalc, allTransactions, allDividends, (id) =>
+		PriceCache.get(id),
+	);
 
-		needCalc.forEach((stockId) => {
-			caches.position.set(stockId, results[stockId]);
-		});
-	}
+	needCalc.forEach((stockId) => {
+		caches.position.set(stockId, results[stockId]);
+	});
 }
 
 /**
@@ -153,14 +154,14 @@ function getPortfolioPositions(market = null) {
  */
 function getPositionSummary(market = null) {
 	const stocks = market ? Stock.getByMarket(market) : Stock.getAll();
+	const positions = mergePositions(stocks, (p) => p.quantity > 0);
 
-	return mergePositions(
-		stocks,
-		(p) => p.quantity > 0,
-		(a, b) => {
-			return parseFloat(calcFloatingPercent(b)) - parseFloat(calcFloatingPercent(a));
-		},
-	);
+	// 预计算浮动盈亏百分比，避免 sort 比较器中重复调用 calcFloatingPercent
+	positions.forEach((p) => {
+		p._floatingPercent = parseFloat(calcFloatingPercent(p));
+	});
+
+	return positions.sort((a, b) => b._floatingPercent - a._floatingPercent);
 }
 
 /**

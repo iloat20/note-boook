@@ -11,7 +11,7 @@ const caches = {
 	position: new LRUCache(100), // 持仓计算结果缓存
 	heatmap: new LRUCache(50), // 热力图数据缓存
 	periodStats: new LRUCache(50), // 周期统计数据缓存
-	mem: new LRUCache(50), // 内存缓存（避免频繁读取本地存储）
+	mem: new LRUCache(100), // 内存缓存（避免频繁读取本地存储）
 };
 
 /**

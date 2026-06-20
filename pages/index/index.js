@@ -8,15 +8,35 @@ const positionService = require("../../utils/services/positionService");
 const positionStore = require("../../utils/state/positionStore");
 const pageMixin = require("../../utils/ui/pageMixin");
 const touchGestureMixin = require("../../utils/ui/touchGestureMixin");
-const { sharePortfolio } = require("../../utils/render/shareHelper");
 const { fmt, fmtDate } = require("../../utils/helpers/format");
 const { calcFloatingPercent } = require("../../utils/helpers/positionCalculator");
 const { getMarketLabel, getMarketColor } = require("../../utils/constants/market");
-const { fetchStockPrice, fetchAllPrices } = require("../../utils/services/stockPrice");
-const { getRates, getRate } = require("../../utils/services/exchangeRate");
 const { MARKETS, TIMING_CONFIG } = require("../../utils/constants/index");
 const { Stock, Transaction, Dividend, PriceCache } = require("../../utils/models/index");
 const { toast, success, loading, hideLoading, catchError } = require("../../utils/ui/feedback");
+
+// 延迟加载：首屏不需要的重模块
+let _sharePortfolio = null;
+let _fetchStockPrice = null;
+let _fetchAllPrices = null;
+let _getRates = null;
+let _getRate = null;
+
+function _ensureNetworkModules() {
+	if (!_fetchStockPrice) {
+		({
+			fetchStockPrice: _fetchStockPrice,
+			fetchAllPrices: _fetchAllPrices,
+		} = require("../../utils/services/stockPrice"));
+		({ getRates: _getRates, getRate: _getRate } = require("../../utils/services/exchangeRate"));
+	}
+}
+
+function _ensureShareModule() {
+	if (!_sharePortfolio) {
+		({ sharePortfolio: _sharePortfolio } = require("../../utils/render/shareHelper"));
+	}
+}
 
 // 判断是否在交易时段（任意市场）
 function isTradingTime() {
@@ -165,7 +185,8 @@ Page({
 			const allPositions = positionService.getAllPositions(forceRefresh);
 
 			// 获取汇率（港股/美股 → 人民币换算）
-			const rates = await getRates();
+			_ensureNetworkModules();
+			const rates = await __getRates();
 			this._rates = rates;
 
 			// [优化] 单次遍历 allPositions：同时完成指标聚合 + positionMap 构建
@@ -179,7 +200,7 @@ Page({
 			const positions = []; // 仅当前持仓（quantity > 0）
 
 			allPositions.forEach((p) => {
-				const rate = getRate(p.market, rates);
+				const rate = _getRate(p.market, rates);
 
 				// 所有持仓（含已清仓）：已实现盈亏 + 分红
 				totalRealizedPnL += (p.realizedPnL || 0) * rate;
@@ -214,7 +235,7 @@ Page({
 				if (t.stockId == null || !positionMap.has(t.stockId)) return;
 				const pos = positionMap.get(t.stockId);
 				if (!pos) return;
-				const tRate = getRate(pos.market, rates);
+				const tRate = _getRate(pos.market, rates);
 				const invest = (t.price * t.quantity + t.fee) * tRate;
 				totalInvestment += invest;
 				marketInvestment[pos.market] = (marketInvestment[pos.market] || 0) + invest;
@@ -388,7 +409,7 @@ Page({
 		const portfolioPositions = allPositions.filter((p) => p.quantity > 0);
 
 		portfolioPositions.forEach((p) => {
-			const rate = getRate(p.market, rates);
+			const rate = _getRate(p.market, rates);
 			if (p.currentPrice && p.quantity > 0) {
 				totalMarketValue += p.currentPrice * p.quantity * rate;
 			}
@@ -446,12 +467,12 @@ Page({
 			const rates = this.data._rates || { usdToCny: 1, hkdToCny: 1 };
 
 			const marketValue = filteredPositions.reduce((sum, p) => {
-				const rate = getRate(p.market, rates);
+				const rate = _getRate(p.market, rates);
 				return sum + (p.currentPrice || 0) * p.quantity * rate;
 			}, 0);
 
 			const marketPnL = filteredPositions.reduce((sum, p) => {
-				const rate = getRate(p.market, rates);
+				const rate = _getRate(p.market, rates);
 				return (
 					sum +
 					(p.floatingPnL || 0) * rate +
@@ -593,7 +614,8 @@ Page({
 		if (!silent) wx.showLoading({ title: "获取行情中..." });
 
 		try {
-			const results = await fetchAllPrices(needFetch);
+			_ensureNetworkModules();
+			const results = await _fetchAllPrices(needFetch);
 			const validResults = results.filter((r) => r.price !== null);
 
 			if (validResults.length > 0) {
@@ -677,7 +699,8 @@ Page({
 		loading("获取行情中...");
 
 		try {
-			const priceData = await fetchStockPrice(position.market, position.code);
+			_ensureNetworkModules();
+			const priceData = await _fetchStockPrice(position.market, position.code);
 
 			if (priceData && priceData.currentPrice > 0) {
 				PriceCache.set(stockId, priceData.currentPrice);
@@ -746,7 +769,8 @@ Page({
 
 	// ========== 持仓截图分享 ==========
 	onSharePortfolio() {
-		sharePortfolio(this);
+		_ensureShareModule();
+		_sharePortfolio(this);
 	},
 
 	// ========== 分享 ==========

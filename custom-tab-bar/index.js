@@ -26,10 +26,7 @@ Component({
 
 	lifetimes: {
 		attached() {
-			// 初始化时检查当前页面
-			setTimeout(() => {
-				this.updateSelectedTab();
-			}, 100);
+			this.updateSelectedTab();
 		},
 	},
 
@@ -49,12 +46,10 @@ Component({
 				const currentPage = pages[pages.length - 1];
 				if (!currentPage) return;
 
-				const route = currentPage.route ? "/" + currentPage.route : "";
+				const route = currentPage.route ? `/${currentPage.route}` : "";
 				if (!route) return;
 
-				const index = this.data.list.findIndex(
-					(item) => item.pagePath === route,
-				);
+				const index = this.data.list.findIndex((item) => item.pagePath === route);
 				if (index !== -1 && index !== this.data.selected) {
 					this.setData({ selected: index });
 				}
@@ -73,7 +68,7 @@ Component({
 			// 添加触觉反馈
 			try {
 				wx.vibrateShort({ type: "light" });
-			} catch (e) {}
+			} catch (_e) {}
 
 			// 设置动画状态
 			this.setData({ animating: true, selected: index });

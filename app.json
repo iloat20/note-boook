@@ -11,9 +11,6 @@
 		}
 	],
 	"preloadRule": {
-		"pages/index/index": {
-			"packages": ["packageDetail", "packageRecord"]
-		},
 		"pages/history/history": {
 			"packages": ["packageDetail", "packageRecord"]
 		},

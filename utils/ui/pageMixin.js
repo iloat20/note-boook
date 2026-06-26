@@ -1,6 +1,6 @@
 ﻿/**
  * 页面 Mixin 工具
- * 提取 tab 页面公共逻辑（NavBar 初始化、TabBar 选中状态、dirty 标记消费）
+ * 提取页面公共逻辑（NavBar 初始化、TabBar 选中状态、dirty 标记消费）
  */
 
 /**
@@ -36,6 +36,15 @@ function onShowMixin(page, tabIndex) {
 }
 
 /**
+ * 子包页面 onShow 公共逻辑：仅消费 dirty 标记（不设置 TabBar）
+ * 用于 detail / record / dividend 等子包页面。
+ * @returns {boolean} 数据是否过期
+ */
+function onShowSubPackage() {
+	return consumeDirtyFlag();
+}
+
+/**
  * Tab 页 onShow 公共逻辑：设置 TabBar 选中态
  * @param {Object} page - 页面实例（this）
  * @param {number} tabIndex - tab 索引
@@ -63,6 +72,7 @@ module.exports = {
 	initPageData,
 	onLoadMixin,
 	onShowMixin,
+	onShowSubPackage,
 	setTabSelected,
 	consumeDirtyFlag,
 };

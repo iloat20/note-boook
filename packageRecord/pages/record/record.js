@@ -15,11 +15,11 @@ const {
 } = require("../../../utils/constants/market");
 const { searchStocks } = require("../../../utils/data/stockDatabase");
 const { toast, success } = require("../../../utils/ui/feedback");
+const pageMixin = require("../../../utils/ui/pageMixin");
 
 Page({
 	data: {
-		statusBarHeight: 0,
-		navBarHeight: 44,
+		...pageMixin.initPageData(),
 		market: MARKETS.A_SHARE,
 		code: "",
 		name: "",
@@ -53,7 +53,7 @@ Page({
 	},
 
 	onLoad(options) {
-		this.setData(getApp().getNavBarInfo());
+		pageMixin.onLoadMixin(this);
 		this._feeManuallySet = false;
 
 		const now = new Date();
@@ -473,6 +473,16 @@ Page({
 		setTimeout(() => {
 			this._submitting = false;
 		}, 1000);
+	},
+
+	onShow() {
+		if (pageMixin.onShowSubPackage()) {
+			this._refreshAuxData();
+		}
+	},
+
+	_refreshAuxData() {
+		this.setData({ allStrategies: Strategy.getAll() });
 	},
 
 	onUnload() {

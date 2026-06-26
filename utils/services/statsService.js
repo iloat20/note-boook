@@ -41,7 +41,7 @@ function calcStatsForRange(transactions, dividends, startDate, endDate, label) {
 		buyFee = 0,
 		sellFee = 0;
 	periodTrans.forEach((t) => {
-		const amount = t.price * t.quantity;
+		const amount = parseFloat((t.price * t.quantity).toFixed(2));
 		if (t.type === "BUY") {
 			buyAmount += amount;
 			buyFee += t.fee;
@@ -53,6 +53,8 @@ function calcStatsForRange(transactions, dividends, startDate, endDate, label) {
 	const dividendIncome = periodDivs.reduce((sum, d) => sum + d.totalAmount, 0);
 	const pnL = sellAmount - sellFee - buyAmount - buyFee + dividendIncome;
 
+	// NOTE: PnL here is realized-only — it does not include unrealized (floating) gains/losses.
+	// This is a design limitation: period stats cannot compute unrealized PnL without historical prices.
 	return {
 		label,
 		startDate: startDate.toISOString(),
@@ -63,6 +65,7 @@ function calcStatsForRange(transactions, dividends, startDate, endDate, label) {
 		sellFee: parseFloat(sellFee.toFixed(2)),
 		dividendIncome: parseFloat(dividendIncome.toFixed(2)),
 		pnL: parseFloat(pnL.toFixed(2)),
+		isRealizedOnly: true,
 	};
 }
 
@@ -74,14 +77,16 @@ function getTotalStats() {
 	let totalInvestment = 0;
 	let totalBuyFee = 0;
 	let totalSellFee = 0;
+	let totalHistoricalBuy = 0;
 
 	// 从交易记录计算投入和手续费
 	const transactions = Transaction.getAll();
 	transactions.forEach((t) => {
-		const amount = t.price * t.quantity;
+		const amount = parseFloat((t.price * t.quantity).toFixed(2));
 		if (t.type === "BUY") {
 			totalInvestment += amount + t.fee;
 			totalBuyFee += t.fee;
+			totalHistoricalBuy += amount;
 		} else {
 			totalSellFee += t.fee;
 		}
@@ -111,7 +116,9 @@ function getTotalStats() {
 
 	const totalPnL = totalRealizedPnL + totalFloatingPnL + totalDividendIncome;
 	// 使用实际持仓成本（而非累计买入总额）计算收益率，避免反复买卖膨胀分母
-	const totalPnLPercent = totalCostBasis > 0 ? (totalPnL / totalCostBasis) * 100 : 0;
+	// When all positions are closed (totalCostBasis == 0), fall back to total historical buy amount
+	const costBasisForPercent = totalCostBasis > 0 ? totalCostBasis : totalHistoricalBuy;
+	const totalPnLPercent = costBasisForPercent > 0 ? (totalPnL / costBasisForPercent) * 100 : 0;
 
 	return {
 		totalInvestment: parseFloat(totalInvestment.toFixed(2)),
@@ -123,6 +130,14 @@ function getTotalStats() {
 		totalPnL: parseFloat(totalPnL.toFixed(2)),
 		totalPnLPercent: parseFloat(totalPnLPercent.toFixed(2)),
 	};
+}
+
+function getISOWeek(date) {
+	const d = new Date(date);
+	d.setHours(0, 0, 0, 0);
+	d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
+	const week1 = new Date(d.getFullYear(), 0, 4);
+	return Math.ceil(((d - week1) / 86400000 + 1) / 7);
 }
 
 /**
@@ -147,7 +162,7 @@ function _generatePeriods(periodType, firstDate, now) {
 
 			while (weekStart <= now) {
 				const weekEnd = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000 - 1);
-				const weekLabel = `${weekStart.getFullYear()}W${Math.ceil((weekStart.getDate() + 6) / 7)}`;
+				const weekLabel = `${weekStart.getFullYear()}W${getISOWeek(weekStart)}`;
 				periods.push({ start: weekStart, end: weekEnd, label: weekLabel });
 				weekStart = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000);
 			}
@@ -227,6 +242,7 @@ function getStatsByPeriod(period) {
 		sellFee: stat ? stat.sellFee : 0,
 		dividendIncome: stat ? stat.dividendIncome : 0,
 		pnL: stat ? stat.pnL : 0,
+		isRealizedOnly: true,
 	};
 }
 
@@ -286,21 +302,27 @@ function getStrategyStats(transactions) {
 	const stats = {};
 	txList.forEach((t) => {
 		if (!t.strategies?.length) return;
+		const amount = parseFloat((t.price * t.quantity).toFixed(2));
 		t.strategies.forEach((tag) => {
-			if (!stats[tag]) stats[tag] = { tag: tag, count: 0, buyAmount: 0, sellAmount: 0 };
+			if (!stats[tag])
+				stats[tag] = { tag: tag, count: 0, buyAmount: 0, sellAmount: 0, buyFee: 0, sellFee: 0 };
 			stats[tag].count++;
 			if (t.type === "BUY") {
-				stats[tag].buyAmount += t.price * t.quantity;
+				stats[tag].buyAmount += amount;
+				stats[tag].buyFee += t.fee || 0;
 			} else {
-				stats[tag].sellAmount += t.price * t.quantity;
+				stats[tag].sellAmount += amount;
+				stats[tag].sellFee += t.fee || 0;
 			}
 		});
 	});
 	return Object.values(stats)
 		.map((s) => {
-			s.netPnL = parseFloat((s.sellAmount - s.buyAmount).toFixed(2));
+			s.netPnL = parseFloat((s.sellAmount - s.sellFee - s.buyAmount - s.buyFee).toFixed(2));
 			s.buyAmount = parseFloat(s.buyAmount.toFixed(2));
 			s.sellAmount = parseFloat(s.sellAmount.toFixed(2));
+			s.buyFee = parseFloat(s.buyFee.toFixed(2));
+			s.sellFee = parseFloat(s.sellFee.toFixed(2));
 			return s;
 		})
 		.sort((a, b) => b.count - a.count);
@@ -335,7 +357,7 @@ async function getPeriodStatsWithReturn(period, getDateRange) {
 		cnySellFee = 0;
 	periodTx.forEach((t) => {
 		const r = getRate(stockMarket[t.stockId], rates);
-		const a = t.price * t.quantity;
+		const a = parseFloat((t.price * t.quantity).toFixed(2));
 		if (t.type === "BUY") {
 			cnyBuyAmount += a * r;
 			cnyBuyFee += t.fee * r;

@@ -84,19 +84,33 @@ function saveData(key, data) {
  * @returns {any} 数据
  */
 function getData(key) {
+	let data;
 	if (_memCache.has(key)) {
-		return _memCache.get(key);
-	}
-	let data = wx.getStorageSync(key);
-	if (!data || (Array.isArray(data) && data.length === 0)) {
-		// 如果是价格缓存，返回对象而不是数组
-		if (key === PRICE_KEY) {
-			data = {};
-		} else {
-			data = [];
+		data = _memCache.get(key);
+	} else {
+		data = wx.getStorageSync(key);
+		if (
+			data === undefined ||
+			data === null ||
+			data === "" ||
+			(Array.isArray(data) && data.length === 0)
+		) {
+			// 如果是价格缓存，返回对象而不是数组
+			if (key === PRICE_KEY) {
+				data = {};
+			} else {
+				data = [];
+			}
 		}
+		_memCache.set(key, data);
 	}
-	_memCache.set(key, data);
+	// 返回深拷贝，防止外部修改污染缓存
+	if (Array.isArray(data)) {
+		return JSON.parse(JSON.stringify(data));
+	}
+	if (data && typeof data === "object") {
+		return JSON.parse(JSON.stringify(data));
+	}
 	return data;
 }
 

@@ -14,6 +14,7 @@ const { getMarketLabel, getMarketColor } = require("../../utils/constants/market
 const { MARKETS, TIMING_CONFIG } = require("../../utils/constants/index");
 const { Stock, Transaction, Dividend, PriceCache } = require("../../utils/models/index");
 const { toast, success, loading, hideLoading, catchError } = require("../../utils/ui/feedback");
+const { confirmDelete } = require("../../utils/ui/confirmDialog");
 
 // 延迟加载：首屏不需要的重模块
 let _sharePortfolio = null;
@@ -167,7 +168,9 @@ Page({
 
 	// ========== 数据加载 ==========
 	async _loadData(forceRefresh = false) {
-		if (this.data.loading) return;
+		if (this._loading) return;
+		this._loading = true;
+		this.setData({ loading: true });
 
 		try {
 			// 使用 positionService 获取数据（已封装缓存逻辑）
@@ -381,9 +384,11 @@ Page({
 				}, delay);
 			}
 
+			this._loading = false;
 			this.setData(setDataUpdates);
 		} catch (err) {
 			console.error("[Index] loadData error:", err);
+			this._loading = false;
 			this.setData({ loading: false });
 			wx.showToast({ title: "数据加载失败", icon: "none" });
 			catchError(err, "加载失败");
@@ -731,25 +736,22 @@ Page({
 	onSwipeDelete(e) {
 		const stockId = e.currentTarget.dataset.stockId;
 
-		wx.showModal({
-			title: "确认删除",
+		confirmDelete({
 			content: "将删除该股票的所有交易记录和分红记录，是否确认？",
-			success: (res) => {
-				if (res.confirm) {
-					// 先触发删除动画
-					this.setData({ deletingId: stockId });
+			onConfirm: () => {
+				// 先触发删除动画
+				this.setData({ deletingId: stockId });
 
-					// 等待动画完成后执行删除
-					setTimeout(() => {
-						Stock.delete(stockId);
-						Transaction.deleteByStockId(stockId);
-						Dividend.deleteByStockId(stockId);
+				// 等待动画完成后执行删除
+				setTimeout(() => {
+					Stock.delete(stockId);
+					Transaction.deleteByStockId(stockId);
+					Dividend.deleteByStockId(stockId);
 
-						wx.showToast({ title: "删除成功", icon: "success" });
-						this.setData({ deletingId: null });
-						this._loadData();
-					}, 400);
-				}
+					success("删除成功");
+					this.setData({ deletingId: null });
+					this._loadData();
+				}, 400);
 			},
 		});
 	},

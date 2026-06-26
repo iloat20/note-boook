@@ -4,6 +4,8 @@ const { fmt, fmtDate, fmtTime } = require("../../utils/helpers/format");
 const { buildStockMap } = require("../../utils/helpers/stockHelpers");
 const { getMarketLabel, getMarketColor } = require("../../utils/constants/market");
 const pageMixin = require("../../utils/ui/pageMixin");
+const { confirmDelete } = require("../../utils/ui/confirmDialog");
+const { loading, hideLoading, success: fbSuccess } = require("../../utils/ui/feedback");
 
 Page({
 	data: {
@@ -258,7 +260,7 @@ Page({
 	},
 
 	toggleSelectItem(e) {
-		const id = e.currentTarget.dataset.id;
+		const id = Number(e.currentTarget.dataset.id);
 		const type = e.currentTarget.dataset.type;
 		const selectedIds = this.data.selectedIds.slice();
 		const selectedTypeMap = { ...this.data.selectedTypeMap };
@@ -305,32 +307,28 @@ Page({
 		const count = this.data.selectedIds.length;
 		if (count === 0) return;
 
-		wx.showModal({
-			title: "确认删除",
+		const { selectedIds, selectedTypeMap } = this.data;
+		confirmDelete({
 			content: `确定要删除选中的 ${count} 条记录吗？`,
-			success: (res) => {
-				if (res.confirm) {
-					wx.showLoading({ title: "删除中..." });
-					const ids = this.data.selectedIds;
-					const typeMap = this.data.selectedTypeMap;
-					ids.forEach((id) => {
-						const recordType = typeMap[id];
-						if (recordType === "DIVIDEND") {
-							Dividend.delete(id);
-						} else {
-							Transaction.delete(id);
-						}
-					});
-					wx.hideLoading();
-					wx.showToast({ title: `已删除 ${count} 条`, icon: "success" });
-					this.setData({
-						selectMode: false,
-						selectedIds: [],
-						selectedMap: {},
-						selectedTypeMap: {},
-					});
-					this.loadHistory();
-				}
+			onConfirm: () => {
+				loading("删除中...");
+				selectedIds.forEach((id) => {
+					const recordType = selectedTypeMap[id];
+					if (recordType === "DIVIDEND") {
+						Dividend.delete(id);
+					} else {
+						Transaction.delete(id);
+					}
+				});
+				hideLoading();
+				fbSuccess(`已删除 ${count} 条`);
+				this.setData({
+					selectMode: false,
+					selectedIds: [],
+					selectedMap: {},
+					selectedTypeMap: {},
+				});
+				this.loadHistory();
 			},
 		});
 	},
@@ -368,23 +366,20 @@ Page({
 						});
 					}
 				} else if (action.value === "delete") {
-					wx.showModal({
-						title: "确认删除",
+					confirmDelete({
 						content: `确定要删除这笔${record.typeText}记录吗？`,
-						success: (modalRes) => {
-							if (modalRes.confirm) {
-								this.setData({ dissolvingId: record.id });
-								setTimeout(() => {
-									if (record.type === "DIVIDEND") {
-										Dividend.delete(record.id);
-									} else {
-										Transaction.delete(record.id);
-									}
-									wx.showToast({ title: "删除成功", icon: "success" });
-									this.setData({ dissolvingId: null });
-									this.loadHistory();
-								}, 400);
-							}
+						onConfirm: () => {
+							this.setData({ dissolvingId: record.id });
+							setTimeout(() => {
+								if (record.type === "DIVIDEND") {
+									Dividend.delete(record.id);
+								} else {
+									Transaction.delete(record.id);
+								}
+								fbSuccess("删除成功");
+								this.setData({ dissolvingId: null });
+								this.loadHistory();
+							}, 400);
 						},
 					});
 				}

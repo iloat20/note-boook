@@ -1,11 +1,11 @@
 const { Stock, Dividend } = require("../../../utils/models/index");
 const { fmt } = require("../../../utils/helpers/format");
 const { toast, success } = require("../../../utils/ui/feedback");
+const pageMixin = require("../../../utils/ui/pageMixin");
 
 Page({
 	data: {
-		statusBarHeight: 0,
-		navBarHeight: 44,
+		...pageMixin.initPageData(),
 		stockOptions: [],
 		stockIdx: 0,
 		stockText: "请选择股票",
@@ -22,7 +22,7 @@ Page({
 	},
 
 	onLoad(o) {
-		this.setData(getApp().getNavBarInfo());
+		pageMixin.onLoadMixin(this);
 
 		const n = new Date();
 		this.setData({
@@ -64,9 +64,14 @@ Page({
 		const s = Stock.getById(d.stockId);
 		const dt = new Date(d.date);
 		const idx = this.data.stockOptions.findIndex((o) => o.stock && o.stock.id === d.stockId);
+		if (idx === -1) {
+			// 原始股票已被删除，需要用户重新选择
+			this._stockMissing = true;
+			toast("原始股票已删除，请重新选择");
+		}
 		this.setData({
 			isEdit: true,
-			stockIdx: Math.max(idx, 0),
+			stockIdx: idx >= 0 ? idx : -1,
 			stockText: s ? `${s.code} ${s.name}` : "请选择股票",
 			divType: d.type || "CASH",
 			perShare: String(d.perShareAmount || 0),
@@ -80,13 +85,20 @@ Page({
 
 	selectDivType(e) {
 		const type = e.currentTarget.dataset.type;
-		this.setData({ divType: type });
+		const updates = { divType: type };
+		if (type === "CASH") {
+			updates.shareQty = "0";
+		} else {
+			updates.perShare = "";
+		}
+		this.setData(updates);
 		this._preview();
 	},
 
 	selStock(e) {
 		const i = parseInt(e.detail.value, 10);
 		const s = this.data.stockOptions[i]?.stock;
+		this._stockMissing = false;
 		this.setData({
 			stockIdx: i,
 			stockText: s ? `${s.code} ${s.name}` : "请选择股票",
@@ -139,21 +151,25 @@ Page({
 		const s = op?.stock;
 		if (!s) {
 			toast("请选择股票");
+			this._submitting = false;
 			return;
 		}
 		const { divType, perShare: ps, qty: q, shareQty: sq, date: d, note: nt } = this.data;
 		if (!d) {
 			toast("请选择日期");
+			this._submitting = false;
 			return;
 		}
 
 		if (divType === "SHARE") {
 			if (!sq || parseInt(sq, 10) <= 0) {
 				toast("请输入有效送股数量");
+				this._submitting = false;
 				return;
 			}
 			if (!q || parseInt(q, 10) <= 0) {
 				toast("请输入有效持股数量");
+				this._submitting = false;
 				return;
 			}
 			// SHARE 类型：perShareAmount=0, type='SHARE', shareQuantity=送股数
@@ -171,10 +187,12 @@ Page({
 		} else {
 			if (!ps || parseFloat(ps) <= 0) {
 				toast("请输入有效分红金额");
+				this._submitting = false;
 				return;
 			}
 			if (!q || parseInt(q, 10) <= 0) {
 				toast("请输入有效数量");
+				this._submitting = false;
 				return;
 			}
 			const dv = Dividend.create(s.id, ps, q, new Date(`${d}T00:00:00`).toISOString(), nt);
@@ -187,6 +205,16 @@ Page({
 		setTimeout(() => {
 			this._submitting = false;
 		}, 1000);
+	},
+
+	onShow() {
+		if (pageMixin.onShowSubPackage()) {
+			this._refreshAuxData();
+		}
+	},
+
+	_refreshAuxData() {
+		this._loadStocks();
 	},
 
 	onUnload() {},

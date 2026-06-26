@@ -63,7 +63,10 @@ function calcPosition(stockId, transactions, dividends, currentPrice) {
 		avgCost: avgCost,
 		realizedPnL: parseFloat(realizedPnL.toFixed(2)),
 		dividendIncome: parseFloat(dividendIncome.toFixed(2)),
-		currentPrice: currentPrice ? parseFloat(currentPrice.toFixed(2)) : null,
+		currentPrice:
+			currentPrice !== null && currentPrice !== undefined
+				? parseFloat(currentPrice.toFixed(2))
+				: null,
 		floatingPnL: parseFloat(floatingPnL.toFixed(2)),
 		totalPnL: parseFloat((realizedPnL + floatingPnL + dividendIncome).toFixed(2)),
 	};

@@ -172,7 +172,7 @@
             <view class="strategy-tag">{{item.tag}}</view>
             <text class="strategy-count">{{item.count}}笔</text>
           </view>
-          <text class="strategy-pnl" style="color: {{item.netPnL >= 0 ? 'var(--xhs-profit)' : 'var(--xhs-loss)'}};">{{item.netPnL >= 0 ? '+' : ''}}{{item.netPnL}}</text>
+          <text class="strategy-pnl" style="color: {{item.netPnL >= 0 ? 'var(--xhs-profit)' : 'var(--xhs-loss)'}};">{{item.netPnL >= 0 ? '+' : ''}}{{item.netPnLFormatted}}</text>
         </view>
       </view>
     </view>

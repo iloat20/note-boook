@@ -71,7 +71,7 @@ Page({
 		const txList = rawTx.map((t) => {
 			const stock = stockMap[t.stockId];
 			const price = parseFloat(t.price) || 0;
-			const quantity = parseInt(t.quantity, 10) || 0;
+			const quantity = parseFloat(t.quantity) || 0;
 			const fee = parseFloat(t.fee) || 0;
 			const amount = price * quantity;
 			const dateObj = new Date(t.date);
@@ -257,8 +257,8 @@ Page({
 		const topStocks = stockList.slice(0, 5);
 		const bottomStocks = stockList
 			.filter((s) => s.totalPnL < 0)
-			.slice(-5)
 			.reverse()
+			.slice(0, 5)
 			.map((s) => {
 				s.totalPnLText = fmt(Math.abs(s.totalPnL));
 				return s;

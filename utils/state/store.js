@@ -54,13 +54,34 @@ function createStore(config) {
 			}
 		},
 
-		/** 订阅状态变更，返回取消订阅函数 */
+		/**
+		 * 订阅状态变更，返回取消订阅函数
+		 *
+		 * 注意：subscribe 按 mutation type 通知，而非 state key。
+		 * - subscribe("INCREMENT", cb)  → 仅在 commit("INCREMENT") 时触发
+		 * - subscribe("*", cb)          → 所有 mutation 都会触发
+		 *
+		 * 如需监听某个 state 属性的变化，请使用 subscribeToState(key, cb)
+		 */
 		subscribe(key, callback) {
 			if (!_listeners[key]) _listeners[key] = [];
 			_listeners[key].push(callback);
 			return function unsubscribe() {
 				_listeners[key] = _listeners[key].filter((cb) => cb !== callback);
 			};
+		},
+
+		/**
+		 * 监听指定 state 属性的变化
+		 * 内部通过 subscribe("*") 实现，每次 mutation 后对比 state[key] 并回调
+		 * @param {string} key - state 中的属性名
+		 * @param {Function} callback - 回调函数，参数为该属性的最新值
+		 * @returns {Function} 取消订阅函数
+		 */
+		subscribeToState(key, callback) {
+			return this.subscribe("*", () => {
+				callback(state[key]);
+			});
 		},
 	};
 }

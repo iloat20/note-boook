@@ -7,6 +7,24 @@ const { fmtDate, fmtTime, fmt } = require("../helpers/format");
 const { buildStockMap } = require("../helpers/stockHelpers");
 const { getMarketLabel } = require("../constants/market");
 
+/**
+ * 转义 Markdown 表格单元格中的特殊字符
+ * 处理：管道符、换行、回车、反斜杠、星号、下划线、反引号
+ */
+function escapeTableCell(str) {
+	if (!str) return "-";
+	return (
+		str
+			.replace(/\|/g, "\\|")
+			.replace(/\n/g, " ")
+			.replace(/\r/g, "")
+			.replace(/\\/g, "\\\\")
+			.replace(/\*/g, "\\*")
+			.replace(/_/g, "\\_")
+			.replace(/`/g, "\\`") || "-"
+	);
+}
+
 function buildMarkdown() {
 	const stocks = Stock.getAll();
 	const stockMap = buildStockMap(stocks);
@@ -36,9 +54,9 @@ function buildMarkdown() {
 			const typeStr = t.type === "BUY" ? "买入" : "卖出";
 			const amount = (t.price || 0) * (t.quantity || 0);
 			const dateStr = t.date ? fmtDate(new Date(t.date)) : "-";
-			const strategies = t.strategies?.length ? t.strategies.join(", ") : "-";
-			const reason = (t.reason || "").replace(/\|/g, "\\|") || "-";
-			const note = (t.note || "").replace(/\|/g, "\\|") || "-";
+			const strategies = escapeTableCell(t.strategies?.length ? t.strategies.join(", ") : "");
+			const reason = escapeTableCell(t.reason);
+			const note = escapeTableCell(t.note);
 			lines.push(
 				"| " +
 					dateStr +
@@ -87,7 +105,7 @@ function buildMarkdown() {
 			const name = stock ? stock.name : "-";
 			const market = stock ? getMarketLabel(stock.market) : "-";
 			const dateStr = d.date ? fmtDate(new Date(d.date)) : "-";
-			const note = (d.note || "").replace(/\|/g, "\\|");
+			const note = escapeTableCell(d.note);
 			lines.push(
 				"| " +
 					dateStr +

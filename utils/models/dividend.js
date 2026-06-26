@@ -53,7 +53,8 @@ const Dividend = {
 	 * @returns {Array} 分红记录列表
 	 */
 	getAll() {
-		return getData(DIVIDEND_KEY);
+		const result = getData(DIVIDEND_KEY);
+		return Array.isArray(result) ? result : [];
 	},
 
 	/**

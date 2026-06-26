@@ -34,11 +34,11 @@ function _calcHKShare(_type, amount) {
 	let clearingFee = amount * config.clearingFeeRate;
 	if (clearingFee < config.clearingFeeMin) clearingFee = config.clearingFeeMin;
 	return {
-		commission: commission,
+		commission: Math.round(commission * 100) / 100,
 		stampDuty: stampDuty,
-		transactionLevy: transactionLevy,
-		transactionFee: transactionFee,
-		clearingFee: clearingFee,
+		transactionLevy: Math.round(transactionLevy * 100) / 100,
+		transactionFee: Math.round(transactionFee * 100) / 100,
+		clearingFee: Math.round(clearingFee * 100) / 100,
 	};
 }
 

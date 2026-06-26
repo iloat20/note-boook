@@ -18,13 +18,13 @@
  */
 
 // RAF 节流辅助（小程序无 requestAnimationFrame，用 setTimeout 兜底）
+// 使用 this._rafTicking 存储节流状态，避免多实例共享同一个 ticking 变量
 function rafThrottle(fn) {
-	let ticking = false;
 	return function (...args) {
-		if (!ticking) {
-			ticking = true;
+		if (!this._rafTicking) {
+			this._rafTicking = true;
 			setTimeout(() => {
-				ticking = false;
+				this._rafTicking = false;
 				fn.apply(this, args);
 			}, 16);
 		}

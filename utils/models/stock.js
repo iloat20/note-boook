@@ -37,7 +37,8 @@ const Stock = {
 	 * @returns {Array} 股票列表
 	 */
 	getAll() {
-		return getData(STOCK_KEY);
+		const result = getData(STOCK_KEY);
+		return Array.isArray(result) ? result : [];
 	},
 
 	/**

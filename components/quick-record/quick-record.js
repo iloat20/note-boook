@@ -99,7 +99,18 @@ Component({
 		// ──── 代码输入 + 自动获取 ────
 		onQrCodeInput: function (e) {
 			const value = (e.detail.value || "").trim();
-			const market = this._detectMarket(value);
+			let market = this.data.qrMarket;
+
+			if (!value) {
+				this._marketLocked = false;
+				market = "A_SHARE";
+			} else if (!this._marketLocked) {
+				const detected = this._detectMarket(value);
+				if (detected) {
+					market = detected;
+					this._marketLocked = true;
+				}
+			}
 
 			// [优化] 合并 setData：一次调用完成所有更新
 			const updates = {
@@ -134,6 +145,7 @@ Component({
 
 		onQrSelectSuggestion: function (e) {
 			const item = e.currentTarget.dataset.item;
+			this._marketLocked = false;
 			this.setData({
 				qrCode: item.code,
 				qrName: item.name,
@@ -266,31 +278,60 @@ Component({
 		// ──── 市场检测 ────
 		_detectMarket: (code) => {
 			if (/^\d{6}$/.test(code)) return MARKETS.A_SHARE;
-			if (/^\d{1,5}$/.test(code)) return MARKETS.HK_SHARE;
+			if (/^\d{5}$/.test(code)) return MARKETS.HK_SHARE;
 			if (/^[A-Za-z]{1,5}$/.test(code)) return MARKETS.US_SHARE;
-			return "A_SHARE";
+			return null;
 		},
 
 		// ──── 提交 ────
 		submitQuickRecord: function () {
+			if (this._submitting) return;
+			this._submitting = true;
+
 			const d = this.data;
 			const code = formatStockCode(d.qrCode, d.qrMarket);
 			const name = d.qrName;
 
 			if (!code) {
 				wx.showToast({ title: "请输入股票代码", icon: "none" });
+				setTimeout(() => {
+					this._submitting = false;
+				}, 1000);
+				return;
+			}
+			if (!validateStockCode(code, d.qrMarket)) {
+				wx.showToast({ title: "股票代码格式错误", icon: "none" });
+				setTimeout(() => {
+					this._submitting = false;
+				}, 1000);
 				return;
 			}
 			if (!name) {
 				wx.showToast({ title: "请从列表中选择或等待自动识别", icon: "none" });
+				setTimeout(() => {
+					this._submitting = false;
+				}, 1000);
 				return;
 			}
 			if (!d.qrPrice || parseFloat(d.qrPrice) <= 0) {
 				wx.showToast({ title: "请输入有效价格", icon: "none" });
+				setTimeout(() => {
+					this._submitting = false;
+				}, 1000);
 				return;
 			}
 			if (!d.qrQuantity || parseInt(d.qrQuantity, 10) <= 0) {
 				wx.showToast({ title: "请输入有效数量", icon: "none" });
+				setTimeout(() => {
+					this._submitting = false;
+				}, 1000);
+				return;
+			}
+			if (d.qrQuantity.includes(".")) {
+				wx.showToast({ title: "数量必须为正整数", icon: "none" });
+				setTimeout(() => {
+					this._submitting = false;
+				}, 1000);
 				return;
 			}
 
@@ -300,11 +341,17 @@ Component({
 			if (d.qrType === "SELL") {
 				if (!stock) {
 					wx.showToast({ title: "暂无可卖持仓", icon: "none" });
+					setTimeout(() => {
+						this._submitting = false;
+					}, 1000);
 					return;
 				}
 				const sellableQuantity = getSellableQuantity(stock.id);
 				if (parseInt(d.qrQuantity, 10) > sellableQuantity) {
 					wx.showToast({ title: "卖出数量超过持仓", icon: "none" });
+					setTimeout(() => {
+						this._submitting = false;
+					}, 1000);
 					return;
 				}
 			}
@@ -326,6 +373,9 @@ Component({
 
 			wx.showToast({ title: "添加成功", icon: "success" });
 			this.triggerEvent("submit", { stockId: stock.id });
+			setTimeout(() => {
+				this._submitting = false;
+			}, 1000);
 		},
 
 		// ──── 重置 ────
@@ -339,6 +389,7 @@ Component({
 				this._feeTimer = null;
 			}
 			this._afFetching = null;
+			this._marketLocked = false;
 			this.setData({
 				qrType: "BUY",
 				qrCode: "",

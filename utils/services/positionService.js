@@ -59,7 +59,7 @@ function getSellableQuantity(stockId, ignoredTransactionId) {
 		if (d.type === "SHARE") shareDividendQty += d.shareQuantity || 0;
 	});
 
-	return buyQuantity + shareDividendQty - sellQuantity;
+	return Math.max(0, buyQuantity + shareDividendQty - sellQuantity);
 }
 
 /**

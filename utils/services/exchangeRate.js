@@ -8,7 +8,7 @@
  */
 
 const { request } = require("../../api/request");
-const { TIMING_CONFIG } = require("../../utils/constants/index");
+const { TIMING_CONFIG } = require("../constants/index");
 
 // 腾讯财经 API 获取汇率（批量查询 USD/CNY + HKD/CNY）
 const API_URL = "https://qt.gtimg.cn/q=fx_usr,fx_hkd";
@@ -55,10 +55,20 @@ function parseRateResponse(responseText) {
  * @returns {Promise<{usdToCny: number, hkdToCny: number}>}
  */
 function fetchAndCacheRates() {
+	const currentId = ++_requestId;
 	return new Promise((resolve) => {
 		request
 			.get(API_URL, null, { timeout: 8000, responseType: "arraybuffer" })
 			.then((data) => {
+				// 如果已有更新的请求，忽略本次过期的响应
+				if (currentId !== _requestId) {
+					resolve({
+						usdToCny: DEFAULTS.usdToCny,
+						hkdToCny: DEFAULTS.hkdToCny,
+					});
+					return;
+				}
+
 				// 解码 GBK 响应（优先 TextDecoder，降级逐字节）
 				let decoded = "";
 				if (data?.byteLength) {
@@ -122,6 +132,7 @@ function fetchAndCacheRates() {
 
 // Promise deduplication for concurrent calls with timeout
 let _inflightPromise = null;
+let _requestId = 0;
 
 function _withTimeout(promise, ms) {
 	let timer;

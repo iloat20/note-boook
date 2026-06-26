@@ -52,7 +52,7 @@
         class="chip {{currentMarket === item.key ? 'chip-active' : ''}}"
         bindtap="switchMarket"
         data-market="{{item.key}}"
-      >{{item.label}}</view>
+      ><text>{{item.label}}</text></view>
 
       <!-- 策略筛选分隔 -->
       <view wx:if="{{activeStrategies.length > 0}}" class="chip-divider"></view>
@@ -61,12 +61,12 @@
       <view wx:for="{{activeStrategies}}" wx:key="tag"
             class="chip {{currentStrategy === item.tag ? 'chip-active' : ''}}"
             bindtap="switchStrategy" data-strategy="{{item.tag}}">
-        {{item.tag}}
+        <text>{{item.tag}}</text>
       </view>
 
       <!-- 批量选择 -->
       <view class="chip-divider"></view>
-      <view class="chip {{selectMode ? 'chip-active chip-batch' : ''}}" bindtap="toggleSelectMode"><view class="batch-icon"></view> 批量</view>
+      <view class="chip {{selectMode ? 'chip-active chip-batch' : ''}}" bindtap="toggleSelectMode"><view class="batch-icon"></view><text>批量</text></view>
     </view>
   </scroll-view>
 

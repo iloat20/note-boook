@@ -11,11 +11,11 @@ const {
 } = require("../../../utils/constants/market");
 const pageMixin = require("../../../utils/ui/pageMixin");
 const { toast, success: fbSuccess } = require("../../../utils/ui/feedback");
+const { confirmDelete } = require("../../../utils/ui/confirmDialog");
 
 Page({
 	data: {
-		statusBarHeight: 0,
-		navBarHeight: 44,
+		...pageMixin.initPageData(),
 		stock: null,
 		stockId: null,
 		stockName: "股票详情",
@@ -53,7 +53,7 @@ Page({
 	},
 
 	onLoad(options) {
-		this.setData(getApp().getNavBarInfo());
+		pageMixin.onLoadMixin(this);
 
 		if (options?.stockId) {
 			this._stockId = parseInt(options.stockId, 10);
@@ -62,7 +62,7 @@ Page({
 	},
 
 	onShow() {
-		if (pageMixin.consumeDirtyFlag() || !this._dataLoaded) {
+		if (pageMixin.onShowSubPackage() || !this._dataLoaded) {
 			this.loadData();
 		}
 	},
@@ -88,6 +88,9 @@ Page({
 		const transactions = rawTransactions.map(this._formatTransaction.bind(this));
 		const dividends = Dividend.getByStockId(stock.id).map(this._formatDividend.bind(this));
 		const strategySummary = getStrategyStats(rawTransactions);
+		strategySummary.forEach((item) => {
+			item.netPnLFormatted = fmt(Math.abs(item.netPnL));
+		});
 
 		// Cache for reuse
 		this._rawTransactions = rawTransactions;
@@ -236,7 +239,7 @@ Page({
 	},
 
 	showTransactionActions(e) {
-		const id = e.currentTarget.dataset.id;
+		const id = Number(e.currentTarget.dataset.id);
 
 		wx.showActionSheet({
 			itemList: ["编辑", "删除"],
@@ -244,18 +247,15 @@ Page({
 				if (res.tapIndex === 0) {
 					wx.navigateTo({ url: `/packageRecord/pages/record/record?id=${id}` });
 				} else if (res.tapIndex === 1) {
-					wx.showModal({
-						title: "确认删除",
+					confirmDelete({
 						content: "确定要删除这笔交易记录吗？",
-						success: (modalRes) => {
-							if (modalRes.confirm) {
-								this.setData({ disTransId: Number(id) });
-								if (this._deleteTransTimer) clearTimeout(this._deleteTransTimer);
-								this._deleteTransTimer = setTimeout(() => {
-									Transaction.delete(id);
-									this.loadData();
-								}, 400);
-							}
+						onConfirm: () => {
+							this.setData({ disTransId: Number(id) });
+							if (this._deleteTransTimer) clearTimeout(this._deleteTransTimer);
+							this._deleteTransTimer = setTimeout(() => {
+								Transaction.delete(id);
+								this.loadData();
+							}, 400);
 						},
 					});
 				}
@@ -264,7 +264,7 @@ Page({
 	},
 
 	showDividendActions(e) {
-		const id = e.currentTarget.dataset.id;
+		const id = Number(e.currentTarget.dataset.id);
 
 		wx.showActionSheet({
 			itemList: ["编辑", "删除"],
@@ -274,18 +274,15 @@ Page({
 						url: `/packageDetail/pages/dividend/dividend?id=${id}`,
 					});
 				} else if (res.tapIndex === 1) {
-					wx.showModal({
-						title: "确认删除",
+					confirmDelete({
 						content: "确定要删除这笔分红记录吗？",
-						success: (modalRes) => {
-							if (modalRes.confirm) {
-								this.setData({ disDivId: Number(id) });
-								if (this._deleteDivTimer) clearTimeout(this._deleteDivTimer);
-								this._deleteDivTimer = setTimeout(() => {
-									Dividend.delete(id);
-									this.loadData();
-								}, 400);
-							}
+						onConfirm: () => {
+							this.setData({ disDivId: Number(id) });
+							if (this._deleteDivTimer) clearTimeout(this._deleteDivTimer);
+							this._deleteDivTimer = setTimeout(() => {
+								Dividend.delete(id);
+								this.loadData();
+							}, 400);
 						},
 					});
 				}
@@ -325,89 +322,62 @@ Page({
 
 	savePosition() {
 		const stockId = this.data.stockId || this._stockId;
-		const quantity = parseInt(this.data.editQuantity, 10) || 0;
-		const avgCost = parseFloat(this.data.editAvgCost) || 0;
-		const currentPrice = parseFloat(this.data.editCurrentPrice) || 0;
 
-		if (quantity <= 0) {
+		const quantityStr = this.data.editQuantity.trim();
+		if (!/^\d+$/.test(quantityStr) || parseInt(quantityStr, 10) <= 0) {
 			toast("请输入有效持仓数量");
 			return;
 		}
+		const quantity = parseInt(quantityStr, 10);
+		const avgCost = parseFloat(this.data.editAvgCost) || 0;
+		const currentPrice = parseFloat(this.data.editCurrentPrice) || 0;
 
 		if (avgCost <= 0) {
 			toast("请输入有效成本价");
 			return;
 		}
 
-		const transactions = this._rawTransactions || Transaction.getByStockId(stockId);
-		const dividends = Dividend.getByStockId(stockId);
-		if (transactions.length === 0) {
-			toast("暂无交易记录，无法调整持仓");
-			return;
-		}
+		const position = this.data.position;
+		const oldQuantity = position.quantity || 0;
+		const oldAvgCost = position.avgCost || 0;
 
-		const totalCost = quantity * avgCost;
-		let totalBuyQuantity = 0;
-		let totalBuyAmount = 0;
-		let totalSellQuantity = 0;
-		let shareDividendQty = 0;
+		const quantityDiff = quantity - oldQuantity;
+		const costDiff = Math.abs(avgCost - oldAvgCost);
 
-		transactions.forEach((t) => {
-			if (t.type === "BUY") {
-				totalBuyQuantity += t.quantity;
-				totalBuyAmount += t.price * t.quantity + t.fee;
-			} else {
-				totalSellQuantity += t.quantity;
+		if (quantityDiff === 0 && costDiff < 0.01) {
+			if (currentPrice > 0) {
+				PriceCache.set(stockId, currentPrice);
 			}
-		});
-
-		dividends.forEach((d) => {
-			if (d.type === "SHARE") shareDividendQty += d.shareQuantity || 0;
-		});
-
-		const totalShares = totalBuyQuantity + shareDividendQty;
-		const avgBuyPrice = totalShares > 0 ? totalBuyAmount / totalShares : 0;
-		const currentPosition = totalShares - totalSellQuantity;
-
-		const diff = totalCost - currentPosition * avgBuyPrice;
-		const feeRate = 0.0003;
-		const syntheticFee = Math.abs(diff) * feeRate;
-
-		if (Math.abs(diff) < avgBuyPrice * 0.5) {
 			toast("持仓已是最新的");
 			this.setData({ editMode: false });
-			return;
-		}
-
-		if (avgBuyPrice <= 0) {
-			toast("无法计算调整价格");
+			if (currentPrice > 0) {
+				this.loadData();
+			}
 			return;
 		}
 
 		try {
-			if (diff > 0) {
-				const buyQty = Math.max(Math.round(diff / avgBuyPrice), 1);
-				const syntheticBuy = Transaction.create(
-					stockId,
-					"BUY",
-					avgBuyPrice,
-					buyQty,
-					syntheticFee,
-					new Date().toISOString(),
-					"持仓调整",
-					"手动调整持仓",
-					[],
-				);
-				Transaction.save(syntheticBuy);
-			} else if (diff < 0) {
-				const sellQuantity = Math.min(Math.round(Math.abs(diff) / avgBuyPrice), currentPosition);
-				if (sellQuantity > 0) {
+			if (costDiff < 0.01) {
+				if (quantityDiff > 0) {
+					const syntheticBuy = Transaction.create(
+						stockId,
+						"BUY",
+						oldAvgCost,
+						quantityDiff,
+						0,
+						new Date().toISOString(),
+						"持仓调整",
+						"手动调整持仓",
+						[],
+					);
+					Transaction.save(syntheticBuy);
+				} else {
 					const syntheticSell = Transaction.create(
 						stockId,
 						"SELL",
-						avgBuyPrice,
-						sellQuantity,
-						syntheticFee,
+						oldAvgCost,
+						Math.abs(quantityDiff),
+						0,
 						new Date().toISOString(),
 						"持仓调整",
 						"手动调整持仓",
@@ -415,6 +385,33 @@ Page({
 					);
 					Transaction.save(syntheticSell);
 				}
+			} else {
+				if (oldQuantity > 0) {
+					const sellAll = Transaction.create(
+						stockId,
+						"SELL",
+						oldAvgCost,
+						oldQuantity,
+						0,
+						new Date().toISOString(),
+						"成本调整",
+						"手动调整成本价",
+						[],
+					);
+					Transaction.save(sellAll);
+				}
+				const buyAll = Transaction.create(
+					stockId,
+					"BUY",
+					avgCost,
+					quantity,
+					0,
+					new Date().toISOString(),
+					"成本调整",
+					"手动调整成本价",
+					[],
+				);
+				Transaction.save(buyAll);
 			}
 		} catch (_e) {
 			toast("保存失败");

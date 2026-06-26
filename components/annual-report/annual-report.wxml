@@ -30,7 +30,7 @@
           <text class="ar-grid-label">交易笔数</text>
         </view>
         <view class="ar-grid-item">
-          <text class="ar-grid-value" style="color: {{data.winRate >= 50 ? '#FF6B6B' : '#34C759'}};">{{data.winRate}}%</text>
+          <text class="ar-grid-value" style="color: {{data.winRate >= 50 ? '#34C759' : '#FF6B6B'}};">{{data.winRate}}%</text>
           <text class="ar-grid-label">胜率</text>
         </view>
         <view class="ar-grid-item">

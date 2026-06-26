@@ -98,13 +98,14 @@
   display: inline-flex;
   align-items: center;
   padding: var(--xhs-space-xs) var(--xhs-space-md);
-  background: var(--xhs-bg-secondary);
-  border-radius: var(--xhs-radius-pill);
+  background: transparent;
+  border-radius: 0;
   font-size: var(--xhs-font-sm);
-  color: var(--xhs-caption);
+  color: #333;
   font-weight: var(--xhs-weight-medium);
   white-space: nowrap;
   transition: var(--xhs-transition);
+  position: relative;
 }
 
 .chip:active {
@@ -112,9 +113,24 @@
 }
 
 .chip-active {
-  background: var(--xhs-primary-bg);
-  color: var(--xhs-primary);
+  background: transparent;
+  color: #333;
   font-weight: var(--xhs-weight-semibold);
+}
+
+.chip-active text {
+  position: relative;
+}
+
+.chip-active text::after {
+  content: "";
+  position: absolute;
+  bottom: -4rpx;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: #FF4D4F;
+  border-radius: 1px;
 }
 
 .chip-divider {
@@ -149,7 +165,7 @@
 }
 
 .chip-batch.chip-active .batch-icon::before {
-  background: var(--xhs-primary-bg);
+  background: #fff;
 }
 
 /* === 日期标题 === */

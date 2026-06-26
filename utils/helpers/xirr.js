@@ -38,6 +38,8 @@ function xirr(cashFlows, dates, guess = 0.1) {
 
 		const newRate = rate - fVal / dfVal;
 
+		if (!Number.isFinite(newRate)) break;
+
 		if (Math.abs(newRate - rate) < tol) {
 			return newRate;
 		}
@@ -56,7 +58,10 @@ function xirr(cashFlows, dates, guess = 0.1) {
 	for (let i = 0; i < maxIter; i++) {
 		const mid = (lo + hi) / 2;
 		const fMid = f(mid);
-		if (Math.abs(fMid) < tol || hi - lo < tol) return mid;
+		if (Math.abs(fMid) < tol || hi - lo < tol) {
+			if (!Number.isFinite(mid)) return null;
+			return mid;
+		}
 		if (fMid * fLo > 0) {
 			lo = mid;
 			fLo = fMid;
@@ -65,7 +70,9 @@ function xirr(cashFlows, dates, guess = 0.1) {
 		}
 	}
 
-	return (lo + hi) / 2;
+	const result = (lo + hi) / 2;
+	if (!Number.isFinite(result)) return null;
+	return result;
 }
 
 module.exports = {

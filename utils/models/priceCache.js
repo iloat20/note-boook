@@ -25,7 +25,7 @@ const PriceCache = {
 			timestamp: Date.now(),
 		};
 		saveData(PRICE_KEY, prices);
-		markDataDirty(["position"]);
+		markDataDirty(["position"], stockId);
 	},
 
 	/**

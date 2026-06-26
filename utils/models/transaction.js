@@ -57,7 +57,8 @@ const Transaction = {
 	 * @returns {Array} 交易记录列表
 	 */
 	getAll() {
-		return getData(TRANSACTION_KEY);
+		const result = getData(TRANSACTION_KEY);
+		return Array.isArray(result) ? result : [];
 	},
 
 	/**
@@ -116,9 +117,12 @@ const Transaction = {
 	 * @returns {Array} 交易记录列表
 	 */
 	getByDateRange(startDate, endDate) {
-		const start = startDate.toISOString();
-		const end = endDate.toISOString();
-		return this.getAll().filter((t) => t.date >= start && t.date <= end);
+		const start = startDate.toISOString().slice(0, 10);
+		const end = endDate.toISOString().slice(0, 10);
+		return this.getAll().filter((t) => {
+			const d = t.date.length > 10 ? t.date.slice(0, 10) : t.date;
+			return d >= start && d <= end;
+		});
 	},
 };
 

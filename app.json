@@ -11,11 +11,8 @@
 		}
 	],
 	"preloadRule": {
-		"pages/history/history": {
-			"packages": ["packageDetail", "packageRecord"]
-		},
-		"pages/stats/stats": {
-			"packages": ["packageRecord", "packageDetail"]
+		"pages/index/index": {
+			"packages": ["packageDetail"]
 		}
 	},
 	"window": {

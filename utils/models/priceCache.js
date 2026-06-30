@@ -19,7 +19,7 @@ const PriceCache = {
 	 */
 	set(stockId, price) {
 		if (stockId == null || Number.isNaN(parseFloat(price)) || parseFloat(price) < 0) return;
-		const prices = this.getAll();
+		const prices = { ...this.getAll() };
 		prices[stockId] = {
 			price: parseFloat(price),
 			timestamp: Date.now(),
@@ -34,7 +34,7 @@ const PriceCache = {
 	 */
 	setBatch(entries) {
 		if (!entries || entries.length === 0) return;
-		const prices = this.getAll();
+		const prices = { ...this.getAll() };
 		const now = Date.now();
 		const updatedIds = [];
 		entries.forEach((item) => {
@@ -86,7 +86,7 @@ const PriceCache = {
 	 */
 	getBatch(stockIds) {
 		if (!stockIds || stockIds.length === 0) return {};
-		const prices = this.getAll();
+		const prices = { ...this.getAll() };
 		const now = Date.now();
 		const result = {};
 		const expiredIds = [];
@@ -132,7 +132,7 @@ const PriceCache = {
 	 * @returns {number} 清理的过期条目数
 	 */
 	pruneExpired() {
-		const prices = getData(PRICE_KEY);
+		const prices = { ...getData(PRICE_KEY) };
 		if (!prices || typeof prices !== "object") return 0;
 
 		const now = Date.now();

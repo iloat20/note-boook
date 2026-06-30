@@ -95,7 +95,6 @@ function getData(key) {
 			data === "" ||
 			(Array.isArray(data) && data.length === 0)
 		) {
-			// 如果是价格缓存，返回对象而不是数组
 			if (key === PRICE_KEY) {
 				data = {};
 			} else {
@@ -104,12 +103,13 @@ function getData(key) {
 		}
 		_memCache.set(key, data);
 	}
-	// 返回深拷贝，防止外部修改污染缓存
 	if (Array.isArray(data)) {
-		return JSON.parse(JSON.stringify(data));
-	}
-	if (data && typeof data === "object") {
-		return JSON.parse(JSON.stringify(data));
+		Object.freeze(data);
+		data.forEach((item) => {
+			if (item && typeof item === "object") Object.freeze(item);
+		});
+	} else if (data && typeof data === "object") {
+		Object.freeze(data);
 	}
 	return data;
 }
@@ -149,17 +149,13 @@ function upsertAndSave(key, item, dirtyTags) {
 	const list = getData(key).slice();
 	const index = list.findIndex((x) => x.id === item.id);
 	if (index >= 0) {
-		// 保留原对象的其他字段，只更新提供的字段
-		list[index] = Object.assign({}, list[index], item);
+		list[index] = { ...list[index], ...item };
 	} else {
 		list.push(item);
 	}
 	saveData(key, list);
-	if (dirtyTags) {
-		const stockId = item.stockId != null ? item.stockId : item.id;
-		markDataDirty(dirtyTags, stockId);
-	}
-	return index >= 0 ? list[index] : item;
+	if (dirtyTags) markDataDirty(dirtyTags, item.id);
+	return item;
 }
 
 /**
@@ -170,17 +166,11 @@ function upsertAndSave(key, item, dirtyTags) {
  * @param {number} [stockId] - 可选的 stockId，用于按股票粒度清除缓存。
  *   不传时自动从被删除项目中检测。
  */
-function deleteAndSave(key, id, dirtyTags, stockId) {
-	let foundStockId = stockId;
-	const list = getData(key).filter((x) => {
-		// 检测被删除项目的 stockId（用于按粒度清除缓存）
-		if (x.id === id && foundStockId == null) {
-			foundStockId = x.stockId != null ? x.stockId : x.id;
-		}
-		return x.id !== id;
-	});
-	saveData(key, list);
-	if (dirtyTags) markDataDirty(dirtyTags, foundStockId);
+function deleteAndSave(key, id, dirtyTags) {
+	const list = getData(key).slice();
+	const newList = list.filter((x) => x.id !== id);
+	saveData(key, newList);
+	if (dirtyTags) markDataDirty(dirtyTags, id);
 }
 
 module.exports = {

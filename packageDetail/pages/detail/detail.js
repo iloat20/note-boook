@@ -50,6 +50,7 @@ Page({
 		editAvgCost: "",
 		editCurrentPrice: "",
 		heroPnLPercentText: "",
+		heroBgClass: "",
 	},
 
 	onLoad(options) {
@@ -136,6 +137,7 @@ Page({
 			totalPnLClass: totalPnL >= 0 ? "profit" : "loss",
 			totalPnLText: (totalPnL >= 0 ? "+" : "") + currency + fmt(Math.abs(totalPnL)),
 			heroPnLPercentText: `${(totalPnLPercent >= 0 ? "+" : "") + totalPnLPercent.toFixed(2)}%`,
+			heroBgClass: totalPnL > 0 ? "hero-profit" : totalPnL < 0 ? "hero-loss" : "hero-flat",
 		});
 	},
 
@@ -217,6 +219,7 @@ Page({
 			totalPnLClass: totalPnL >= 0 ? "profit" : "loss",
 			totalPnLText: (totalPnL >= 0 ? "+" : "") + currency + fmt(Math.abs(totalPnL)),
 			heroPnLPercentText: `${(totalPnLPercent >= 0 ? "+" : "") + totalPnLPercent.toFixed(2)}%`,
+			heroBgClass: totalPnL > 0 ? "hero-profit" : totalPnL < 0 ? "hero-loss" : "hero-flat",
 		});
 	},
 

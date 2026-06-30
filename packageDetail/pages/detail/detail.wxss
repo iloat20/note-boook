@@ -1,202 +1,331 @@
 @import '../../../styles/common.wxss';
 
 page {
-  background: #FAFAFC;
+  background: var(--xhs-bg);
 }
 
 /* =============================
-   Hero Section
+   Hero 区
    ============================= */
-.hero-section {
-  padding: 16rpx 0;
+.hero-card {
+  background: var(--xhs-surface);
+  border-radius: var(--xhs-radius-md);
+  padding: 40rpx var(--page-margin) 36rpx;
+  margin-bottom: var(--xhs-space-lg);
+  box-shadow: var(--xhs-elevation-2);
+  position: relative;
+  overflow: hidden;
 }
 
-.hero-header-row {
+.hero-profit {
+  background: var(--xhs-surface) radial-gradient(
+    ellipse at top right,
+    rgba(255, 215, 0, 0.08) 0%,
+    transparent 60%
+  );
+}
+
+.hero-loss {
+  background: var(--xhs-surface) radial-gradient(
+    ellipse at top right,
+    rgba(0, 170, 0, 0.06) 0%,
+    transparent 60%
+  );
+}
+
+.hero-flat {
+  /* default white, no gradient */
+}
+
+.hero-top-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8rpx;
+  gap: 16rpx;
+  margin-bottom: 28rpx;
 }
 
-.hero-info-group {
-  display: flex;
-  align-items: center;
-  gap: var(--xhs-space-sm);
-  flex: 1;
-  min-width: 0;
-}
-
-/* iOS 毛玻璃编辑按钮 */
-.hero-glass-btn {
-  flex-shrink: 0;
+.hero-back-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 56rpx;
-  min-width: 56rpx;
-  padding: 0 24rpx;
-  border-radius: 28rpx;
-  background: rgba(255, 255, 255, 0.65);
-  backdrop-filter: blur(40px);
-  -webkit-backdrop-filter: blur(40px);
-  border: 0.5px solid rgba(255, 255, 255, 0.5);
-  box-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.04),
-    0 1px 2px rgba(0, 0, 0, 0.02);
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  cursor: default;
-}
-
-.hero-glass-btn:active {
-  opacity: 0.75;
-  transform: scale(0.94);
-  box-shadow:
-    0 1px 4px rgba(0, 0, 0, 0.06),
-    0 0px 1px rgba(0, 0, 0, 0.03);
-}
-
-/* 返回按钮（与编辑按钮同款毛玻璃风格） */
-.hero-back-btn {
   width: 56rpx;
   height: 56rpx;
-  min-width: 56rpx;
-  padding: 0;
-  justify-content: center;
+  border-radius: var(--xhs-radius-round);
+  background: var(--xhs-surface);
+  box-shadow: var(--xhs-elevation-1);
+  transition: var(--xhs-transition);
+  flex-shrink: 0;
+}
+
+.hero-back-btn:active {
+  transform: scale(0.92);
+  opacity: 0.75;
 }
 
 .hero-back-icon {
-  font-size: 28px;
-  font-weight: 300;
+  font-size: 36rpx;
+  font-weight: 400;
   color: var(--xhs-title);
   line-height: 1;
-  transform: translateX(2rpx);
 }
 
-.hero-glass-btn-text {
-  font-size: 13px;
-  font-weight: var(--xhs-weight-semibold);
-  color: var(--xhs-primary);
-  letter-spacing: 0.01em;
-  line-height: 1;
-}
-
-.hero-glass-btn-active {
-  background: rgba(255, 59, 48, 0.75);
-  backdrop-filter: blur(40px);
-  -webkit-backdrop-filter: blur(40px);
-  border-color: rgba(255, 59, 48, 0.3);
-  box-shadow:
-    0 2px 12px rgba(255, 59, 48, 0.25),
-    0 1px 3px rgba(255, 59, 48, 0.15);
-}
-
-.hero-glass-btn-active .hero-glass-btn-text {
-  color: #fff;
-}
-
-.hero-stock-code {
-  font-size: var(--xhs-font-sm);
-  color: var(--xhs-caption);
-  font-weight: var(--xhs-weight-regular);
-  letter-spacing: 0.02em;
-}
-
-.hero-center-info {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.hero-stock-info {
   flex: 1;
-  gap: 12rpx;
   min-width: 0;
 }
 
-.hero-stock-name-inline {
-  font-size: 32rpx;
-  font-weight: var(--xhs-weight-semibold);
-  color: var(--xhs-title);
-  letter-spacing: -0.01em;
-}
-
-.hero-stock-code-inline {
-  font-size: 24rpx;
-  color: var(--xhs-caption);
-  font-weight: var(--xhs-weight-regular);
-  letter-spacing: 0.02em;
+.hero-name-row {
+  display: flex;
+  align-items: center;
+  gap: var(--xhs-space-sm);
 }
 
 .hero-stock-name {
-  display: block;
   font-size: 40rpx;
   font-weight: var(--xhs-weight-bold);
   color: var(--xhs-title);
+  letter-spacing: -0.02em;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   line-height: 1.2;
-  margin-bottom: 16rpx;
-  letter-spacing: -0.01em;
+}
+
+.hero-stock-code {
+  font-size: 26rpx;
+  font-weight: var(--xhs-weight-semibold);
+  color: var(--xhs-body);
+  flex-shrink: 0;
+  line-height: 1.2;
+}
+
+.hero-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 48rpx;
+  padding: 0 24rpx;
+  border-radius: var(--xhs-radius-pill);
+  background: var(--xhs-bg-secondary);
+  transition: var(--xhs-transition);
+  flex-shrink: 0;
+}
+
+.hero-edit-btn:active {
+  transform: scale(0.94);
+  opacity: 0.75;
+}
+
+.hero-edit-btn-active {
+  background: var(--xhs-primary);
+}
+
+.hero-edit-text {
+  font-size: 24rpx;
+  font-weight: var(--xhs-weight-semibold);
+  color: var(--xhs-caption);
+  line-height: 1;
+}
+
+.hero-edit-btn-active .hero-edit-text {
+  color: #fff;
 }
 
 .hero-price {
-  display: block;
-  font-size: 56rpx;
+  font-size: var(--xhs-font-5xl);
   font-weight: var(--xhs-weight-bold);
   color: var(--xhs-title);
   line-height: 1.1;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
   margin-bottom: 12rpx;
-  font-family: -apple-system, 'Helvetica Neue', sans-serif;
 }
 
 .hero-pnl-row {
   display: flex;
   align-items: center;
-  gap: 16rpx;
+  gap: var(--xhs-space-sm);
 }
 
 .hero-pnl-amount {
-  font-size: 40rpx;
+  font-size: var(--xhs-font-2xl);
   font-weight: var(--xhs-weight-bold);
   letter-spacing: -0.01em;
-  font-family: -apple-system, 'Helvetica Neue', sans-serif;
-}
-
-.pnl-pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 4rpx 20rpx;
-  border-radius: var(--xhs-radius-pill);
-}
-
-.pnl-pill.profit {
-  background: var(--xhs-profit-bg);
-}
-
-.pnl-pill.loss {
-  background: var(--xhs-loss-bg);
-}
-
-.pnl-pill-text {
-  font-size: 24rpx;
-  font-weight: var(--xhs-weight-semibold);
-  letter-spacing: 0.01em;
-}
-
-.pnl-pill.profit .pnl-pill-text {
-  color: var(--xhs-profit);
-}
-
-.pnl-pill.loss .pnl-pill-text {
-  color: var(--xhs-loss);
 }
 
 /* =============================
-   Detail Cards (matching index)
+   数据面板
+   ============================= */
+.data-panel {
+  background: var(--xhs-surface);
+  border-radius: var(--xhs-radius-md);
+  box-shadow: var(--xhs-elevation-2);
+  margin-bottom: var(--xhs-space-md);
+  overflow: hidden;
+}
+
+.data-panel-section {
+  padding: var(--page-margin);
+}
+
+.data-panel-title {
+  font-size: var(--xhs-font-md);
+  font-weight: var(--xhs-weight-semibold);
+  color: var(--xhs-title);
+  letter-spacing: -0.01em;
+  margin-bottom: 20rpx;
+  display: block;
+}
+
+.data-grid-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24rpx 32rpx;
+}
+
+.data-grid-4col {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16rpx 12rpx;
+}
+
+.data-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+}
+
+.data-cell-label {
+  font-size: var(--xhs-font-xs);
+  color: var(--xhs-caption);
+  font-weight: var(--xhs-weight-medium);
+  letter-spacing: 0.02em;
+}
+
+.data-cell-value {
+  font-size: var(--xhs-font-xl);
+  font-weight: var(--xhs-weight-bold);
+  color: var(--xhs-title);
+  letter-spacing: -0.01em;
+}
+
+.data-cell-value-sm {
+  font-size: var(--xhs-font-lg);
+}
+
+.data-cell-value-lg {
+  font-size: var(--xhs-font-xl);
+}
+
+.data-cell-unit {
+  font-size: var(--xhs-font-sm);
+  color: var(--xhs-caption);
+  font-weight: var(--xhs-weight-medium);
+}
+
+.data-cell-sub {
+  font-size: var(--xhs-font-xs);
+  font-weight: var(--xhs-weight-medium);
+}
+
+.data-panel-divider {
+  height: 1px;
+  background: var(--xhs-divider);
+  margin: 0 var(--page-margin);
+}
+
+/* =============================
+   编辑模式（面板内）
+   ============================= */
+.data-panel-edit {
+  padding: var(--page-margin);
+}
+
+.edit-field-row {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-bottom: 16rpx;
+}
+
+.edit-field-label {
+  font-size: var(--xhs-font-sm);
+  color: var(--xhs-caption);
+  font-weight: var(--xhs-weight-medium);
+  width: 64rpx;
+  flex-shrink: 0;
+}
+
+.edit-input {
+  flex: 1;
+  height: 40px;
+  background: var(--xhs-bg-secondary);
+  border: 1.5px solid var(--xhs-divider-strong);
+  border-radius: 10px;
+  padding: 0 12px;
+  font-size: 16px;
+  font-weight: var(--xhs-weight-semibold);
+  color: var(--xhs-title);
+  transition: var(--xhs-transition);
+  text-align: right;
+}
+
+.edit-input:focus {
+  border-color: var(--xhs-primary);
+  background: var(--xhs-surface);
+  box-shadow: 0 0 0 3px rgba(255, 59, 48, 0.08);
+}
+
+.edit-actions {
+  display: flex;
+  gap: var(--xhs-space-sm);
+  margin-top: 8rpx;
+}
+
+.btn-cancel {
+  flex: 1;
+  height: 88rpx;
+  line-height: 88rpx;
+  text-align: center;
+  font-size: var(--xhs-font-md);
+  font-weight: var(--xhs-weight-semibold);
+  color: var(--xhs-caption);
+  background: var(--xhs-bg-secondary);
+  border-radius: 12px;
+  transition: var(--xhs-transition);
+}
+
+.btn-cancel:active {
+  opacity: 0.7;
+  transform: scale(0.98);
+}
+
+.btn-save {
+  flex: 1;
+  height: 88rpx;
+  line-height: 88rpx;
+  text-align: center;
+  font-size: var(--xhs-font-md);
+  font-weight: var(--xhs-weight-semibold);
+  color: #fff;
+  background: var(--xhs-primary);
+  border-radius: 12px;
+  box-shadow: var(--xhs-btn-shadow);
+  transition: var(--xhs-transition);
+}
+
+.btn-save:active {
+  opacity: 0.85;
+  transform: scale(0.98);
+}
+
+/* =============================
+   通用卡片
    ============================= */
 .detail-card {
-  background: #FFFDF7;
-  border-radius: 24rpx;
-  border: 1px solid rgba(0, 0, 0, 0.03);
-  box-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.04),
-    0 4px 16px rgba(0, 0, 0, 0.02);
+  background: var(--xhs-surface);
+  border-radius: var(--xhs-radius-md);
+  box-shadow: var(--xhs-elevation-2);
   padding: var(--page-margin);
   margin-bottom: var(--xhs-space-md);
   position: relative;
@@ -244,92 +373,6 @@ page {
   padding: var(--page-margin);
 }
 
-.detail-card-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12rpx 0;
-}
-
-.detail-card-row + .detail-card-row {
-  border-top: 1px solid var(--xhs-divider);
-}
-
-.detail-card-row-sub {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8rpx 0 12rpx;
-  padding-left: 16rpx;
-  border-top: 1px solid var(--xhs-divider);
-}
-
-.detail-card-row-dividend {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12rpx 0;
-  border-top: 1px solid var(--xhs-divider);
-}
-
-.detail-card-label {
-  font-size: var(--xhs-font-sm);
-  color: var(--xhs-caption);
-  font-weight: var(--xhs-weight-medium);
-  letter-spacing: 0.02em;
-  flex-shrink: 0;
-}
-
-.detail-card-label-sub {
-  font-size: 20rpx;
-  color: var(--xhs-caption-light);
-  font-weight: var(--xhs-weight-regular);
-  flex-shrink: 0;
-}
-
-.detail-card-value {
-  font-size: var(--xhs-font-md);
-  font-weight: var(--xhs-weight-semibold);
-  color: var(--xhs-title);
-  text-align: right;
-  font-family: -apple-system, 'Helvetica Neue', sans-serif;
-  letter-spacing: 0.01em;
-}
-
-.detail-card-value-sub {
-  font-size: 22rpx;
-  font-weight: var(--xhs-weight-medium);
-  font-family: -apple-system, 'Helvetica Neue', sans-serif;
-  text-align: right;
-}
-
-.detail-card-divider {
-  height: 1px;
-  background: var(--xhs-divider);
-  margin: 0 var(--page-margin);
-}
-
-.detail-card-total-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--page-margin);
-  border-top: 1px solid var(--xhs-divider);
-  background: rgba(255, 253, 247, 0.8);
-}
-
-.detail-card-total-label {
-  font-size: var(--xhs-font-md);
-  font-weight: var(--xhs-weight-semibold);
-  color: var(--xhs-title);
-}
-
-.detail-card-total-value {
-  font-size: var(--xhs-font-lg);
-  font-weight: var(--xhs-weight-bold);
-  font-family: -apple-system, 'Helvetica Neue', sans-serif;
-}
-
 .detail-card-empty {
   padding: var(--page-margin);
   display: flex;
@@ -344,96 +387,11 @@ page {
 }
 
 /* =============================
-   Edit Mode within Cards
-   ============================= */
-.detail-card-edit-row {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.detail-card-currency {
-  font-size: var(--xhs-font-md);
-  color: var(--xhs-caption);
-  font-weight: var(--xhs-weight-semibold);
-}
-
-.detail-card-unit {
-  font-size: var(--xhs-font-sm);
-  color: var(--xhs-caption);
-  font-weight: var(--xhs-weight-medium);
-}
-
-.edit-input {
-  flex: 1;
-  height: 40px;
-  background: var(--xhs-surface);
-  border: 1.5px solid var(--xhs-divider-strong);
-  border-radius: 10px;
-  padding: 0 12px;
-  font-size: 16px;
-  font-weight: var(--xhs-weight-semibold);
-  color: var(--xhs-title);
-  font-family: -apple-system, 'Helvetica Neue', sans-serif;
-  transition: var(--xhs-transition);
-  min-width: 80px;
-  text-align: right;
-}
-
-.edit-input:focus {
-  border-color: var(--xhs-primary);
-  background: var(--xhs-primary-bg);
-  box-shadow: 0 0 0 3px rgba(255, 59, 48, 0.08);
-}
-
-.edit-actions {
-  display: flex;
-  gap: var(--xhs-space-sm);
-  padding: var(--page-margin);
-}
-
-.btn-cancel {
-  flex: 1;
-  height: 88rpx;
-  line-height: 88rpx;
-  text-align: center;
-  font-size: var(--xhs-font-md);
-  font-weight: var(--xhs-weight-semibold);
-  color: var(--xhs-caption);
-  background: var(--xhs-bg-secondary);
-  border-radius: 12px;
-  transition: var(--xhs-transition);
-}
-
-.btn-cancel:active {
-  opacity: 0.7;
-  transform: scale(0.98);
-}
-
-.btn-save {
-  flex: 1;
-  height: 88rpx;
-  line-height: 88rpx;
-  text-align: center;
-  font-size: var(--xhs-font-md);
-  font-weight: var(--xhs-weight-semibold);
-  color: #fff;
-  background: var(--xhs-primary);
-  border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(255, 59, 48, 0.25);
-  transition: var(--xhs-transition);
-}
-
-.btn-save:active {
-  opacity: 0.85;
-  transform: scale(0.98);
-}
-
-/* =============================
-   Transaction Records (inside card)
+   交易记录
    ============================= */
 .record-item {
   padding: var(--page-margin);
+  margin: 0 var(--page-margin);
   border-top: 1px solid var(--xhs-divider);
   transition: var(--xhs-transition-slow);
 }
@@ -454,7 +412,10 @@ page {
   padding-top: 0 !important;
   padding-bottom: 0 !important;
   overflow: hidden !important;
-  transition: opacity 400ms cubic-bezier(0.4, 0, 0.2, 1), transform 400ms cubic-bezier(0.4, 0, 0.2, 1), max-height 400ms cubic-bezier(0.4, 0, 0.2, 1), padding 400ms cubic-bezier(0.4, 0, 0.2, 1) !important;
+  transition: opacity 400ms cubic-bezier(0.4, 0, 0.2, 1),
+    transform 400ms cubic-bezier(0.4, 0, 0.2, 1),
+    max-height 400ms cubic-bezier(0.4, 0, 0.2, 1),
+    padding 400ms cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 .record-main {
@@ -466,7 +427,7 @@ page {
 .record-left {
   display: flex;
   flex-direction: column;
-  gap: 6rpx;
+  gap: 8rpx;
 }
 
 .record-tag-row {
@@ -476,7 +437,7 @@ page {
 }
 
 .record-date {
-  font-size: 20rpx;
+  font-size: var(--xhs-font-xs);
   color: var(--xhs-caption-light);
   font-weight: var(--xhs-weight-regular);
 }
@@ -496,9 +457,8 @@ page {
 
 .record-price {
   font-weight: var(--xhs-weight-bold);
-  font-size: 30rpx;
+  font-size: var(--xhs-font-md);
   letter-spacing: 0.01em;
-  font-family: -apple-system, 'Helvetica Neue', sans-serif;
   line-height: 1.2;
 }
 
@@ -511,34 +471,35 @@ page {
 }
 
 .record-amount {
-  font-size: 22rpx;
+  font-size: var(--xhs-font-sm);
   font-weight: var(--xhs-weight-medium);
   color: var(--xhs-caption);
 }
 
 .record-fee-row {
-  margin-top: 8rpx;
+  margin-top: 12rpx;
   padding-top: 8rpx;
   border-top: 1px solid var(--xhs-divider);
 }
 
 .record-fee-text {
-  font-size: 20rpx;
+  font-size: var(--xhs-font-xs);
   color: var(--xhs-caption-light);
   font-weight: var(--xhs-weight-regular);
 }
 
-.record-journal {
-  margin-top: 8rpx;
-  padding-top: 8rpx;
-  border-top: 1px solid var(--xhs-divider);
+.record-journal-wrap {
+  margin-top: 12rpx;
+  padding: 12rpx 16rpx;
+  background: var(--xhs-bg-secondary);
+  border-radius: var(--xhs-radius-sm);
 }
 
 .record-reason {
   font-size: var(--xhs-font-sm);
   color: var(--xhs-body);
   line-height: 1.5;
-  margin-top: 4rpx;
+  margin-top: 6rpx;
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -548,10 +509,11 @@ page {
 }
 
 /* =============================
-   Dividend Records (inside card)
+   分红记录
    ============================= */
 .dividend-item {
   padding: var(--page-margin);
+  margin: 0 var(--page-margin);
   border-top: 1px solid var(--xhs-divider);
   transition: var(--xhs-transition-slow);
 }
@@ -572,7 +534,10 @@ page {
   padding-top: 0 !important;
   padding-bottom: 0 !important;
   overflow: hidden !important;
-  transition: opacity 400ms cubic-bezier(0.4, 0, 0.2, 1), transform 400ms cubic-bezier(0.4, 0, 0.2, 1), max-height 400ms cubic-bezier(0.4, 0, 0.2, 1), padding 400ms cubic-bezier(0.4, 0, 0.2, 1) !important;
+  transition: opacity 400ms cubic-bezier(0.4, 0, 0.2, 1),
+    transform 400ms cubic-bezier(0.4, 0, 0.2, 1),
+    max-height 400ms cubic-bezier(0.4, 0, 0.2, 1),
+    padding 400ms cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 .dividend-main-row {
@@ -583,7 +548,7 @@ page {
 }
 
 .dividend-date {
-  font-size: 20rpx;
+  font-size: var(--xhs-font-xs);
   color: var(--xhs-caption-light);
   font-weight: var(--xhs-weight-regular);
 }
@@ -601,44 +566,44 @@ page {
 }
 
 .dividend-amount {
-  font-size: var(--xhs-font-lg);
+  font-size: var(--xhs-font-xl);
   font-weight: var(--xhs-weight-bold);
 }
 
+.dividend-amount.dividend,
+.data-cell-value.dividend {
+  color: var(--xhs-dividend);
+}
+
 /* =============================
-   Strategy Section
+   策略复盘
    ============================= */
 .strategy-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12rpx 0;
+  padding: 16rpx 0;
 }
 
 .strategy-row-bordered {
   border-top: 1px solid var(--xhs-divider);
 }
 
-.strategy-left {
-  display: flex;
-  align-items: center;
-  gap: var(--xhs-space-sm);
-}
-
 .strategy-tag {
   display: inline-block;
   padding: 4px 12px;
   border-radius: var(--xhs-radius-pill);
-  font-size: 20rpx;
+  font-size: var(--xhs-font-xs);
   background: var(--xhs-primary-bg);
   color: var(--xhs-primary);
   font-weight: var(--xhs-weight-medium);
 }
 
-.strategy-count {
-  font-size: 20rpx;
-  color: var(--xhs-caption);
-  font-weight: var(--xhs-weight-regular);
+.strategy-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4rpx;
 }
 
 .strategy-pnl {
@@ -646,16 +611,8 @@ page {
   font-weight: var(--xhs-weight-semibold);
 }
 
-/* =============================
-   Dissolve animation fallback
-   ============================= */
-@keyframes dissolve-out {
-  0% { opacity: 1; transform: translateX(0) scale(1); max-height: 300px; padding: var(--page-margin); }
-  50% { opacity: 0; transform: translateX(100%) scale(0.9); max-height: 300px; padding: var(--page-margin); }
-  100% { opacity: 0; transform: translateX(100%) scale(0.9); max-height: 0; padding-top: 0; padding-bottom: 0; }
-}
-
-.dissolving {
-  animation: dissolve-out 350ms ease-in forwards;
-  pointer-events: none;
+.strategy-count {
+  font-size: var(--xhs-font-xs);
+  color: var(--xhs-caption);
+  font-weight: var(--xhs-weight-regular);
 }

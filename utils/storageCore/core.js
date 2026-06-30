@@ -155,7 +155,7 @@ function upsertAndSave(key, item, dirtyTags) {
 	}
 	saveData(key, list);
 	if (dirtyTags) markDataDirty(dirtyTags, item.id);
-	return item;
+	return list[index >= 0 ? index : list.length - 1];
 }
 
 /**
@@ -168,9 +168,15 @@ function upsertAndSave(key, item, dirtyTags) {
  */
 function deleteAndSave(key, id, dirtyTags) {
 	const list = getData(key).slice();
-	const newList = list.filter((x) => x.id !== id);
+	let foundStockId = null;
+	const newList = list.filter((x) => {
+		if (x.id === id && foundStockId == null) {
+			foundStockId = x.stockId != null ? x.stockId : x.id;
+		}
+		return x.id !== id;
+	});
 	saveData(key, newList);
-	if (dirtyTags) markDataDirty(dirtyTags, id);
+	if (dirtyTags) markDataDirty(dirtyTags, foundStockId);
 }
 
 module.exports = {

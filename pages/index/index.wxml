@@ -71,7 +71,7 @@
     />
 
     <!-- 持仓列表 -->
-    <scroll-view wx:if="{{positionCount > 0}}" class="scroll-container {{tabAnimating ? 'tab-content-exit' : ''}} {{entranceDone ? '' : 'animate-stagger stagger-delay-4'}}" scroll-y style="height: {{scrollHeight}}px;" bindscrolltolower="loadMorePositions">
+    <scroll-view wx:if="{{positionCount > 0}}" class="scroll-container {{tabAnimating ? 'tab-content-exit' : ''}}" scroll-y style="height: {{scrollHeight}}px;" bindscrolltolower="loadMorePositions">
       <view wx:for="{{displayPositions}}" wx:key="id" class="swipe-container">
         <view class="swipe-actions {{item.swipeOpen ? 'swipe-actions-open' : ''}}">
           <view class="swipe-action-btn swipe-action-edit" data-stock-id="{{item.id}}" catchtap="onSwipeEdit">

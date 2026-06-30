@@ -143,9 +143,13 @@ Page({
 				this._fetchPrices({ silent: true, force: true });
 			}
 		} else if (isTradingTime()) {
-			// 交易时段正常刷新现价
+			// 交易时段正常刷新现价（带 30s 节流）
 			if (this._positionsCache && this._positionsCache.length > 0) {
-				this._fetchPrices({ silent: true });
+				const now = Date.now();
+				if (now - (this._lastFetchAt || 0) > 30000) {
+					this._fetchPrices({ silent: true });
+					this._lastFetchAt = now;
+				}
 			}
 		}
 	},

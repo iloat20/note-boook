@@ -74,6 +74,9 @@ Page({
 			{ key: MARKETS.US_SHARE, label: "美股", count: 0 },
 		],
 
+		// 分享截图生成状态
+		generatingShare: false,
+
 		// 持仓数据
 		// [优化] positions / _allPositions 移出 data（挂 this._positionsCache / this._allPositionsCache）
 		// 只有 displayPositions 进渲染层；positionCount 给 WXML 计数用
@@ -762,8 +765,12 @@ Page({
 
 	// ========== 持仓截图分享 ==========
 	onSharePortfolio() {
+		this.setData({ generatingShare: true });
 		_ensureShareModule();
-		_sharePortfolio(this);
+		// 等待 canvas 挂载
+		setTimeout(() => {
+			_sharePortfolio(this);
+		}, 50);
 	},
 
 	// ========== 分享 ==========

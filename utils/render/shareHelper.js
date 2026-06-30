@@ -14,6 +14,7 @@ const { fmt } = require("../helpers/format");
 function sharePortfolio(page) {
 	const positions = page._positionsCache || page.data.positions;
 	if (!positions || positions.length === 0) {
+		page.setData({ generatingShare: false });
 		toast("暂无持仓数据");
 		return;
 	}
@@ -31,6 +32,7 @@ function sharePortfolio(page) {
 		.exec((res) => {
 			if (!res?.[0]?.node) {
 				hideLoading();
+				page.setData({ generatingShare: false });
 				toast("生成失败");
 				return;
 			}
@@ -80,10 +82,12 @@ function sharePortfolio(page) {
 					destHeight: canvasHeight * dpr,
 					success: (fileRes) => {
 						hideLoading();
+						page.setData({ generatingShare: false });
 						_showShareActions(fileRes.tempFilePath);
 					},
 					fail: () => {
 						hideLoading();
+						page.setData({ generatingShare: false });
 						toast("生成失败");
 					},
 				});

@@ -170,5 +170,5 @@
   <quick-record visible="{{showQuickRecord}}" bind:close="onQuickRecordClose" bind:submit="onQuickRecordSubmit" />
 
   <!-- 隐藏 canvas 用于生成分享图 -->
-  <canvas type="2d" id="shareCanvas" style="position: fixed; left: -9999px; top: 0; width: 1px; height: 1px;"></canvas>
+  <canvas wx:if="{{generatingShare}}" type="2d" id="shareCanvas" style="position: fixed; left: -9999px; top: 0; width: 1px; height: 1px;"></canvas>
 </view>

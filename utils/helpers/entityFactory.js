@@ -90,6 +90,7 @@ function createTransaction(
 		note: note || "",
 		reason: reason || "",
 		strategies: Array.isArray(strategies) ? strategies : [],
+		_sortKey: new Date(dateStr).getTime(),
 	};
 }
 
@@ -141,6 +142,7 @@ function createDividend(stockId, perShareAmount, quantity, date, note, type, sha
 		note: note || "",
 		type: divType,
 		shareQuantity: shareQty,
+		_sortKey: new Date(dateStr).getTime(),
 	};
 }
 

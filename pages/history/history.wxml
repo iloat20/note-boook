@@ -12,9 +12,21 @@
   <view class="search-bar-wrap animate-stagger" style="animation-delay:160ms">
     <view class="search-bar">
       <image src="/images/search.svg" mode="aspectFit" class="search-icon" />
-      <input class="search-input" placeholder="搜索股票代码/名称..." value="{{searchKeyword}}" bindinput="onSearchInput" />
+      <input class="search-input" placeholder="搜索股票代码/名称..." value="{{searchKeyword}}" bindinput="onSearchInput" bindfocus="onSearchFocus" bindblur="onSearchBlur" />
       <view wx:if="{{searchKeyword}}" class="search-clear" bindtap="clearSearch">
         <text class="search-clear-icon">✕</text>
+      </view>
+    </view>
+    <!-- 搜索历史 -->
+    <view wx:if="{{showSearchHistory && searchHistory.length}}" class="search-history-dropdown">
+      <view class="sh-header">
+        <text class="sh-title">搜索历史</text>
+        <text class="sh-clear" bindtap="clearHistory">清空</text>
+      </view>
+      <view class="sh-tags">
+        <view wx:for="{{searchHistory}}" wx:key="*this" class="sh-tag" bindtap="tapHistory" data-keyword="{{item}}">
+          {{item}}
+        </view>
       </view>
     </view>
   </view>

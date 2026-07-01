@@ -52,10 +52,20 @@ Component({
 	},
 
 	lifetimes: {
+		attached() {
+			this._marketLocked = false;
+			this._afTimer = null;
+			this._afFetching = null;
+			this._afProbe = null;
+			this._blurTimer = null;
+			this._feeTimer = null;
+			this._stockValidCache = {};
+		},
 		detached() {
 			if (this._afTimer) clearTimeout(this._afTimer);
 			if (this._feeTimer) clearTimeout(this._feeTimer);
 			if (this._blurTimer) clearTimeout(this._blurTimer);
+			this._stockValidCache = {};
 		},
 	},
 
@@ -96,10 +106,11 @@ Component({
 			wx.vibrateShort({ type: "light" });
 		},
 
-		// ──── 代码输入 + 自动获取 ────
+		// 代码输入 + 自动获取（同步格式化 + 异步探测）
 		onQrCodeInput: function (e) {
 			const value = (e.detail.value || "").trim();
 			let market = this.data.qrMarket;
+			const prevCode = this.data.qrCode;
 
 			if (!value) {
 				this._marketLocked = false;
@@ -112,13 +123,17 @@ Component({
 				}
 			}
 
-			// [优化] 合并 setData：一次调用完成所有更新
+			const formatted = formatStockCode(value, market);
+			const codeChanged = value !== prevCode;
+
+			// 核心修复：不清空正在获取中的价格；仅当代码改变+无获取中请求时清空
+			const fetching = this._fetchingCode;
 			const updates = {
 				qrCode: value,
 				qrMarket: market,
 				qrMarketLabel: getMarketLabel(market),
-				qrName: "",
-				qrPrice: "",
+				qrName: codeChanged && !fetching ? "" : this.data.qrName,
+				qrPrice: codeChanged && !fetching ? "" : this.data.qrPrice,
 			};
 
 			if (value.length >= 1) {
@@ -132,15 +147,25 @@ Component({
 
 			this.setData(updates);
 			this._scheduleCalcFee();
-			this._scheduleAutoFetch(value);
+
+			// 输入完整（6 位/5 位/1-5 位字母）时获取价格
+			if (formatted && validateStockCode(formatted, market)) {
+				this._scheduleAutoFetch(formatted);
+				this._probeStockPrice(market, formatted);
+			}
 		},
 
 		onQrCodeBlur: function () {
 			this._blurTimer = setTimeout(() => {
 				this.setData({ showQrSuggestions: false });
 			}, 200);
-			// 失焦时立即尝试获取
-			this._tryAutoFetch(this.data.qrCode);
+			// 失焦时：如果 qrPrice 仍空 + 当前代码有效，立即 try probe（兜底）
+			const d = this.data;
+			const code = formatStockCode(d.qrCode, d.qrMarket);
+			if (code && validateStockCode(code, d.qrMarket) && (!d.qrPrice || parseFloat(d.qrPrice) <= 0)) {
+				this._tryAutoFetch(code);
+				this._probeStockPrice(d.qrMarket, code);
+			}
 		},
 
 		onQrSelectSuggestion: function (e) {
@@ -276,11 +301,55 @@ Component({
 		},
 
 		// ──── 市场检测 ────
-		_detectMarket: (code) => {
+		_detectMarket: function (code) {
+			const upper = (code || "").toUpperCase();
+			// 优先：6 位数字 = A 股（先于 5 位，避免 6 位被误判为港股）
 			if (/^\d{6}$/.test(code)) return MARKETS.A_SHARE;
-			if (/^\d{5}$/.test(code)) return MARKETS.HK_SHARE;
-			if (/^[A-Za-z]{1,5}$/.test(code)) return MARKETS.US_SHARE;
+			// 5 位数字默认 A 股（大多数中小板/创业板/科创板）；仅当有 HK 前缀才判港股
+			if (/^(?:hk|HK)\d{1,5}$/.test(upper)) return MARKETS.HK_SHARE;
+			if (/^\d{5}$/.test(code)) return MARKETS.A_SHARE;
+			if (/^[A-Z]{1,5}$/.test(upper)) return MARKETS.US_SHARE;
 			return null;
+		},
+
+		// 异步探测代码有效性 + 自动填充名称和价格（缓存结果）
+		_probeStockPrice: function (market, code) {
+			if (!code || !validateStockCode(code, market)) return;
+			const existing = Stock.getByCode(code, market);
+			if (!this._stockValidCache) this._stockValidCache = {};
+			const cacheKey = `${market}_${code}`;
+			if (existing && cacheKey in this._stockValidCache) return;
+
+			this._afProbe = code;
+			this.setData({ qrFetching: true });
+			fetchStockPrice(market, code)
+				.then((result) => {
+					const valid = !!(result && result.currentPrice > 0);
+					this._stockValidCache[cacheKey] = valid;
+					console.log('[QR probe] api result for', code, ':', JSON.stringify(result), 'valid:', valid);
+					if (valid && this._afProbe === code) {
+						// 只要 probe 未改变输入（用户未快速输新码），无条件设置
+						const localName = searchStocks(code, market, 1)[0]?.name || "";
+						const priceStr = String(result.currentPrice);
+						this.setData({
+							qrName: localName || existing?.name || result.name || "",
+							qrPrice: priceStr,
+						});
+						console.log('[QR probe] set qrPrice=', priceStr, '| this.data.qrPrice=', this.data.qrPrice);
+						this._calcQrFee();
+					} else if (!valid) {
+						wx.showToast({ title: "股票代码无效或无法获取行情", icon: "none" });
+					}
+				})
+				.catch((err) => {
+					console.error('[QR probe] fetch error:', err);
+					wx.showToast({ title: "网络异常，请手动输入价格", icon: "none" });
+				})
+				.finally(() => {
+					if (this._afProbe === code) {
+						this.setData({ qrFetching: false });
+					}
+				});
 		},
 
 		// ──── 提交 ────
@@ -292,46 +361,40 @@ Component({
 			const code = formatStockCode(d.qrCode, d.qrMarket);
 			const name = d.qrName;
 
-			if (!code) {
-				wx.showToast({ title: "请输入股票代码", icon: "none" });
+			const _reset = () => {
 				setTimeout(() => {
 					this._submitting = false;
 				}, 1000);
+			};
+			const _fail = (msg) => {
+				wx.showToast({ title: msg, icon: "none" });
+				_reset();
+			};
+
+			if (!code) {
+				_fail("请输入股票代码");
 				return;
 			}
 			if (!validateStockCode(code, d.qrMarket)) {
-				wx.showToast({ title: "股票代码格式错误", icon: "none" });
-				setTimeout(() => {
-					this._submitting = false;
-				}, 1000);
-				return;
-			}
-			if (!name) {
-				wx.showToast({ title: "请从列表中选择或等待自动识别", icon: "none" });
-				setTimeout(() => {
-					this._submitting = false;
-				}, 1000);
+				_fail("股票代码格式错误");
 				return;
 			}
 			if (!d.qrPrice || parseFloat(d.qrPrice) <= 0) {
-				wx.showToast({ title: "请输入有效价格", icon: "none" });
-				setTimeout(() => {
-					this._submitting = false;
-				}, 1000);
+				_fail("价格无效，请等待获取或手动输入");
 				return;
 			}
 			if (!d.qrQuantity || parseInt(d.qrQuantity, 10) <= 0) {
-				wx.showToast({ title: "请输入有效数量", icon: "none" });
-				setTimeout(() => {
-					this._submitting = false;
-				}, 1000);
+				_fail("请输入有效数量");
 				return;
 			}
 			if (d.qrQuantity.includes(".")) {
-				wx.showToast({ title: "数量必须为正整数", icon: "none" });
-				setTimeout(() => {
-					this._submitting = false;
-				}, 1000);
+				_fail("数量必须为正整数");
+				return;
+			}
+
+			// 新建股票必须已识别名称（从 API 或列表填充）
+			if (!Stock.getByCode(code, d.qrMarket) && !name) {
+				_fail("股票名称未识别，请从列表选择或等待自动识别");
 				return;
 			}
 
@@ -340,18 +403,12 @@ Component({
 
 			if (d.qrType === "SELL") {
 				if (!stock) {
-					wx.showToast({ title: "暂无可卖持仓", icon: "none" });
-					setTimeout(() => {
-						this._submitting = false;
-					}, 1000);
+					_fail("暂无可卖持仓");
 					return;
 				}
 				const sellableQuantity = getSellableQuantity(stock.id);
 				if (parseInt(d.qrQuantity, 10) > sellableQuantity) {
-					wx.showToast({ title: "卖出数量超过持仓", icon: "none" });
-					setTimeout(() => {
-						this._submitting = false;
-					}, 1000);
+					_fail("卖出数量超过持仓");
 					return;
 				}
 			}
@@ -373,9 +430,7 @@ Component({
 
 			wx.showToast({ title: "添加成功", icon: "success" });
 			this.triggerEvent("submit", { stockId: stock.id });
-			setTimeout(() => {
-				this._submitting = false;
-			}, 1000);
+			_reset();
 		},
 
 		// ──── 重置 ────

@@ -9,6 +9,7 @@
 
 const { request } = require("../../api/request");
 const { TIMING_CONFIG } = require("../constants/index");
+const { getData, saveData } = require("../storageCore/core");
 
 // 腾讯财经 API 获取汇率（批量查询 USD/CNY + HKD/CNY）
 const API_URL = "https://qt.gtimg.cn/q=fx_usr,fx_hkd";
@@ -24,10 +25,6 @@ const DEFAULTS = {
 
 // 汇率缓存有效期（毫秒）- 4小时，支持当天内刷新
 const RATE_CACHE_TTL = TIMING_CONFIG.RATE_CACHE_TTL_MS;
-
-// 内存缓存，避免每次 getRates 都读 wx.getStorageSync
-let _memCachedRates = null;
-let _memCachedAt = 0;
 
 /**
  * 解析腾讯财经 API 的汇率数据
@@ -110,7 +107,7 @@ function fetchAndCacheRates() {
 				};
 
 				try {
-					wx.setStorageSync(CACHE_KEY, cache);
+					saveData(CACHE_KEY, cache);
 				} catch (_e) {
 					// 缓存写入失败不影响主流程
 				}
@@ -153,36 +150,20 @@ function _withTimeout(promise, ms) {
  * @returns {Promise<{usdToCny: number, hkdToCny: number}>}
  */
 function getRates() {
-	// Check memory cache first
-	if (_memCachedRates && Date.now() - _memCachedAt < RATE_CACHE_TTL) {
-		return Promise.resolve(_memCachedRates);
+	// Check storageCore LRU cache (covers memory + wx.getStorageSync)
+	const cached = getData(CACHE_KEY);
+	const now = Date.now();
+	const isFresh =
+		cached?.usdToCny &&
+		cached.hkdToCny &&
+		cached.timestamp &&
+		now - cached.timestamp < RATE_CACHE_TTL;
+
+	if (isFresh) {
+		return Promise.resolve({ usdToCny: cached.usdToCny, hkdToCny: cached.hkdToCny });
 	}
 
 	return new Promise((resolve) => {
-		let cached = null;
-		try {
-			cached = wx.getStorageSync(CACHE_KEY);
-		} catch (_e) {
-			// 读取缓存失败
-		}
-
-		// 缓存有效（在 TTL 内，或当天且有旧缓存）
-		const now = Date.now();
-		const isFresh =
-			cached?.usdToCny &&
-			cached.hkdToCny &&
-			cached.timestamp &&
-			now - cached.timestamp < RATE_CACHE_TTL;
-		if (isFresh) {
-			_memCachedRates = {
-				usdToCny: cached.usdToCny,
-				hkdToCny: cached.hkdToCny,
-			};
-			_memCachedAt = now;
-			resolve({ usdToCny: cached.usdToCny, hkdToCny: cached.hkdToCny });
-			return;
-		}
-
 		// Deduplicate concurrent requests with timeout
 		if (_inflightPromise) {
 			_inflightPromise.then(resolve).catch(() => {
@@ -193,8 +174,6 @@ function getRates() {
 
 		_inflightPromise = _withTimeout(fetchAndCacheRates(), 10000)
 			.then((rates) => {
-				_memCachedRates = rates;
-				_memCachedAt = Date.now();
 				_inflightPromise = null;
 				return rates;
 			})

@@ -8,6 +8,7 @@ const {
 const { fetchStockPrice } = require("../../../utils/services/stockPrice");
 const { calculateFee, getFeeBreakdown } = require("../../../utils/helpers/feeCalculator");
 const { fmt } = require("../../../utils/helpers/format");
+const { loadSearchHistory, saveSearchHistory } = require("../../../utils/helpers/searchHistory");
 const {
 	getMarketLabel,
 	validateStockCode,
@@ -44,6 +45,10 @@ Page({
 		showSuggestions: false,
 		suggestions: [],
 		highlightIndex: -1,
+		// 股票搜索历史（空输入时展示）
+		stockSearchHistory: [],
+		keyword: "",
+		showSearchHistory: false,
 		showJournal: false,
 		reason: "",
 		strategies: [],
@@ -55,6 +60,8 @@ Page({
 	onLoad(options) {
 		pageMixin.onLoadMixin(this);
 		this._feeManuallySet = false;
+		this._stockValidCache = {}; // 代码有效性缓存 { "A_SHARE_600519": true }
+		this.setData({ stockSearchHistory: loadSearchHistory() });
 
 		const now = new Date();
 		this.setData({
@@ -166,6 +173,12 @@ Page({
 			marketLabel: getMarketLabel(market),
 		});
 		this._calcFee();
+		// 切换市场后清空校验缓存（同一代码在不同市场有效性不同）
+		this._stockValidCache = {};
+		if (this.data.code) {
+			const formatted = formatStockCode(this.data.code, market);
+			this._probeStockValidity(market, formatted);
+		}
 	},
 
 	selectType(e) {
@@ -176,18 +189,27 @@ Page({
 
 	onCodeInput(e) {
 		const value = (e.detail.value || "").trim();
-		this.setData({ code: value, codeError: "", name: "" });
+		this.setData({ code: value, codeError: "", name: "", keyword: value });
 		this._checkCode();
 		// 触发联想搜索（本地数据库）
 		if (value.length >= 1) {
-			const results = searchStocks(value, this.data.market, 8);
+			const results = searchStocks(value, this.data.market, TIMING_CONFIG.SEARCH_SUGGESTIONS_MAX);
 			this.setData({
 				suggestions: results,
 				showSuggestions: results.length > 0,
+				showSearchHistory: false,
 				highlightIndex: -1,
 			});
+			// 异步探测代码有效性（缓存结果，submit 时同步读）
+			const formatted = formatStockCode(value, this.data.market);
+			this._probeStockValidity(this.data.market, formatted);
 		} else {
-			this.setData({ suggestions: [], showSuggestions: false });
+			// 空输入时展示搜索历史
+			this.setData({
+				suggestions: [],
+				showSuggestions: false,
+				showSearchHistory: this.data.stockSearchHistory.length > 0,
+			});
 		}
 		// 自动获取：有效代码时延迟拉取名称和现价
 		this._scheduleAutoFetch(value);
@@ -232,15 +254,32 @@ Page({
 			name: item.name,
 			suggestions: [],
 			showSuggestions: false,
+			showSearchHistory: false,
 			codeError: "",
 		});
+		saveSearchHistory(item.code);
+		this.setData({ stockSearchHistory: loadSearchHistory() });
 		this._calcFee();
 		// 选中后自动拉取现价
 		this._tryAutoFetch(item.code);
 	},
 
+	tapStockHistory(e) {
+		const keyword = e.currentTarget.dataset.keyword;
+		// 历史关键词可能是代码或名称，直接填入输入框并触发搜索
+		this.setData({ code: keyword, keyword });
+		this._checkCode();
+		const results = searchStocks(keyword, this.data.market, TIMING_CONFIG.SEARCH_SUGGESTIONS_MAX);
+		this.setData({
+			suggestions: results,
+			showSuggestions: results.length > 0,
+			showSearchHistory: false,
+		});
+		this._scheduleAutoFetch(keyword);
+	},
+
 	hideSuggestions() {
-		this.setData({ suggestions: [], showSuggestions: false });
+		this.setData({ suggestions: [], showSuggestions: false, showSearchHistory: false });
 		// 失焦时立即尝试自动获取（无延迟）
 		this._tryAutoFetch(this.data.code);
 	},
@@ -406,39 +445,113 @@ Page({
 
 		if (!code || !name) {
 			toast("请填写代码和名称");
+			this._resetSubmit();
 			return;
 		}
 		if (!validateStockCode(code, market)) {
 			toast("代码格式错误");
+			this._resetSubmit();
 			return;
 		}
 		if (!price || parseFloat(price) <= 0) {
 			toast("请输入有效价格");
+			this._resetSubmit();
 			return;
 		}
 		if (quantity.includes(".")) {
 			toast("数量必须为整数");
+			this._resetSubmit();
 			return;
 		}
 		if (!quantity || parseInt(quantity, 10) <= 0) {
 			toast("请输入有效数量");
+			this._resetSubmit();
 			return;
 		}
 		if (!date || !time) {
 			toast("请选择日期时间");
+			this._resetSubmit();
 			return;
 		}
 
+		// 新股票：SELL 不允许（无持仓可卖）；BUY 需校验代码真实性
 		let stock = Stock.getByCode(code, market);
-		if (type === "SELL") {
-			if (!stock) {
+		if (!stock) {
+			if (type === "SELL") {
 				toast("暂无可卖持仓");
+				this._resetSubmit();
 				return;
 			}
+			const cacheKey = `${market}_${code}`;
+			if (this._stockValidCache?.[cacheKey] === false) {
+				toast("股票代码无效或不在该市场，请检查");
+				this._resetSubmit();
+				return;
+			}
+			// 缓存未命中（如用户粘贴代码）时探测后提交
+			this._validateAndSubmit(stock, market, code, name, type, price, quantity, fee, date, time, note, data);
+			return;
+		}
+
+		this._doSubmit(stock, type, price, quantity, date, time, code, market, name, fee, note, data);
+	},
+
+	// 兜底：提交失败 / 校验失败时统一重置 _submitting
+	_resetSubmit() {
+		this._subTimer = setTimeout(() => {
+			this._submitting = false;
+		}, 1000);
+	},
+
+	/**
+	 * 输入时异步探测代码有效性（缓存结果，submit 时同步读）
+	 * 在 onCodeInput / selectMarket 时调用，避免 submit 阻塞
+	 * @param {string} market
+	 * @param {string} code - 格式化后的代码
+	 */
+	_probeStockValidity(market, code) {
+		if (!code || !validateStockCode(code, market)) return;
+		if (Stock.getByCode(code, market)) return; // 已有股票不需校验
+		const cacheKey = `${market}_${code}`;
+		if (!this._stockValidCache) this._stockValidCache = {};
+		if (cacheKey in this._stockValidCache) return; // 已探测过
+
+		fetchStockPrice(market, code)
+			.then((result) => {
+				this._stockValidCache[cacheKey] = result && result.currentPrice > 0;
+			})
+			.catch(() => {
+				// 网络异常：不缓存（下次 submit 时可重试）
+			});
+	},
+
+	// submit 时发现缓存未命中，同步等待一次
+	_validateAndSubmit(stock, market, code, name, type, price, quantity, fee, date, time, note, data) {
+		fetchStockPrice(market, code)
+			.then((result) => {
+				const valid = !!(result && result.currentPrice > 0);
+				if (!this._stockValidCache) this._stockValidCache = {};
+				this._stockValidCache[`${market}_${code}`] = valid;
+				if (!valid) {
+					toast("股票代码无效或不在该市场，请检查");
+					return;
+				}
+				this._doSubmit(stock, type, price, quantity, date, time, code, market, name, fee, note, data);
+			})
+			.catch(() => {
+				// 网络异常：降级允许保存
+				this._doSubmit(stock, type, price, quantity, date, time, code, market, name, fee, note, data);
+			});
+	},
+
+	// 实际创建/保存逻辑（原 submit 后半段）
+	_doSubmit(stock, type, price, quantity, date, time, code, market, name, fee, note, data) {
+		if (type === "SELL") {
 			const ignoredTransactionId = this._isEdit ? this._editId : null;
 			const sellableQuantity = getSellableQuantity(stock.id, ignoredTransactionId);
 			if (parseInt(quantity, 10) > sellableQuantity) {
 				toast("卖出数量超过持仓");
+				this._resetSubmit();
 				return;
 			}
 		}
@@ -470,9 +583,7 @@ Page({
 		this._navTimer = setTimeout(() => {
 			wx.navigateBack();
 		}, TIMING_CONFIG.NAVIGATE_BACK_DELAY);
-		this._subTimer = setTimeout(() => {
-			this._submitting = false;
-		}, 1000);
+		this._resetSubmit();
 	},
 
 	onShow() {

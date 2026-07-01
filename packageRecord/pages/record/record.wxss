@@ -314,6 +314,23 @@ page {
   color: var(--xhs-caption);
 }
 
+/* === 搜索历史 === */
+.sh-hint {
+  padding: 8px 14px;
+  font-size: var(--xhs-font-xs, 11px);
+  color: var(--xhs-caption);
+  font-weight: var(--xhs-weight-medium);
+}
+
+.history-item {
+  padding-left: 14px;
+}
+
+.history-keyword {
+  font-weight: var(--xhs-weight-medium);
+  color: var(--xhs-body);
+}
+
 /* === 手续费明细 === */
 .fee-breakdown {
   margin-top: 8px;

@@ -5,7 +5,6 @@
 const positionService = require("./positionService");
 const statsService = require("./statsService");
 const stockPrice = require("./stockPrice");
-const chartService = require("./chartService");
 
 module.exports = {
 	// Position services
@@ -26,8 +25,4 @@ module.exports = {
 	// Stock price services
 	fetchStockPrice: stockPrice.fetchStockPrice,
 	fetchAllPrices: stockPrice.fetchAllPrices,
-
-	// Chart services
-	getHeatmapData: chartService.getHeatmapData,
-	getMixedChartData: chartService.getMixedChartData,
 };

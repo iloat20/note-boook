@@ -1,8 +1,8 @@
 const { MARKETS, TIMING_CONFIG } = require("../../utils/constants/index");
 const { Stock, Transaction, Dividend, Strategy } = require("../../utils/models/index");
-const { fmt, fmtDate, fmtTime } = require("../../utils/helpers/format");
 const { buildStockMap } = require("../../utils/helpers/stockHelpers");
-const { getMarketLabel, getMarketColor } = require("../../utils/constants/market");
+const { buildRecordView } = require("../../utils/helpers/recordView");
+const { loadSearchHistory, saveSearchHistory, clearSearchHistory } = require("../../utils/helpers/searchHistory");
 const pageMixin = require("../../utils/ui/pageMixin");
 const { confirmDelete } = require("../../utils/ui/confirmDialog");
 const { loading, hideLoading, success: fbSuccess } = require("../../utils/ui/feedback");
@@ -34,6 +34,9 @@ Page({
 		hasMore: true,
 		dissolvingId: null,
 		searchKeyword: "",
+		// 搜索历史（MRU 序）
+		searchHistory: [],
+		showSearchHistory: false,
 		// 是否有记录存在（不受筛选影响）
 		recordExists: false,
 		// 缓存相关
@@ -49,6 +52,7 @@ Page({
 
 	onLoad() {
 		pageMixin.onLoadMixin(this);
+		this.setData({ searchHistory: loadSearchHistory() });
 		this.loadHistory();
 	},
 
@@ -61,6 +65,8 @@ Page({
 		if (!this.data.entranceDone) {
 			this.setData({ entranceDone: true });
 		}
+		// 刷新历史（可能在其他页搜过）
+		this.setData({ searchHistory: loadSearchHistory() });
 	},
 
 	// 构建全部记录并缓存，仅在数据变更时调用
@@ -76,66 +82,25 @@ Page({
 		transactions.forEach((t) => {
 			const stock = stockMap[t.stockId];
 			if (stock) {
-				const date = new Date(t.date);
-				const amount =
-					t.type === "BUY" ? -(t.price * t.quantity + t.fee) : t.price * t.quantity - t.fee;
-				const isBuy = t.type === "BUY";
-				allRecords.push({
-					id: t.id,
-					type: t.type,
-					typeText: isBuy ? "买入" : "卖出",
-					typeTagClass: `tag type-tag ${isBuy ? "tag-buy" : "tag-sell"}`,
-					typeBarClass: `record-type-bar ${isBuy ? "bar-buy" : "bar-sell"}`,
-					amountClass: `detail-amount mono-num ${isBuy ? "loss" : "profit"}`,
-					stockId: t.stockId,
-					market: stock.market,
-					marketLabel: getMarketLabel(stock.market),
-					marketColor: getMarketColor(stock.market),
-					code: stock.code,
-					name: stock.name,
-					price: t.price,
-					priceText: fmt(t.price),
-					quantity: parseFloat(t.quantity) || 0,
-					fee: t.fee,
-					feeText: fmt(t.fee),
-					amount: amount,
-					amountText: fmt(Math.abs(amount)),
-					date: fmtDate(date),
-					time: fmtTime(date),
-					_sortKey: date.getTime(),
-					strategies: t.strategies || [],
-					reason: t.reason || "",
-					hasJournal: !!(t.reason || t.strategies?.length),
-				});
+				allRecords.push(buildRecordView(t, stock, {
+					amountClassPrefix: "detail-amount",
+					amountClassForBuy: "loss",
+					amountClassForSell: "profit",
+					includeTypeBar: true,
+					includeJournalFields: true,
+					includeFeeFields: true,
+				}));
 			}
 		});
 
 		dividends.forEach((d) => {
 			const stock = stockMap[d.stockId];
 			if (stock) {
-				const date = new Date(d.date);
-				allRecords.push({
-					id: d.id,
-					type: "DIVIDEND",
-					typeText: "分红",
-					typeTagClass: "tag type-tag tag-dividend",
-					typeBarClass: "record-type-bar bar-dividend",
-					amountClass: "detail-amount mono-num dividend",
-					stockId: d.stockId,
-					market: stock.market,
-					marketLabel: getMarketLabel(stock.market),
-					marketColor: getMarketColor(stock.market),
-					code: stock.code,
-					name: stock.name,
-					perShareAmount: d.perShareAmount,
-					perShareAmountText: fmt(d.perShareAmount),
-					quantity: parseFloat(d.quantity) || 0,
-					amount: d.totalAmount,
-					amountText: fmt(d.totalAmount),
-					date: fmtDate(date),
-					time: fmtTime(date),
-					_sortKey: date.getTime(),
-				});
+				allRecords.push(buildRecordView(d, stock, {
+					amountClassPrefix: "detail-amount",
+					includeTypeBar: true,
+					includeDividendFields: true,
+				}));
 			}
 		});
 
@@ -238,7 +203,7 @@ Page({
 	clearSearch() {
 		if (this._searchTimer) clearTimeout(this._searchTimer);
 		this._pendingKeyword = "";
-		this.setData({ searchKeyword: "" });
+		this.setData({ searchKeyword: "", showSearchHistory: false });
 		this._applyFilters();
 	},
 
@@ -348,10 +313,45 @@ Page({
 		const keyword = e.detail.value.toLowerCase();
 		// Store locally to avoid setData on every keystroke
 		this._pendingKeyword = keyword;
+		// 空输入时展示搜索历史
+		if (!keyword) {
+			this.setData({ showSearchHistory: true });
+		}
 		this._searchTimer = setTimeout(() => {
 			this.setData({ searchKeyword: this._pendingKeyword });
 			this._applyFilters();
 		}, TIMING_CONFIG.SEARCH_DEBOUNCE_MS);
+	},
+
+	onSearchFocus() {
+		// 聚焦且无关键词时展示历史
+		if (!this._pendingKeyword && !this.data.searchKeyword) {
+			this.setData({ showSearchHistory: true });
+		}
+	},
+
+	onSearchBlur() {
+		// 失焦后短暂延迟隐藏，避免点击历史项时 dropdown 先消失
+		setTimeout(() => {
+			this.setData({ showSearchHistory: false });
+		}, 150);
+	},
+
+	tapHistory(e) {
+		const keyword = e.currentTarget.dataset.keyword;
+		this._pendingKeyword = keyword;
+		this.setData({
+			searchKeyword: keyword,
+			showSearchHistory: false,
+		});
+		saveSearchHistory(keyword);
+		this.setData({ searchHistory: loadSearchHistory() });
+		this._applyFilters();
+	},
+
+	clearHistory() {
+		clearSearchHistory();
+		this.setData({ searchHistory: [], showSearchHistory: false });
 	},
 
 	showActions(e) {

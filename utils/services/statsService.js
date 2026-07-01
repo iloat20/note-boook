@@ -5,8 +5,7 @@
 const Stock = require("../models/stock");
 const Transaction = require("../models/transaction");
 const Dividend = require("../models/dividend");
-const PriceCache = require("../models/priceCache");
-const { batchCalcPositions } = require("../helpers/positionCalculator");
+const { getAllPositions } = require("./positionService");
 const { caches } = require("../cache/cacheManager");
 const { calcXIRRForRange, getTotalXIRR } = require("./xirrService");
 const { getRate, getRates } = require("./exchangeRate");
@@ -92,20 +91,15 @@ function getTotalStats() {
 		}
 	});
 
-	// 通过纯函数计算每个持仓，避免依赖 positionService
-	const stocks = Stock.getAll();
-	const allDiv = Dividend.getAll();
-
-	const stockIds = stocks.map((s) => s.id);
-	const positions = batchCalcPositions(stockIds, transactions, allDiv, (id) => PriceCache.get(id));
+	// 通过 positionService 缓存获取所有持仓，避免重复计算
+	const positions = getAllPositions();
 
 	let totalRealizedPnL = 0;
 	let totalFloatingPnL = 0;
 	let totalDividendIncome = 0;
 	let totalCostBasis = 0;
 
-	Object.keys(positions).forEach((id) => {
-		const pos = positions[id];
+	positions.forEach((pos) => {
 		totalRealizedPnL += pos.realizedPnL;
 		totalDividendIncome += pos.dividendIncome;
 		if (pos.quantity > 0) {

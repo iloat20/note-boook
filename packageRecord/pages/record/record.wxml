@@ -35,7 +35,7 @@
             <view wx:if="{{marketLabel}}" class="code-market-badge">{{marketLabel}}</view>
           </view>
           <text wx:if="{{codeError}}" class="field-error">{{codeError}}</text>
-          <!-- 搜索建议 -->
+          <!-- 搜索建议 / 搜索历史 -->
           <view wx:if="{{showSuggestions}}" class="suggestions-dropdown">
             <view wx:for="{{suggestions}}" wx:key="code"
               class="suggestion-item"
@@ -43,6 +43,14 @@
               <text class="suggestion-code">{{item.code}}</text>
               <text class="suggestion-name">{{item.name}}</text>
               <text class="suggestion-market-tag">{{item.market === 'A_SHARE' ? 'A股' : item.market === 'HK_SHARE' ? '港股' : '美股'}}</text>
+            </view>
+          </view>
+          <view wx:elif="{{showSearchHistory && stockSearchHistory.length}}" class="suggestions-dropdown">
+            <view class="sh-hint">搜索历史</view>
+            <view wx:for="{{stockSearchHistory}}" wx:key="*this"
+              class="suggestion-item history-item"
+              bindtap="tapStockHistory" data-keyword="{{item}}">
+              <text class="suggestion-code history-keyword">{{item}}</text>
             </view>
           </view>
         </view>

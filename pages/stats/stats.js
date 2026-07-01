@@ -4,10 +4,11 @@ const {
 	getTotalXIRR,
 	getPeriodStatsWithReturn,
 } = require("../../utils/services/statsService");
-const { getClearedPositions, getPositionSummary } = require("../../utils/services/positionService");
+const { getClearedPositions, getPositionSummary, getAllPositions } = require("../../utils/services/positionService");
 const { Stock, Transaction, Dividend } = require("../../utils/models/index");
 const { fmt, fmtDate } = require("../../utils/helpers/format");
 const { buildStockMap } = require("../../utils/helpers/stockHelpers");
+const { buildRecordView } = require("../../utils/helpers/recordView");
 const { exportMD } = require("../../utils/exporters/markdown");
 const { getRates, getRate } = require("../../utils/services/exchangeRate");
 const pageMixin = require("../../utils/ui/pageMixin");
@@ -22,8 +23,6 @@ const {
 	clearMemCache,
 } = require("../../utils/storageCore/core");
 const { markDataDirty } = require("../../utils/cache/cacheManager");
-const { batchCalcPositions } = require("../../utils/helpers/positionCalculator");
-const PriceCache = require("../../utils/models/priceCache");
 
 Page({
 	data: {
@@ -80,16 +79,7 @@ Page({
 	},
 
 	_computeAllPositions() {
-		const stocks = Stock.getAll();
-		const stockIds = stocks.map((s) => s.id);
-		const allTransactions = Transaction.getAll();
-		const allDividends = Dividend.getAll();
-		const positions = batchCalcPositions(
-			stockIds,
-			allTransactions,
-			allDividends,
-			(id) => PriceCache.get(id)
-		);
+		const positions = getAllPositions(true);
 		this._positionsCache = positions;
 		return positions;
 	},
@@ -103,50 +93,22 @@ Page({
 
 		const txList = rawTx.map((t) => {
 			const stock = stockMap[t.stockId];
-			const price = parseFloat(t.price) || 0;
-			const quantity = parseFloat(t.quantity) || 0;
-			const fee = parseFloat(t.fee) || 0;
-			const amount = price * quantity;
-			const isBuy = t.type === "BUY";
-			return {
-				id: t.id,
-				stockId: t.stockId,
-				type: t.type,
-				typeText: isBuy ? "买入" : "卖出",
-				typeTagClass: `tag type-tag ${isBuy ? "tag-buy" : "tag-sell"}`,
-				amountClass: `detail-d-amount mono-num ${isBuy ? "xhs-loss" : "xhs-profit"}`,
-				dateText: t.date ? fmtDate(new Date(t.date)) : "-",
-				_sortKey: t._sortKey || new Date(t.date).getTime(),
-				price,
-				priceText: fmt(price),
-				quantity,
-				fee,
-				feeText: fmt(fee),
-				amountText: fmt(amount),
-				totalPnLText: fmt(amount),
-				name: stock ? stock.name : "-",
-				code: stock ? stock.code : "-",
-				market: stock ? stock.market : "",
-			};
+			return buildRecordView(t, stock, {
+				amountClassPrefix: "detail-d-amount",
+				amountClassForBuy: "xhs-loss",
+				amountClassForSell: "xhs-profit",
+				includeStatsFields: true,
+				grossAmount: true,
+			});
 		});
 
 		const divList = allDivs.map((d) => {
 			const stock = stockMap[d.stockId];
-			return {
-				id: d.id,
-				stockId: d.stockId,
-				type: "DIVIDEND",
-				typeText: "分红",
-				typeTagClass: "tag type-tag tag-dividend",
-				amountClass: "detail-d-amount mono-num xhs-profit",
-				dateText: d.date ? fmtDate(new Date(d.date)) : "-",
-				_sortKey: d._sortKey || new Date(d.date).getTime(),
-				amountText: fmt(d.totalAmount),
-				totalPnLText: fmt(d.totalAmount),
-				name: stock ? stock.name : "-",
-				code: stock ? stock.code : "-",
-				market: stock ? stock.market : "",
-			};
+			return buildRecordView(d, stock, {
+				amountClassPrefix: "detail-d-amount",
+				amountClassForDividend: "xhs-profit",
+				includeStatsFields: true,
+			});
 		});
 
 		const completeTrades = txList.concat(divList).sort((a, b) => b._sortKey - a._sortKey);
@@ -169,81 +131,6 @@ Page({
 			});
 
 		return { completeTrades, clearedPositions };
-	},
-
-	_buildTradeList() {
-		const stocks = Stock.getAll();
-		const stockMap = buildStockMap(stocks);
-		const rawTx = Transaction.getAll();
-
-		const txList = rawTx.map((t) => {
-			const stock = stockMap[t.stockId];
-			const price = parseFloat(t.price) || 0;
-			const quantity = parseFloat(t.quantity) || 0;
-			const fee = parseFloat(t.fee) || 0;
-			const amount = price * quantity;
-			const dateObj = new Date(t.date);
-			const isBuy = t.type === "BUY";
-			const item = {
-				id: t.id,
-				stockId: t.stockId,
-				type: t.type,
-				typeText: isBuy ? "买入" : "卖出",
-				typeTagClass: `tag type-tag ${isBuy ? "tag-buy" : "tag-sell"}`,
-				amountClass: `detail-d-amount mono-num ${isBuy ? "xhs-loss" : "xhs-profit"}`,
-				dateText: t.date ? fmtDate(dateObj) : "-",
-				_sortKey: dateObj.getTime(),
-				price: price,
-				priceText: fmt(price),
-				quantity: quantity,
-				fee: fee,
-				feeText: fmt(fee),
-				amountText: fmt(amount),
-				totalPnLText: fmt(amount),
-				name: stock ? stock.name : "-",
-				code: stock ? stock.code : "-",
-				market: stock ? stock.market : "",
-			};
-			return item;
-		});
-
-		const divList = Dividend.getAll().map((d) => {
-			const stock = stockMap[d.stockId];
-			const dateObj = new Date(d.date);
-			return {
-				id: d.id,
-				stockId: d.stockId,
-				type: "DIVIDEND",
-				typeText: "分红",
-				typeTagClass: "tag type-tag tag-dividend",
-				amountClass: "detail-d-amount mono-num xhs-profit",
-				dateText: d.date ? fmtDate(dateObj) : "-",
-				_sortKey: dateObj.getTime(),
-				amountText: fmt(d.totalAmount),
-				totalPnLText: fmt(d.totalAmount),
-				name: stock ? stock.name : "-",
-				code: stock ? stock.code : "-",
-				market: stock ? stock.market : "",
-			};
-		});
-
-		const completeTrades = txList.concat(divList);
-		completeTrades.sort((a, b) => b._sortKey - a._sortKey);
-
-		return completeTrades;
-	},
-
-	_formatClearedPositions() {
-		return getClearedPositions().map((p) => {
-			const totalPnL = p.realizedPnL + p.dividendIncome;
-			return Object.assign({}, p, {
-				totalPnL: totalPnL,
-				totalPnLText: (totalPnL >= 0 ? "+" : "") + fmt(totalPnL),
-				realizedPnLText: fmt(p.realizedPnL),
-				dividendIncomeText: fmt(p.dividendIncome),
-				pnlClass: totalPnL >= 0 ? "profit" : "loss",
-			});
-		});
 	},
 
 	async loadStats() {

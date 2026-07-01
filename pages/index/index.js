@@ -171,7 +171,7 @@ Page({
 			const rates = await _getRates();
 			this._rates = rates;
 
-			// [优化] 单次遍历 allPositions：同时完成指标聚合 + positionMap 构建
+			// [优化] 单次遍历 allPositions：同时完成指标聚合 + marketAgg 构建 + positionMap
 			let totalMarketValue = 0;
 			let totalCost = 0;
 			let totalRealizedPnL = 0;
@@ -181,6 +181,10 @@ Page({
 			const positionMap = new Map();
 			const positions = []; // 仅当前持仓（quantity > 0）
 
+			// [优化] 单次遍历 allPositions：同时完成指标聚合 + marketAgg 构建 + positionMap
+			const marketAgg = {};
+			let aggTotalMV = 0,
+				aggTotalPnL = 0;
 			allPositions.forEach((p) => {
 				const rate = _getRate(p.market, rates);
 
@@ -191,7 +195,7 @@ Page({
 				// 构建 O(1) 查询映射
 				positionMap.set(p.id, p);
 
-				// 仅当前持仓：浮动盈亏 + 市值 + 成本
+				// 仅当前持仓：浮动盈亏 + 市值 + 成本 + per-market 聚合
 				if (p.quantity > 0) {
 					positions.push(p);
 					totalFloatingPnL += (p.floatingPnL || 0) * rate;
@@ -200,8 +204,26 @@ Page({
 					}
 					totalCost += p.avgCost * p.quantity * rate;
 					totalBuyFee += (p.totalBuyFee || 0) * rate;
+
+					// per-market 聚合（原 formattedPositions.forEach 第二遍）
+					if (!marketAgg[p.market])
+						marketAgg[p.market] = { marketValue: 0, pnl: 0 };
+					if (p.currentPrice) {
+						marketAgg[p.market].marketValue += p.currentPrice * p.quantity * rate;
+						aggTotalMV += p.currentPrice * p.quantity * rate;
+					}
+					const pnl =
+						((p.floatingPnL || 0) + (p.realizedPnL || 0) + (p.dividendIncome || 0)) *
+						rate;
+					marketAgg[p.market].pnl += pnl;
+					aggTotalPnL += pnl;
 				}
 			});
+			marketAgg[null] = {
+				marketValue: parseFloat(aggTotalMV.toFixed(2)),
+				pnl: parseFloat(aggTotalPnL.toFixed(2)),
+			};
+			this._marketAggCache = marketAgg;
 			this._positionMap = positionMap;
 
 			// 更新 Store（会触发订阅回调）
@@ -287,28 +309,6 @@ Page({
 			});
 
 			// Precompute per-market aggregates for fast tab switching
-			const marketAgg = {};
-			let totalMV = 0,
-				totalPnL = 0;
-			formattedPositions.forEach((p) => {
-				const rate = _getRate(p.market, rates);
-				if (!marketAgg[p.market])
-					marketAgg[p.market] = { marketValue: 0, pnl: 0 };
-				if (p.currentPrice) {
-					marketAgg[p.market].marketValue += p.currentPrice * p.quantity * rate;
-					totalMV += p.currentPrice * p.quantity * rate;
-				}
-				const pnl =
-					((p.floatingPnL || 0) + (p.realizedPnL || 0) + (p.dividendIncome || 0)) *
-					rate;
-				marketAgg[p.market].pnl += pnl;
-				totalPnL += pnl;
-			});
-			marketAgg[null] = {
-				marketValue: parseFloat(totalMV.toFixed(2)),
-				pnl: parseFloat(totalPnL.toFixed(2)),
-			};
-			this._marketAggCache = marketAgg;
 
 			const updatedTabs = this.data.marketTabs.map((tab) =>
 				Object.assign({}, tab, { count: marketCounts[tab.key] || 0 }),
@@ -406,39 +406,6 @@ Page({
 			wx.showToast({ title: "数据加载失败", icon: "none" });
 			catchError(err, "加载失败");
 		}
-	},
-
-	_updateSummary() {
-		const allPositions = this._allPositionsCache || [];
-		const rates = this.data._rates || { usdToCny: 1, hkdToCny: 1 };
-
-		let totalMarketValue = 0;
-		let totalPnL = 0;
-
-		const portfolioPositions = allPositions.filter((p) => p.quantity > 0);
-
-		portfolioPositions.forEach((p) => {
-			const rate = _getRate(p.market, rates);
-			if (p.currentPrice && p.quantity > 0) {
-				totalMarketValue += p.currentPrice * p.quantity * rate;
-			}
-			totalPnL +=
-				(p.floatingPnL || 0) * rate + (p.realizedPnL || 0) * rate + (p.dividendIncome || 0) * rate;
-		});
-
-		const totalInvestment = this._cachedTotalInvestment || 1;
-		const totalPnLPercent = totalInvestment > 0 ? (totalPnL / totalInvestment) * 100 : 0;
-
-		this.setData({
-			totalMarketValue: parseFloat(totalMarketValue.toFixed(2)),
-			totalMarketValueText: fmt(totalMarketValue),
-			totalPnL: parseFloat(totalPnL.toFixed(2)),
-			totalPnLText: fmt(totalPnL),
-			totalPnLPercent: parseFloat(totalPnLPercent.toFixed(2)),
-			"displayValues.totalMarketValue": fmt(totalMarketValue),
-			"displayValues.totalPnL": fmt(totalPnL),
-			"displayValues.totalPnLPercent": fmt(totalPnLPercent),
-		});
 	},
 
 	// Incremental summary update: only recompute contribution from stocks whose price changed

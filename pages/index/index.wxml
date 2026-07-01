@@ -74,19 +74,19 @@
     <scroll-view wx:if="{{positionCount > 0}}" class="scroll-container {{tabAnimating ? 'tab-content-exit' : ''}}" scroll-y style="height: {{scrollHeight}}px;" bindscrolltolower="loadMorePositions">
       <view wx:for="{{displayPositions}}" wx:key="id" class="swipe-container">
         <view class="swipe-actions {{item.swipeOpen ? 'swipe-actions-open' : ''}}">
-          <view class="swipe-action-btn swipe-action-edit" data-stock-id="{{item.id}}" catchtap="onSwipeEdit">
+          <view wx:if="{{item.swipeOpen}}" class="swipe-action-btn swipe-action-edit" data-stock-id="{{item.id}}" catchtap="onSwipeEdit">
             <view class="swipe-action-content">
               <text>编辑</text>
               <text class="swipe-action-sub">{{item.quantityText}}股</text>
             </view>
           </view>
-          <view class="swipe-action-btn swipe-action-sell" data-stock-id="{{item.id}}" catchtap="onSwipeSell">
+          <view wx:if="{{item.swipeOpen}}" class="swipe-action-btn swipe-action-sell" data-stock-id="{{item.id}}" catchtap="onSwipeSell">
             <view class="swipe-action-content">
               <text>卖出</text>
               <text wx:if="{{item.quantity > 0}}" class="swipe-action-sub">可卖{{item.quantityText}}</text>
             </view>
           </view>
-          <view class="swipe-action-btn swipe-action-delete" data-stock-id="{{item.id}}" catchtap="onSwipeDelete">删除</view>
+          <view wx:if="{{item.swipeOpen}}" class="swipe-action-btn swipe-action-delete" data-stock-id="{{item.id}}" catchtap="onSwipeDelete">删除</view>
         </view>
         <view class="{{item.cardClass}} {{item.id === deletingId ? 'position-card-deleting' : ''}}"
           style="transform: translateX({{item.swipeOffset || 0}}px);"

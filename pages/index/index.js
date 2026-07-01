@@ -286,6 +286,30 @@ Page({
 				};
 			});
 
+			// Precompute per-market aggregates for fast tab switching
+			const marketAgg = {};
+			let totalMV = 0,
+				totalPnL = 0;
+			formattedPositions.forEach((p) => {
+				const rate = _getRate(p.market, rates);
+				if (!marketAgg[p.market])
+					marketAgg[p.market] = { marketValue: 0, pnl: 0 };
+				if (p.currentPrice) {
+					marketAgg[p.market].marketValue += p.currentPrice * p.quantity * rate;
+					totalMV += p.currentPrice * p.quantity * rate;
+				}
+				const pnl =
+					((p.floatingPnL || 0) + (p.realizedPnL || 0) + (p.dividendIncome || 0)) *
+					rate;
+				marketAgg[p.market].pnl += pnl;
+				totalPnL += pnl;
+			});
+			marketAgg[null] = {
+				marketValue: parseFloat(totalMV.toFixed(2)),
+				pnl: parseFloat(totalPnL.toFixed(2)),
+			};
+			this._marketAggCache = marketAgg;
+
 			const updatedTabs = this.data.marketTabs.map((tab) =>
 				Object.assign({}, tab, { count: marketCounts[tab.key] || 0 }),
 			);
@@ -417,6 +441,49 @@ Page({
 		});
 	},
 
+	// Incremental summary update: only recompute contribution from stocks whose price changed
+	_updateSummaryIncremental(priceResults) {
+		const rates = this.data._rates || { usdToCny: 1, hkdToCny: 1 };
+		let addedMarketValue = 0,
+			addedPnL = 0;
+
+		priceResults.forEach((r) => {
+			const idx = this._allIndexById ? this._allIndexById.get(r.stockId) : undefined;
+			const pos = idx != null && this._allPositionsCache ? this._allPositionsCache[idx] : null;
+			if (!pos || pos.quantity <= 0) return;
+			const rate = _getRate(pos.market, rates);
+			const oldPrice = pos.currentPrice || 0;
+			addedMarketValue += (r.price - oldPrice) * pos.quantity * rate;
+			addedPnL += (r.price - oldPrice) * pos.quantity * rate;
+		});
+
+		if (addedMarketValue === 0 && addedPnL === 0) return;
+
+		const totalMarketValue = parseFloat(
+			(this.data.totalMarketValue + addedMarketValue).toFixed(2)
+		);
+		const totalPnL = parseFloat((this.data.totalPnL + addedPnL).toFixed(2));
+		const totalInvestment = this._cachedTotalInvestment || 1;
+
+		this.setData({
+			totalMarketValue,
+			totalMarketValueText: fmt(totalMarketValue),
+			totalPnL,
+			totalPnLText: fmt(totalPnL),
+			totalPnLPercent:
+				totalInvestment > 0
+					? parseFloat(((totalPnL / totalInvestment) * 100).toFixed(2))
+					: 0,
+			"displayValues.totalMarketValue": fmt(totalMarketValue),
+			"displayValues.totalPnL": fmt(totalPnL),
+			"displayValues.totalPnLPercent": fmt(
+				totalInvestment > 0
+					? parseFloat(((totalPnL / totalInvestment) * 100).toFixed(2))
+					: 0
+			),
+		});
+	},
+
 	// 更新市场 tab 计数（已内联到 _loadData）
 	// _updateMarketTabs removed - counts computed in _loadData main setData
 
@@ -435,57 +502,36 @@ Page({
 		// 先触发退场动画
 		this.setData({ tabAnimating: true });
 
-		// 等待退场动画完成后切换数据
 		if (this._tabTimer) clearTimeout(this._tabTimer);
 		this._tabTimer = setTimeout(() => {
-			// 从缓存数据中筛选对应市场的持仓
 			const allPositions = this._allPositionsCache || [];
-			const filteredPositions = key ? allPositions.filter((p) => p.market === key) : allPositions;
+			const filteredPositions = key
+				? allPositions.filter((p) => p.market === key)
+				: allPositions;
 
-			// [优化] positions 移出 data，挂实例字段 + 重建 id→index Map
 			this._positionsCache = filteredPositions;
 			this._indexById = new Map(filteredPositions.map((p, i) => [p.id, i]));
-			const displayCount = 20;
-			const displaySlice = filteredPositions.slice(0, displayCount);
+			const displaySlice = filteredPositions.slice(0, 20);
 
-			// 使用缓存的汇率计算汇总数据
-			const rates = this.data._rates || { usdToCny: 1, hkdToCny: 1 };
-
-			const marketValue = filteredPositions.reduce((sum, p) => {
-				const rate = _getRate(p.market, rates);
-				return sum + (p.currentPrice || 0) * p.quantity * rate;
-			}, 0);
-
-			const marketPnL = filteredPositions.reduce((sum, p) => {
-				const rate = _getRate(p.market, rates);
-				return (
-					sum +
-					(p.floatingPnL || 0) * rate +
-					(p.realizedPnL || 0) * rate +
-					(p.dividendIncome || 0) * rate
-				);
-			}, 0);
-
-			let marketInvestment = 0;
-			const cachedMI = this._cachedMarketInvestment;
-			if (key && cachedMI) {
-				marketInvestment = cachedMI[key] || 0;
-			} else if (cachedMI) {
-				marketInvestment = cachedMI[null] || 0;
-			}
-			const marketPnLPercent = marketInvestment > 0 ? (marketPnL / marketInvestment) * 100 : 0;
+			// Read market aggregate from cache (key null = "全部")
+			const agg = this._marketAggCache[key] || this._marketAggCache[null];
+			const marketInvestment = key
+				? (this._cachedMarketInvestment && this._cachedMarketInvestment[key]) || 0
+				: this._cachedTotalInvestment || 0;
+			const marketPnLPercent =
+				marketInvestment > 0 ? (agg.pnl / marketInvestment) * 100 : 0;
 
 			this.setData({
 				currentMarket: key,
 				positionCount: filteredPositions.length,
 				displayPositions: displaySlice,
 				tabAnimating: false,
-				displayCount: displayCount,
-				totalMarketValue: parseFloat(marketValue.toFixed(2)),
-				totalPnL: parseFloat(marketPnL.toFixed(2)),
+				displayCount: 20,
+				totalMarketValue: parseFloat(agg.marketValue.toFixed(2)),
+				totalPnL: parseFloat(agg.pnl.toFixed(2)),
 				totalPnLPercent: parseFloat(marketPnLPercent.toFixed(2)),
-				"displayValues.totalMarketValue": fmt(marketValue),
-				"displayValues.totalPnL": fmt(marketPnL),
+				"displayValues.totalMarketValue": fmt(agg.marketValue),
+				"displayValues.totalPnL": fmt(agg.pnl),
 				"displayValues.totalPnLPercent": fmt(marketPnLPercent),
 			});
 		}, TIMING_CONFIG.TAB_SWITCH_ANIM_DELAY);
@@ -637,8 +683,8 @@ Page({
 
 				if (Object.keys(updates).length > 0) {
 					this.setData(updates);
-					// cache 有变化且渲染层已更新，重算汇总
-					this._updateSummary();
+					// cache 有变化且渲染层已更新，增量重算汇总
+					this._updateSummaryIncremental(validResults);
 				}
 			} else {
 				// 无有效结果时仍刷新持仓（可能清理过期缓存等）

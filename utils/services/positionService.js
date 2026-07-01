@@ -6,6 +6,7 @@ const Stock = require("../models/stock");
 const Transaction = require("../models/transaction");
 const Dividend = require("../models/dividend");
 const PriceCache = require("../models/priceCache");
+const TransactionIndex = require("../models/transactionIndex");
 const {
 	calcPosition,
 	batchCalcPositions,
@@ -24,7 +25,7 @@ function calculatePosition(stockId) {
 		return caches.position.get(stockId);
 	}
 
-	const transactions = Transaction.getByStockId(stockId);
+	const transactions = TransactionIndex.getByStockId(stockId);
 	const dividends = Dividend.getByStockId(stockId);
 	const currentPrice = PriceCache.get(stockId);
 	const result = calcPosition(stockId, transactions, dividends, currentPrice);

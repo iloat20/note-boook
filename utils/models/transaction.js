@@ -51,6 +51,7 @@ const Transaction = {
 	save(transaction) {
 		const result = upsertAndSave(TRANSACTION_KEY, transaction);
 		markDataDirty(["position", "heatmap", "periodStats"], transaction.stockId);
+		require("./transactionIndex").invalidate();
 		return result;
 	},
 
@@ -80,6 +81,7 @@ const Transaction = {
 	 */
 	delete(id) {
 		deleteAndSave(TRANSACTION_KEY, id, ["position", "heatmap", "periodStats"]);
+		require("./transactionIndex").invalidate();
 	},
 
 	/**
@@ -90,6 +92,7 @@ const Transaction = {
 		const transactions = this.getAll().filter((t) => t.stockId !== stockId);
 		saveData(TRANSACTION_KEY, transactions);
 		markDataDirty(["position", "heatmap", "periodStats"], stockId);
+		require("./transactionIndex").invalidate();
 	},
 
 	/**

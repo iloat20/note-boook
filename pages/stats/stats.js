@@ -22,6 +22,8 @@ const {
 	clearMemCache,
 } = require("../../utils/storageCore/core");
 const { markDataDirty } = require("../../utils/cache/cacheManager");
+const { batchCalcPositions } = require("../../utils/helpers/positionCalculator");
+const PriceCache = require("../../utils/models/priceCache");
 
 Page({
 	data: {
@@ -75,6 +77,98 @@ Page({
 
 	async _calcPeriodStats(period) {
 		return getPeriodStatsWithReturn(period, this._getPeriodDateRange.bind(this));
+	},
+
+	_computeAllPositions() {
+		const stocks = Stock.getAll();
+		const stockIds = stocks.map((s) => s.id);
+		const allTransactions = Transaction.getAll();
+		const allDividends = Dividend.getAll();
+		const positions = batchCalcPositions(
+			stockIds,
+			allTransactions,
+			allDividends,
+			(id) => PriceCache.get(id)
+		);
+		this._positionsCache = positions;
+		return positions;
+	},
+
+	_buildTradeListAndCleared() {
+		const positions = this._computeAllPositions();
+		const stocks = Stock.getAll();
+		const stockMap = buildStockMap(stocks);
+		const rawTx = Transaction.getAll();
+		const allDivs = Dividend.getAll();
+
+		const txList = rawTx.map((t) => {
+			const stock = stockMap[t.stockId];
+			const price = parseFloat(t.price) || 0;
+			const quantity = parseFloat(t.quantity) || 0;
+			const fee = parseFloat(t.fee) || 0;
+			const amount = price * quantity;
+			const isBuy = t.type === "BUY";
+			return {
+				id: t.id,
+				stockId: t.stockId,
+				type: t.type,
+				typeText: isBuy ? "买入" : "卖出",
+				typeTagClass: `tag type-tag ${isBuy ? "tag-buy" : "tag-sell"}`,
+				amountClass: `detail-d-amount mono-num ${isBuy ? "xhs-loss" : "xhs-profit"}`,
+				dateText: t.date ? fmtDate(new Date(t.date)) : "-",
+				_sortKey: t._sortKey || new Date(t.date).getTime(),
+				price,
+				priceText: fmt(price),
+				quantity,
+				fee,
+				feeText: fmt(fee),
+				amountText: fmt(amount),
+				totalPnLText: fmt(amount),
+				name: stock ? stock.name : "-",
+				code: stock ? stock.code : "-",
+				market: stock ? stock.market : "",
+			};
+		});
+
+		const divList = allDivs.map((d) => {
+			const stock = stockMap[d.stockId];
+			return {
+				id: d.id,
+				stockId: d.stockId,
+				type: "DIVIDEND",
+				typeText: "分红",
+				typeTagClass: "tag type-tag tag-dividend",
+				amountClass: "detail-d-amount mono-num xhs-profit",
+				dateText: d.date ? fmtDate(new Date(d.date)) : "-",
+				_sortKey: d._sortKey || new Date(d.date).getTime(),
+				amountText: fmt(d.totalAmount),
+				totalPnLText: fmt(d.totalAmount),
+				name: stock ? stock.name : "-",
+				code: stock ? stock.code : "-",
+				market: stock ? stock.market : "",
+			};
+		});
+
+		const completeTrades = txList.concat(divList).sort((a, b) => b._sortKey - a._sortKey);
+
+		const clearedPositions = Object.values(positions)
+			.filter(
+				(p) =>
+					p.quantity === 0 &&
+					(Math.abs(p.realizedPnL) > 0.01 || Math.abs(p.dividendIncome) > 0.01)
+			)
+			.map((p) => {
+				const totalPnL = p.realizedPnL + p.dividendIncome;
+				return Object.assign({}, p, {
+					totalPnL,
+					totalPnLText: (totalPnL >= 0 ? "+" : "") + fmt(totalPnL),
+					realizedPnLText: fmt(p.realizedPnL),
+					dividendIncomeText: fmt(p.dividendIncome),
+					pnlClass: totalPnL >= 0 ? "profit" : "loss",
+				});
+			});
+
+		return { completeTrades, clearedPositions };
 	},
 
 	_buildTradeList() {
@@ -155,11 +249,8 @@ Page({
 	async loadStats() {
 		try {
 			const period = this.data.currentPeriod;
-
 			const { stats, detailItems } = await this._calcPeriodStats(period);
-			const completeTrades = this._buildTradeList();
-			const clearedPositions = this._formatClearedPositions();
-
+			const { completeTrades, clearedPositions } = this._buildTradeListAndCleared();
 			this.setData({
 				stats,
 				detailItems,
@@ -239,13 +330,18 @@ Page({
 			monthlyPnL.push({ month: m, pnL: found ? found.pnL : 0 });
 		}
 
-		const cleared = getClearedPositions();
+		const positions = this._computeAllPositions();
+		const cleared = Object.values(positions).filter(
+			(p) =>
+				p.quantity === 0 &&
+				(Math.abs(p.realizedPnL) > 0.01 || Math.abs(p.dividendIncome) > 0.01)
+		);
 		const winCount = cleared.filter((p) => p.realizedPnL + p.dividendIncome > 0).length;
 		const winRate = cleared.length > 0 ? Math.round((winCount / cleared.length) * 100) : 0;
 
-		const allPositions = getPositionSummary().concat(
-			cleared.map((p) => Object.assign({}, p, { floatingPnL: 0 })),
-		);
+		const allPositions = Object.values(positions)
+			.filter((p) => p.quantity > 0)
+			.concat(cleared.map((p) => Object.assign({}, p, { floatingPnL: 0 })));
 		const stockPnL = {};
 		allPositions.forEach((p) => {
 			const key = p.code;

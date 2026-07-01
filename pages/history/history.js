@@ -53,7 +53,9 @@ Page({
 	},
 
 	onShow() {
-		if (pageMixin.onShowMixin(this, 1) || !this._allGroupedHistory) {
+		const wasDirty = pageMixin.onShowMixin(this, 1);
+		this._dataDirty = wasDirty;
+		if (wasDirty || !this._allGroupedHistory) {
 			this.loadHistory();
 		}
 		if (!this.data.entranceDone) {
@@ -201,7 +203,11 @@ Page({
 	},
 
 	loadHistory() {
-		this._buildAllRecords();
+		const dirty = this._dataDirty || !this._cachedAllRecords;
+		if (dirty) {
+			this._buildAllRecords();
+			this._dataDirty = false;
+		}
 		this.setData({
 			activeStrategies: Strategy.getUsedStrategies(),
 			loading: false,

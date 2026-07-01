@@ -412,6 +412,10 @@ page {
   color: var(--xhs-loss);
 }
 
+.profit-badge .mono-num {
+  color: inherit;
+}
+
 /* === FAB === */
 .fab {
   position: fixed;

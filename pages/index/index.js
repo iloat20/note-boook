@@ -39,20 +39,6 @@ function _ensureShareModule() {
 	}
 }
 
-// 判断是否在交易时段（任意市场）
-function isTradingTime() {
-	const now = new Date();
-	const day = now.getDay();
-	if (day === 0 || day === 6) return false;
-
-	const t = now.getHours() * 60 + now.getMinutes();
-	// A股+港股：9:30-12:00 / 13:00-16:00
-	const inAHK = (t >= 570 && t < 720) || (t >= 780 && t < 960);
-	// 美股：21:30-次日5:00
-	const inUS = t >= 1290 || t < 300;
-	return inAHK || inUS;
-}
-
 Page({
 	...touchGestureMixin,
 	// ========== 页面数据 ==========
@@ -112,13 +98,9 @@ Page({
 
 	// ========== 生命周期 ==========
 	async onLoad() {
-		// 使用 mixin 初始化
 		pageMixin.onLoadMixin(this);
-
-		// 更新日期
 		this.updateDate();
 
-		// 计算虚拟列表高度
 		const systemInfo = getApp().globalData.systemInfo || wx.getWindowInfo() || {};
 		const windowHeight = systemInfo.windowHeight || 667;
 		const statusBarHeight = this.data.statusBarHeight || systemInfo.statusBarHeight || 44;
@@ -126,34 +108,13 @@ Page({
 		const scrollHeight = windowHeight - fixedHeight;
 		this.setData({ scrollHeight: Math.max(scrollHeight, 300) });
 
-		// 等待数据加载完成后再获取现价
-		await this._loadData();
-
-		// 只在交易时段或持仓无现价时（首次进入）获取行情
-		const allPos = this._allPositionsCache || [];
-		const hasNoPrice = allPos.some((p) => !p.currentPrice || p.currentPrice <= 0);
-		if (isTradingTime() || hasNoPrice) {
-			this._fetchPrices({ silent: true });
-		}
+		await this.refresh();
 	},
 
 	async onShow() {
-		// 如果数据过期，先刷新持仓数据
-		if (pageMixin.onShowMixin(this, 0)) {
-			await this._loadData();
-			// 添加/修改交易后自动获取一次现价，不区分交易时段，强制忽略缓存
-			if (this._positionsCache && this._positionsCache.length > 0) {
-				this._fetchPrices({ silent: true, force: true });
-			}
-		} else if (isTradingTime()) {
-			// 交易时段正常刷新现价（带 30s 节流）
-			if (this._positionsCache && this._positionsCache.length > 0) {
-				const now = Date.now();
-				if (now - (this._lastFetchAt || 0) > 30000) {
-					this._fetchPrices({ silent: true });
-					this._lastFetchAt = now;
-				}
-			}
+		const dirty = pageMixin.onShowMixin(this, 0);
+		if (dirty || this._allPositionsCache?.length > 0) {
+			await this.refresh();
 		}
 	},
 
@@ -164,10 +125,23 @@ Page({
 		if (this._tabTimer) clearTimeout(this._tabTimer);
 	},
 
+	// ========== 统一刷新管道 ==========
+	async refresh({ force = false, fetchPrices = true } = {}) {
+		if (this._refreshing) return;
+		this._refreshing = true;
+		try {
+			await this._loadData(force);
+			if (fetchPrices && this._positionsCache?.length > 0) {
+				await this._fetchPrices({ silent: true, force });
+			}
+		} finally {
+			this._refreshing = false;
+		}
+	},
+
 	async onPullDownRefresh() {
 		try {
-			await this._loadData(true);
-			this._fetchPrices({ silent: true });
+			await this.refresh({ force: true });
 		} finally {
 			wx.stopPullDownRefresh();
 		}
@@ -175,8 +149,6 @@ Page({
 
 	// ========== 数据加载 ==========
 	async _loadData(forceRefresh = false) {
-		if (this._loading) return;
-		this._loading = true;
 		this.setData({ loading: true });
 
 		try {
@@ -509,17 +481,14 @@ Page({
 		}, TIMING_CONFIG.TAB_SWITCH_ANIM_DELAY);
 	},
 
-	// 更新价格
 	updatePrice(e) {
 		const stockId = parseInt(e.currentTarget.dataset.stockId, 10);
 		if (Number.isNaN(stockId)) return;
 		const price = parseFloat(e.detail.value);
-
 		if (!Number.isNaN(price) && price > 0) {
 			PriceCache.set(stockId, price);
 		}
-
-		this._loadData();
+		this.refresh({ fetchPrices: false });
 	},
 
 	// 跳转到详情
@@ -587,11 +556,9 @@ Page({
 		this.setData({ showQuickRecord: false });
 	},
 
-	onQuickRecordSubmit() {
+	async onQuickRecordSubmit() {
 		this.setData({ showQuickRecord: false });
-		this._loadData();
-		// 自动刷新行情，更新现价（静默）
-		this._fetchPrices({ silent: true });
+		await this.refresh();
 	},
 
 	// ========== 获取行情 ==========
@@ -664,7 +631,7 @@ Page({
 				}
 			} else {
 				// 无有效结果时仍刷新持仓（可能清理过期缓存等）
-				this._loadData();
+				this.refresh({ fetchPrices: false });
 			}
 
 			if (!silent) wx.hideLoading();
@@ -678,7 +645,7 @@ Page({
 			}
 		} catch (_err) {
 			if (!silent) wx.hideLoading();
-			this._loadData();
+			this.refresh({ fetchPrices: false });
 			if (!silent) wx.showToast({ title: "获取失败", icon: "none" });
 		}
 	},
@@ -742,22 +709,17 @@ Page({
 
 	onSwipeDelete(e) {
 		const stockId = e.currentTarget.dataset.stockId;
-
 		confirmDelete({
 			content: "将删除该股票的所有交易记录和分红记录，是否确认？",
 			onConfirm: () => {
-				// 先触发删除动画
 				this.setData({ deletingId: stockId });
-
-				// 等待动画完成后执行删除
 				setTimeout(() => {
 					Stock.delete(stockId);
 					Transaction.deleteByStockId(stockId);
 					Dividend.deleteByStockId(stockId);
-
 					success("删除成功");
 					this.setData({ deletingId: null });
-					this._loadData();
+					this.refresh();
 				}, 400);
 			},
 		});

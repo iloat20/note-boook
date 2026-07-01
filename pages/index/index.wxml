@@ -18,7 +18,7 @@
   <!-- 非加载状态 -->
   <block wx:else>
     <!-- 标题栏 -->
-    <view class="page-title {{entranceDone ? '' : 'animate-stagger stagger-delay-1'}}">
+    <view class="page-title {{entranceDone ? '' : 'animate-stagger'}}" style="{{entranceDone ? '' : 'animation-delay:80ms'}}">
       <view class="title-row">
         <view class="title-icon-wrap">
           <image class="title-icon" src="/images/title-portfolio.svg" mode="aspectFit" />
@@ -28,7 +28,7 @@
     </view>
 
     <!-- 汇总卡片 -->
-    <view class="summary-card {{entranceDone ? '' : 'animate-stagger stagger-delay-2'}}" style="margin-bottom: var(--xhs-space-lg);">
+    <view class="summary-card {{entranceDone ? '' : 'animate-stagger'}}" style="margin-bottom: var(--xhs-space-lg);{{entranceDone ? '' : 'animation-delay:160ms'}}">
       <!-- 总市值 -->
       <view class="summary-header">
         <view class="summary-label">总市值（元）</view>
@@ -62,12 +62,12 @@
 
     <!-- 市场筛选 -->
     <liquid-slider
-      class="{{entranceDone ? '' : 'animate-stagger stagger-delay-3'}}"
+      class="{{entranceDone ? '' : 'animate-stagger'}}"
       tabs="{{marketTabs}}"
       currentKey="{{currentMarket}}"
       showCount="{{true}}"
       bind:change="onMarketTabChange"
-      style="margin-bottom: 16px;"
+      style="margin-bottom: 16px;{{entranceDone ? '' : 'animation-delay:240ms'}}"
     />
 
     <!-- 持仓列表 -->
@@ -145,7 +145,8 @@
     <!-- 空状态 -->
     <empty-state
       wx:if="{{positionCount === 0}}"
-      class="{{entranceDone ? '' : 'animate-stagger stagger-delay-4'}}"
+      class="{{entranceDone ? '' : 'animate-stagger'}}"
+      style="{{entranceDone ? '' : 'animation-delay:320ms'}}"
       icon="📈"
       title="开始您的投资之旅"
       desc="记录每一笔交易，追踪您的财富增长"
@@ -153,7 +154,7 @@
     >
       <view slot="actions" class="empty-actions-enhanced">
         <view class="empty-btn-primary animate-scale-in" bindtap="onQuickRecord">🚀 添加第一笔交易</view>
-        <view class="empty-tips-card animate-stagger stagger-delay-5">
+        <view class="empty-tips-card animate-stagger" style="animation-delay:400ms">
           <text class="tips-icon">💡</text>
           <view class="tips-content">
             <text class="tips-title">小贴士</text>

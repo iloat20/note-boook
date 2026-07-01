@@ -1,7 +1,7 @@
-<view class="page-container page-entrance" style="padding-top: {{statusBarHeight + navBarHeight}}px;">
+<view class="page-container {{entranceDone ? '' : 'page-entrance'}}" style="padding-top: {{statusBarHeight + navBarHeight}}px;">
   <scroll-view wx:if="{{stock}}" class="scroll-container" scroll-y>
     <!-- ===== Hero 区：标题 + 价格 + 总盈亏 ===== -->
-    <view class="hero-card {{heroBgClass}} animate-stagger stagger-delay-1">
+    <view class="hero-card {{heroBgClass}} animate-stagger" style="animation-delay:80ms">
       <view class="hero-top-row">
         <view bindtap="goBack" class="hero-back-btn">
           <text class="hero-back-icon">‹</text>
@@ -27,7 +27,7 @@
     </view>
 
     <!-- ===== 数据面板：持仓摘要 + 盈亏明细 ===== -->
-    <view class="data-panel animate-stagger stagger-delay-2">
+    <view class="data-panel animate-stagger" style="animation-delay:160ms">
       <!-- 持仓摘要 -->
       <view class="data-panel-section">
         <text class="data-panel-title">持仓摘要</text>
@@ -101,7 +101,7 @@
     </view>
 
     <!-- ===== 交易记录 ===== -->
-    <view class="detail-card detail-card-no-pad animate-stagger stagger-delay-3">
+    <view class="detail-card detail-card-no-pad animate-stagger" style="animation-delay:240ms">
       <view class="detail-card-header detail-card-header-with-action">
         <text class="detail-card-title">交易记录</text>
         <view class="detail-card-action" bindtap="goToRecord">添加</view>
@@ -138,7 +138,7 @@
     </view>
 
     <!-- ===== 分红记录 ===== -->
-    <view class="detail-card detail-card-no-pad animate-stagger stagger-delay-4">
+    <view class="detail-card detail-card-no-pad animate-stagger" style="animation-delay:320ms">
       <view class="detail-card-header detail-card-header-with-action">
         <text class="detail-card-title">分红记录</text>
         <view class="detail-card-action" bindtap="goToDividend">添加</view>
@@ -164,7 +164,7 @@
     </view>
 
     <!-- ===== 策略复盘 ===== -->
-    <view wx:if="{{strategySummary.length > 0}}" class="detail-card animate-stagger stagger-delay-5">
+    <view wx:if="{{strategySummary.length > 0}}" class="detail-card animate-stagger" style="animation-delay:400ms">
       <view class="detail-card-header">
         <text class="detail-card-title">策略复盘</text>
       </view>

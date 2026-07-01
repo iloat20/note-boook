@@ -467,10 +467,10 @@ Page({
 		if (this._isEdit) transaction.id = this._editId;
 		Transaction.save(transaction);
 		success(this._isEdit ? "已修改" : "已添加");
-		setTimeout(() => {
+		this._navTimer = setTimeout(() => {
 			wx.navigateBack();
 		}, TIMING_CONFIG.NAVIGATE_BACK_DELAY);
-		setTimeout(() => {
+		this._subTimer = setTimeout(() => {
 			this._submitting = false;
 		}, 1000);
 	},
@@ -487,5 +487,7 @@ Page({
 
 	onUnload() {
 		if (this._fetchTimer) clearTimeout(this._fetchTimer);
+		if (this._navTimer) clearTimeout(this._navTimer);
+		if (this._subTimer) clearTimeout(this._subTimer);
 	},
 });

@@ -201,8 +201,8 @@ Page({
 		}
 
 		success(this._isEdit ? "已修改" : "已添加");
-		setTimeout(() => wx.navigateBack(), 800);
-		setTimeout(() => {
+		this._navTimer = setTimeout(() => wx.navigateBack(), 800);
+		this._subTimer = setTimeout(() => {
 			this._submitting = false;
 		}, 1000);
 	},
@@ -217,5 +217,8 @@ Page({
 		this._loadStocks();
 	},
 
-	onUnload() {},
+	onUnload() {
+		if (this._navTimer) clearTimeout(this._navTimer);
+		if (this._subTimer) clearTimeout(this._subTimer);
+	},
 });

@@ -49,7 +49,9 @@ const Transaction = {
 	 * @returns {Object} 保存后的交易记录对象
 	 */
 	save(transaction) {
-		return upsertAndSave(TRANSACTION_KEY, transaction, ["position", "heatmap", "periodStats"]);
+		const result = upsertAndSave(TRANSACTION_KEY, transaction);
+		markDataDirty(["position", "heatmap", "periodStats"], transaction.stockId);
+		return result;
 	},
 
 	/**

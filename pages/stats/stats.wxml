@@ -1,6 +1,6 @@
-<view class="page-container page-entrance" style="padding-top: {{statusBarHeight + navBarHeight}}px;">
+<view class="page-container {{entranceDone ? '' : 'page-entrance'}}" style="padding-top: {{statusBarHeight + navBarHeight}}px;">
   <!-- 标题栏 -->
-  <view class="page-title animate-stagger stagger-delay-1">
+  <view class="page-title animate-stagger" style="animation-delay:80ms">
     <view class="title-row">
       <view class="title-icon-wrap">
         <image class="title-icon" src="/images/title-stats.svg" mode="aspectFit" />
@@ -24,7 +24,7 @@
 
   <scroll-view wx:else class="xhs-scroll" scroll-y>
     <!-- 时段选择 (黑色文字 + 红色下划线) -->
-    <view class="period-tabs animate-stagger stagger-delay-2">
+    <view class="period-tabs animate-stagger" style="animation-delay:160ms">
       <view
         wx:for="{{periodTabs}}"
         wx:key="key"
@@ -35,7 +35,7 @@
     </view>
 
     <!-- 双列统计卡片 (小红书笔记风格) -->
-    <view class="xhs-feed-grid animate-stagger stagger-delay-3">
+    <view class="xhs-feed-grid animate-stagger" style="animation-delay:240ms">
       <!-- 盈亏 -->
       <view class="xhs-feed-card">
         <view class="xhs-feed-card-inner">
@@ -98,7 +98,7 @@
     </view>
 
     <!-- 完整交易明细 (小红书长笔记风格) -->
-    <view class="xhs-feed-card-full animate-stagger stagger-delay-4">
+    <view class="xhs-feed-card-full animate-stagger" style="animation-delay:320ms">
       <view class="xhs-feed-card-full-header">
         <text class="xhs-feed-card-full-title">📝 完整交易明细</text>
         <view class="xhs-feed-card-full-action" bindtap="onExportMD">
@@ -174,9 +174,16 @@
     </view>
 
     <!-- 底部年度报告 CTA -->
-    <view class="xhs-feed-footer animate-stagger stagger-delay-7">
+    <view class="xhs-feed-footer animate-stagger" style="animation-delay:480ms">
       <view class="xhs-feed-cta hover-lift" bindtap="onOpenAnnualReport">
         <text>📊 查看年度报告</text>
+      </view>
+    </view>
+
+    <!-- 清除所有数据 -->
+    <view class="xhs-feed-footer">
+      <view class="xhs-feed-cta-danger hover-lift" bindtap="onClearAllData">
+        <text>🗑️ 一键清除所有数据</text>
       </view>
     </view>
 

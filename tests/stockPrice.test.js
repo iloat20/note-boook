@@ -40,9 +40,7 @@ describe("Stock price batching", () => {
 			const symbols = url.split("q=")[1].split(",");
 			// Build mock response matching Tencent API format (>= 35 fields)
 			const lines = symbols.map((symbol) => {
-				const code = symbol
-					.replace(/^sh|^sz|^bj|^r_hk|^us\./, "")
-					.toUpperCase();
+				const code = symbol.replace(/^sh|^sz|^bj|^r_hk|^us\./, "").toUpperCase();
 				const fields = Array(39).fill("0");
 				fields[0] = "x";
 				fields[1] = "name_" + code;

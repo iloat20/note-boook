@@ -114,7 +114,7 @@ Page({
 	async onShow() {
 		const dirty = pageMixin.onShowMixin(this, 0);
 		if (dirty) {
-			await this.refresh({ force: true });
+			await this.refresh();
 		} else if (this._allPositionsCache?.length > 0) {
 			await this.refresh();
 		}
@@ -125,6 +125,8 @@ Page({
 		if (this._animTimer) clearTimeout(this._animTimer);
 		if (this._cleanupTimer) clearTimeout(this._cleanupTimer);
 		if (this._tabTimer) clearTimeout(this._tabTimer);
+		if (this._deleteTimer) clearTimeout(this._deleteTimer);
+		if (this._shareTimer) clearTimeout(this._shareTimer);
 	},
 
 	// ========== 统一刷新管道 ==========
@@ -134,7 +136,13 @@ Page({
 		try {
 			await this._loadData(force);
 			if (fetchPrices && this._positionsCache?.length > 0) {
-				await this._fetchPrices({ silent: true, force });
+				// 行情刷新最小间隔 30s
+				const now = Date.now();
+				const canFetch = force || !this._lastFetchAt || now - this._lastFetchAt > 30000;
+				if (canFetch) {
+					await this._fetchPrices({ silent: true, force });
+					this._lastFetchAt = Date.now();
+				}
 			}
 		} finally {
 			this._refreshing = false;
@@ -516,7 +524,8 @@ Page({
 
 	// 长按持仓卡片 — 快捷操作菜单
 	onPositionLongPress(e) {
-		const stockId = e.currentTarget.dataset.stockId;
+		const stockId = parseInt(e.currentTarget.dataset.stockId, 10);
+		if (Number.isNaN(stockId)) return;
 		const stock = (this._allPositionsCache || []).find((p) => p.id === stockId);
 		if (!stock) return;
 		wx.showActionSheet({
@@ -710,12 +719,16 @@ Page({
 	},
 
 	onSwipeDelete(e) {
-		const stockId = e.currentTarget.dataset.stockId;
+		const rawId = e.currentTarget.dataset.stockId;
+		const stockId = parseInt(rawId, 10);
+		if (Number.isNaN(stockId)) return;
 		confirmDelete({
 			content: "将删除该股票的所有交易记录和分红记录，是否确认？",
 			onConfirm: () => {
-				this.setData({ deletingId: stockId });
-				setTimeout(() => {
+				this.setData({ deletingId: rawId });
+				if (this._deleteTimer) clearTimeout(this._deleteTimer);
+				this._deleteTimer = setTimeout(() => {
+					this._deleteTimer = null;
 					Stock.delete(stockId);
 					Transaction.deleteByStockId(stockId);
 					Dividend.deleteByStockId(stockId);
@@ -732,7 +745,9 @@ Page({
 		this.setData({ generatingShare: true });
 		_ensureShareModule();
 		// 等待 canvas 挂载
-		setTimeout(() => {
+		if (this._shareTimer) clearTimeout(this._shareTimer);
+		this._shareTimer = setTimeout(() => {
+			this._shareTimer = null;
 			_sharePortfolio(this);
 		}, 50);
 	},

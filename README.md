@@ -1,16 +1,16 @@
-# 茄子笔记本
+# 茄子笔记本 🦞
 
 微信小程序 · 股票持仓追踪与交易记录
 
-一款纯客户端的微信小程序，帮你记录 A 股 / 港股 / 美股交易，追踪持仓盈亏，生成统计图表与年度报告。所有数据本地存储，无需云端。
+纯客户端的微信小程序，记录 A 股 / 港股 / 美股交易，追踪持仓盈亏，生成统计图表与年度报告。所有数据 `wx.setStorageSync` 本地存储，无需云端。
 
 ## 功能
 
-- **持仓看板** — 实时行情（腾讯财经 API），滑动操作快速编辑，市场标签
-- **交易流水** — 买入 / 卖出记录，筛选、搜索、分页
-- **统计图表** — ECharts 盈亏趋势、持仓分布、收益分布散点图
-- **年度报告** — 年度盈亏、胜率、月度盈亏可视化、策略分布
-- **多市场** — A 股、港股、美股，含汇率换算
+- **持仓看板** — 实时行情（腾讯财经 API），左滑编辑/卖出/删除，多市场标签切换
+- **交易流水** — 买入 / 卖出 / 分红记录，筛选、搜索、分页、批量删除
+- **统计图表** — 盈亏概览、收益率（含 XIRR）、周期趋势、月度热力图
+- **年度报告** — 纯 CSS 渲染的年度盈亏、胜率、月度可视化、策略分布
+- **多市场** — A 股、港股、美股，汇率实时换算
 - **数据备份** — JSON 导入 / 导出（合并或覆盖模式）
 - **Markdown 导出** — 一键生成交易流水 Markdown 文件并分享
 
@@ -20,44 +20,65 @@
 ├── pages/              # 主包页面（持仓 / 流水 / 统计）
 ├── packageDetail/      # 分包 — 股票详情、分红
 ├── packageRecord/      # 分包 — 新增 / 编辑交易
-├── components/         # 通用组件（年度报告、空状态、策略标签等）
+├── components/         # 通用组件（年度报告、快捷记录、滑动选择器等）
 ├── custom-tab-bar/     # 自定义 Tab Bar（SVG 图标 + 毛玻璃样式）
-├── styles/             # 全局样式
+├── styles/             # 全局样式变量
+
 ├── utils/
-│   ├── storageCore/    # 底层存储（LRU 缓存、时间戳 ID、脏标记）
+│   ├── storageCore/    # 底层存储（LRU 缓存 + Object.freeze 防篡改）
 │   ├── models/         # Active Record 模型（Stock / Transaction / Dividend …）
-│   ├── services/       # 业务服务（行情、统计、图表、汇率）
-│   ├── helpers/        # 纯函数（持仓计算、手续费、排序）
-│   ├── exporters/      # Markdown 导出
-│   ├── ui/             # 页面 mixin、反馈
-│   └── constants.js    # 枚举常量
-├── api/                # 网络请求层（Token 管理、重试、占位）
+│   ├── services/       # 业务服务（行情、统计、持仓计算、汇率、XIRR）
+│   ├── helpers/        # 纯函数（持仓计算、手续费、排序、日期范围）
+│   ├── state/          # 轻量状态管理（脏标记 + mutation 订阅）
+│   ├── cache/          # LRU 缓存管理器（按股票粒度清除）
+│   ├── ui/             # 页面 mixin、触摸手势、动画助手
+│   └── constants/      # 枚举常量、市场配置
+├── api/                # 网络请求层
 └── tests/              # Jest 单元测试
 ```
 
 ### 数据流
 
-用户操作 → 页面调用 `Stock/Transaction.save()` → `wx.setStorageSync` 持久化 → `markDataDirty()` 清除缓存 → 返回上一页 → `onShow()` 检测到脏标记重新加载。
+```
+用户操作 → 页面调用 Model.save()
+   → upsertAndSave() + wx.setStorageSync 持久化
+   → markDataDirty() 按 stockId 粒度清除 LRU 缓存
+   → 返回上一页 → onShow() 消费脏标记 → 增量刷新
+```
 
-### 渲染风格
+### 技术特色
 
-iOS 26.5 毛玻璃设计系统，CSS 自定义属性定义 Apple 系统色、SF Pro 字号、强调橙 `#FF6B35`，`backdrop-filter: blur` 导航栏。
+- **纯客户端** — 所有数据本地存储，0 服务端依赖
+- **LRU 缓存** — 持仓计算结果 / 行情 / 统计数据分层缓存，带 TTL 自动过期
+- **CSS 优先** — 年度报告纯 CSS 渲染，无需 Canvas，GPU 加速
+- **毛玻璃设计** — iOS 风格设计系统，CSS 自定义属性，`backdrop-filter` 导航栏
+- **手势驱动** — RAF 节流 + data path 精确更新的左滑菜单
+- **延迟加载** — 分包预加载、按需组件、非首屏模块延迟 import
+- **入场动画** — CSS `transform/opacity` 交错入场，首次展示后锁定，不重播
 
 ## 开发
 
-用微信开发者工具打开项目根目录即可开发、预览、上传。
-
 ```bash
+# 安装依赖
+npm install
+
 # 运行单元测试
 npm test
+
+# 代码检查
+npx biome check pages/ utils/ components/ packageDetail/ packageRecord/
+
+# 自动修复
+npx biome check --write --unsafe pages/ utils/ components/ packageDetail/ packageRecord/
 ```
 
-## 项目结构约定
+在 **微信开发者工具** 中打开项目根目录即可构建、预览、上传。
 
-- `project.config.json` — AppID、基础库版本、编译设置
-- `project.private.config.json` — 本地开发覆盖（ES6 转译、PostCSS、压缩）
+### 项目配置
+
+- `project.config.json` — AppID、基础库版本
 - `lazyCodeLoading: "requiredComponents"` — 按需加载组件
-- `componentFramework: "glass-easel"` — 使用 glass-easel 组件框架
+- `componentFramework: "glass-easel"` — Glass Easel 组件框架
 
 ## License
 

@@ -41,10 +41,7 @@ describe("Storage LRU Cache", () => {
 
 	test("saveData updates both cache and wx.setStorageSync", () => {
 		storage.saveData("test_key", [4, 5, 6]);
-		expect(global.wx.setStorageSync).toHaveBeenCalledWith(
-			"test_key",
-			[4, 5, 6],
-		);
+		expect(global.wx.setStorageSync).toHaveBeenCalledWith("test_key", [4, 5, 6]);
 		// 读取时应该从缓存获取
 		const result = storage.getData("test_key");
 		expect(result).toEqual([4, 5, 6]);

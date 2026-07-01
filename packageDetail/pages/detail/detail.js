@@ -16,6 +16,7 @@ const { confirmDelete } = require("../../../utils/ui/confirmDialog");
 Page({
 	data: {
 		...pageMixin.initPageData(),
+		entranceDone: false,
 		stock: null,
 		stockId: null,
 		stockName: "股票详情",
@@ -65,6 +66,9 @@ Page({
 	onShow() {
 		if (pageMixin.onShowSubPackage() || !this._dataLoaded) {
 			this.loadData();
+		}
+		if (!this.data.entranceDone) {
+			this.setData({ entranceDone: true });
 		}
 	},
 

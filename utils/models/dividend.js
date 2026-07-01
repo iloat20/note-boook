@@ -45,7 +45,9 @@ const Dividend = {
 	 * @returns {Object} 保存后的分红对象
 	 */
 	save(dividend) {
-		return upsertAndSave(DIVIDEND_KEY, dividend, ["position", "heatmap", "periodStats"]);
+		const result = upsertAndSave(DIVIDEND_KEY, dividend);
+		markDataDirty(["position", "heatmap", "periodStats"], dividend.stockId);
+		return result;
 	},
 
 	/**

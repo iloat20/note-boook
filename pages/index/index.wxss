@@ -167,6 +167,7 @@ page {
   z-index: var(--xhs-z-card);
   overflow: hidden;
   transition: var(--xhs-transition-slow);
+  will-change: transform, opacity;
 }
 
 .position-card:active {
@@ -287,6 +288,7 @@ page {
   border-radius: var(--xhs-radius-md);
   box-shadow: var(--xhs-elevation-2);
   overflow: hidden;
+  will-change: transform;
 }
 
 .swipe-actions {
@@ -299,7 +301,6 @@ page {
   z-index: 1;
   padding: 0 var(--page-margin) 0 var(--xhs-space-xs);
   gap: var(--xhs-space-xs);
-  background: var(--xhs-bg);
 }
 
 .swipe-actions-open {
@@ -316,7 +317,7 @@ page {
   color: #fff;
   font-size: var(--xhs-font-sm);
   font-weight: var(--xhs-weight-semibold);
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
 }
 
 .swipe-action-content {
@@ -328,19 +329,27 @@ page {
 
 .swipe-action-sub {
   font-size: 18rpx;
-  opacity: 0.8;
+  opacity: 0.7;
+  letter-spacing: 0.04em;
 }
 
+/* 霓虹科技色 */
 .swipe-action-edit {
-  background: var(--xhs-primary);
+  color: #fff;
+  background: #00D4AA;
+  border-color: #00D4AA;
 }
 
 .swipe-action-sell {
-  background: var(--xhs-loss);
+  color: #fff;
+  background: #5B8DEF;
+  border-color: #5B8DEF;
 }
 
 .swipe-action-delete {
-  background: var(--xhs-caption);
+  color: #fff;
+  background: #FF6B6B;
+  border-color: #FF6B6B;
 }
 
 /* === 刷新按钮 === */
@@ -372,11 +381,11 @@ page {
 
 /* === 价格闪光动画 === */
 .price-flash-profit {
-  animation: price-flash-profit 800ms ease-out;
+  animation: price-flash-profit 500ms ease-out;
 }
 
 .price-flash-loss {
-  animation: price-flash-loss 800ms ease-out;
+  animation: price-flash-loss 500ms ease-out;
 }
 
 @keyframes price-flash-profit {

@@ -10,6 +10,7 @@ const { loading, hideLoading, success: fbSuccess } = require("../../utils/ui/fee
 Page({
 	data: {
 		...pageMixin.initPageData(),
+		entranceDone: false,
 		loading: true,
 		currentFilter: "ALL",
 		currentMarket: null,
@@ -54,6 +55,9 @@ Page({
 	onShow() {
 		if (pageMixin.onShowMixin(this, 1) || !this._allGroupedHistory) {
 			this.loadHistory();
+		}
+		if (!this.data.entranceDone) {
+			this.setData({ entranceDone: true });
 		}
 	},
 
@@ -370,7 +374,9 @@ Page({
 						content: `确定要删除这笔${record.typeText}记录吗？`,
 						onConfirm: () => {
 							this.setData({ dissolvingId: record.id });
-							setTimeout(() => {
+							if (this._deleteTimer) clearTimeout(this._deleteTimer);
+							this._deleteTimer = setTimeout(() => {
+								this._deleteTimer = null;
 								if (record.type === "DIVIDEND") {
 									Dividend.delete(record.id);
 								} else {
@@ -397,6 +403,7 @@ Page({
 
 	onUnload() {
 		if (this._searchTimer) clearTimeout(this._searchTimer);
+		if (this._deleteTimer) clearTimeout(this._deleteTimer);
 		this._cachedAllRecords = null;
 		this._allGroupedHistory = null;
 	},

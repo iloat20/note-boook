@@ -26,29 +26,9 @@ describe("Portfolio calculations", () => {
 	});
 
 	test("should include realized PnL when position is fully closed", () => {
-		const stock = Stock.save(
-			Stock.create("600000", "浦发银行", MARKETS.A_SHARE),
-		);
-		Transaction.save(
-			Transaction.create(
-				stock.id,
-				"BUY",
-				10,
-				100,
-				1,
-				"2026-01-01T00:00:00.000Z",
-			),
-		);
-		Transaction.save(
-			Transaction.create(
-				stock.id,
-				"SELL",
-				12,
-				100,
-				1,
-				"2026-01-02T00:00:00.000Z",
-			),
-		);
+		const stock = Stock.save(Stock.create("600000", "浦发银行", MARKETS.A_SHARE));
+		Transaction.save(Transaction.create(stock.id, "BUY", 10, 100, 1, "2026-01-01T00:00:00.000Z"));
+		Transaction.save(Transaction.create(stock.id, "SELL", 12, 100, 1, "2026-01-02T00:00:00.000Z"));
 
 		const stats = getTotalStats();
 
@@ -59,28 +39,10 @@ describe("Portfolio calculations", () => {
 	});
 
 	test("should return sellable quantity when excluding edited sell transaction", () => {
-		const stock = Stock.save(
-			Stock.create("600000", "浦发银行", MARKETS.A_SHARE),
-		);
-		Transaction.save(
-			Transaction.create(
-				stock.id,
-				"BUY",
-				10,
-				100,
-				1,
-				"2026-01-01T00:00:00.000Z",
-			),
-		);
+		const stock = Stock.save(Stock.create("600000", "浦发银行", MARKETS.A_SHARE));
+		Transaction.save(Transaction.create(stock.id, "BUY", 10, 100, 1, "2026-01-01T00:00:00.000Z"));
 		const sell = Transaction.save(
-			Transaction.create(
-				stock.id,
-				"SELL",
-				12,
-				60,
-				1,
-				"2026-01-02T00:00:00.000Z",
-			),
+			Transaction.create(stock.id, "SELL", 12, 60, 1, "2026-01-02T00:00:00.000Z"),
 		);
 
 		expect(getSellableQuantity(stock.id)).toBe(40);

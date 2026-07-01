@@ -4,60 +4,7 @@
 
 @import '../../../styles/common.wxss';
 
-/* === 导航栏 === */
-.nav-bar {
-  position: sticky;
-  top: 0;
-  z-index: var(--xhs-z-sticky);
-  display: flex;
-  align-items: flex-end;
-  background: var(--xhs-bg);
-  padding: 0 var(--xhs-space-md) var(--xhs-space-sm);
-}
-
-.nav-back {
-  width: 44px;
-  height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.nav-back-circle {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: var(--xhs-surface);
-  box-shadow: var(--xhs-elevation-1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: var(--xhs-transition);
-}
-
-.nav-back-circle:active {
-  transform: scale(0.9);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-}
-
-.nav-back-arrow {
-  font-size: 52rpx;
-  color: var(--xhs-title);
-  font-weight: 400;
-  line-height: 1;
-  margin-top: -2px;
-}
-
-.nav-title {
-  flex: 1;
-  font-size: var(--xhs-font-lg);
-  font-weight: var(--xhs-weight-semibold);
-  color: var(--xhs-title);
-  text-align: center;
-  letter-spacing: -0.01em;
-  padding-right: 44px;
-}
+@import '../../../styles/_nav-bar.wxss';
 
 /* === 区块标题 === */
 .section-title {
@@ -243,6 +190,7 @@
   line-height: 48px;
   text-align: center;
   color: #fff;
+  background: var(--xhs-primary);
   font-size: var(--xhs-font-md);
   font-weight: var(--xhs-weight-semibold);
   border-radius: var(--xhs-radius-sm);

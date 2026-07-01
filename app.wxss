@@ -575,16 +575,6 @@ page {
   }
 }
 
-/* Stagger delay classes */
-.stagger-delay-1 { animation-delay: 80ms; }
-.stagger-delay-2 { animation-delay: 160ms; }
-.stagger-delay-3 { animation-delay: 240ms; }
-.stagger-delay-4 { animation-delay: 320ms; }
-.stagger-delay-5 { animation-delay: 400ms; }
-.stagger-delay-6 { animation-delay: 480ms; }
-.stagger-delay-7 { animation-delay: 560ms; }
-.stagger-delay-8 { animation-delay: 640ms; }
-
 /* Fade in only */
 .animate-fade-in {
   opacity: 0;

@@ -397,6 +397,22 @@
   transition: transform 200ms ease, background-color 200ms ease, border-color 200ms ease;
 }
 
+.xhs-feed-cta-danger {
+  background: var(--xhs-surface);
+  border: 2px solid #FF4D4F;
+  color: #FF4D4F;
+  font-size: var(--xhs-font-md);
+  font-weight: var(--xhs-weight-semibold);
+  padding: var(--page-margin) var(--xhs-space-lg);
+  border-radius: var(--xhs-radius-pill);
+  text-align: center;
+  transition: transform 200ms ease, background-color 200ms ease, border-color 200ms ease;
+}
+
+.xhs-feed-cta-danger:active {
+  background: #FFF0F0;
+}
+
 /* === Scroll === */
 .xhs-scroll {
   height: auto;

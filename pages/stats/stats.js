@@ -12,10 +12,21 @@ const { exportMD } = require("../../utils/exporters/markdown");
 const { getRates, getRate } = require("../../utils/services/exchangeRate");
 const pageMixin = require("../../utils/ui/pageMixin");
 const { getByPeriod } = require("../../utils/helpers/dateRange");
+const {
+	saveData,
+	STOCK_KEY,
+	TRANSACTION_KEY,
+	DIVIDEND_KEY,
+	PRICE_KEY,
+	STRATEGY_KEY,
+	clearMemCache,
+} = require("../../utils/storageCore/core");
+const { markDataDirty } = require("../../utils/cache/cacheManager");
 
 Page({
 	data: {
 		...pageMixin.initPageData(),
+		entranceDone: false,
 		loading: true,
 		currentPeriod: "MONTH",
 		periodTabs: [
@@ -43,6 +54,9 @@ Page({
 		const wasDirty = pageMixin.onShowMixin(this, 2);
 		if (wasDirty || !this.data.stats) {
 			await this.loadStats();
+		}
+		if (!this.data.entranceDone) {
+			this.setData({ entranceDone: true });
 		}
 	},
 
@@ -313,6 +327,35 @@ Page({
 
 	onCloseAnnualReport() {
 		this.setData({ showAnnualReport: false, annualReportData: null });
+	},
+
+	onClearAllData() {
+		wx.showModal({
+			title: "⚠️ 确认清除",
+			content: "将永久删除所有股票、交易、分红记录，此操作不可恢复！",
+			confirmText: "确认清除",
+			confirmColor: "#FF4D4F",
+			cancelText: "取消",
+			success: (res) => {
+				if (res.confirm) {
+					saveData(STOCK_KEY, []);
+					saveData(TRANSACTION_KEY, []);
+					saveData(DIVIDEND_KEY, []);
+					saveData(PRICE_KEY, {});
+					saveData(STRATEGY_KEY, []);
+					clearMemCache();
+					markDataDirty("all");
+					this.setData({
+						stats: null,
+						detailItems: [],
+						completeTrades: [],
+						clearedPositions: [],
+						loading: false,
+					});
+					wx.showToast({ title: "已清除所有数据", icon: "success" });
+				}
+			},
+		});
 	},
 
 	onUnload() {

@@ -113,7 +113,9 @@ Page({
 
 	async onShow() {
 		const dirty = pageMixin.onShowMixin(this, 0);
-		if (dirty || this._allPositionsCache?.length > 0) {
+		if (dirty) {
+			await this.refresh({ force: true });
+		} else if (this._allPositionsCache?.length > 0) {
 			await this.refresh();
 		}
 	},

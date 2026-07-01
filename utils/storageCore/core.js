@@ -67,15 +67,37 @@ function getNextId() {
 }
 
 /**
+ * Recursively freeze an object/array.
+ * @param {any} obj
+ * @returns {any} the frozen object (same reference)
+ */
+function deepFreeze(obj) {
+	if (obj === null || typeof obj !== "object") return obj;
+	Object.freeze(obj);
+	if (Array.isArray(obj)) {
+		obj.forEach((item) => {
+			if (item && typeof item === "object") deepFreeze(item);
+		});
+	} else {
+		Object.keys(obj).forEach((k) => {
+			const v = obj[k];
+			if (v && typeof v === "object") deepFreeze(v);
+		});
+	}
+	return obj;
+}
+
+/**
  * 保存数据到本地存储和内存缓存
  * @param {string} key - 存储键
  * @param {any} data - 数据
  */
 function saveData(key, data) {
 	wx.setStorageSync(key, data);
-	// LRU: 删除后重新插入，保证最近使用的在末尾
+	// Freeze on write: subsequent getData cache-hits return the frozen reference
+	const frozen = deepFreeze(data);
 	_memCache.delete(key);
-	_memCache.set(key, data);
+	_memCache.set(key, frozen);
 }
 
 /**
@@ -84,33 +106,24 @@ function saveData(key, data) {
  * @returns {any} 数据
  */
 function getData(key) {
-	let data;
 	if (_memCache.has(key)) {
-		data = _memCache.get(key);
-	} else {
-		data = wx.getStorageSync(key);
-		if (
-			data === undefined ||
-			data === null ||
-			data === "" ||
-			(Array.isArray(data) && data.length === 0)
-		) {
-			if (key === PRICE_KEY) {
-				data = {};
-			} else {
-				data = [];
-			}
+		return _memCache.get(key); // Already frozen (from saveData) or first-load mutable
+	}
+	let data = wx.getStorageSync(key);
+	if (
+		data === undefined ||
+		data === null ||
+		data === "" ||
+		(Array.isArray(data) && data.length === 0)
+	) {
+		if (key === PRICE_KEY) {
+			data = {};
+		} else {
+			data = [];
 		}
-		_memCache.set(key, data);
 	}
-	if (Array.isArray(data)) {
-		Object.freeze(data);
-		data.forEach((item) => {
-			if (item && typeof item === "object") Object.freeze(item);
-		});
-	} else if (data && typeof data === "object") {
-		Object.freeze(data);
-	}
+	// First load: store mutable (callers like upsertAndSave use .slice() before mutating)
+	_memCache.set(key, data);
 	return data;
 }
 

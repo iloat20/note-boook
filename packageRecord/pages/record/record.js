@@ -222,7 +222,10 @@ Page({
 		this._calcFee();
 	},
 	onQuantityInput(e) {
-		this.setData({ quantity: e.detail.value });
+		const raw = e.detail.value;
+		const sanitized = typeof raw === "string" ? raw.replace(/[^0-9]/g, "") : raw;
+		if (sanitized !== raw) this.setData({ quantity: sanitized });
+		else this.setData({ quantity: raw });
 		this._calcFee();
 	},
 	onFeeInput(e) {
@@ -475,7 +478,7 @@ Page({
 		}
 
 		// 新股票：SELL 不允许（无持仓可卖）；BUY 需校验代码真实性
-		let stock = Stock.getByCode(code, market);
+		const stock = Stock.getByCode(code, market);
 		if (!stock) {
 			if (type === "SELL") {
 				toast("暂无可卖持仓");
@@ -489,7 +492,20 @@ Page({
 				return;
 			}
 			// 缓存未命中（如用户粘贴代码）时探测后提交
-			this._validateAndSubmit(stock, market, code, name, type, price, quantity, fee, date, time, note, data);
+			this._validateAndSubmit(
+				stock,
+				market,
+				code,
+				name,
+				type,
+				price,
+				quantity,
+				fee,
+				date,
+				time,
+				note,
+				data,
+			);
 			return;
 		}
 
@@ -526,7 +542,20 @@ Page({
 	},
 
 	// submit 时发现缓存未命中，同步等待一次
-	_validateAndSubmit(stock, market, code, name, type, price, quantity, fee, date, time, note, data) {
+	_validateAndSubmit(
+		stock,
+		market,
+		code,
+		name,
+		type,
+		price,
+		quantity,
+		fee,
+		date,
+		time,
+		note,
+		data,
+	) {
 		fetchStockPrice(market, code)
 			.then((result) => {
 				const valid = !!(result && result.currentPrice > 0);
@@ -536,11 +565,37 @@ Page({
 					toast("股票代码无效或不在该市场，请检查");
 					return;
 				}
-				this._doSubmit(stock, type, price, quantity, date, time, code, market, name, fee, note, data);
+				this._doSubmit(
+					stock,
+					type,
+					price,
+					quantity,
+					date,
+					time,
+					code,
+					market,
+					name,
+					fee,
+					note,
+					data,
+				);
 			})
 			.catch(() => {
 				// 网络异常：降级允许保存
-				this._doSubmit(stock, type, price, quantity, date, time, code, market, name, fee, note, data);
+				this._doSubmit(
+					stock,
+					type,
+					price,
+					quantity,
+					date,
+					time,
+					code,
+					market,
+					name,
+					fee,
+					note,
+					data,
+				);
 			});
 	},
 

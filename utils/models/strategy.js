@@ -20,7 +20,7 @@ const Strategy = {
 		if (!tag || typeof tag !== "string") return;
 		tag = tag.trim();
 		if (!tag) return;
-		const customs = getData(STRATEGY_KEY) || [];
+		const customs = getData(STRATEGY_KEY).slice() || [];
 		if (customs.indexOf(tag) === -1 && DEFAULT_STRATEGIES.indexOf(tag) === -1) {
 			customs.push(tag);
 			saveData(STRATEGY_KEY, customs);
@@ -28,7 +28,7 @@ const Strategy = {
 	},
 
 	remove(tag) {
-		const customs = getData(STRATEGY_KEY) || [];
+		const customs = getData(STRATEGY_KEY).slice() || [];
 		const idx = customs.indexOf(tag);
 		if (idx >= 0) {
 			customs.splice(idx, 1);

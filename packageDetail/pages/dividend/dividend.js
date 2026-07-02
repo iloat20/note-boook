@@ -88,8 +88,10 @@ Page({
 		const updates = { divType: type };
 		if (type === "CASH") {
 			updates.shareQty = "0";
+			updates.perShare = "";
 		} else {
 			updates.perShare = "";
+			updates.shareQty = "0";
 		}
 		this.setData(updates);
 		this._preview();

@@ -59,7 +59,20 @@ const Stock = {
 	 */
 	getByCode(code, market) {
 		const stocks = this.getAll();
-		return stocks.find((s) => s.code === code && s.market === market);
+		const marketStock = stocks.filter((s) => s.market === market);
+		const exact = marketStock.find((s) => s.code === code);
+		if (exact) return exact;
+		const { formatStockCode } = require("../constants/market");
+		const formatted = formatStockCode(code, market);
+		if (formatted !== code) {
+			const existing = marketStock.find((s) => s.code === formatted);
+			if (existing) return existing;
+		}
+		const norm =
+			String(code)
+				.replace(/^(hk|HK)/, "")
+				.replace(/^0+/, "") || String(code);
+		return marketStock.find((s) => (s.code || "").replace(/^0+/, "") === norm) || undefined;
 	},
 
 	/**

@@ -4,9 +4,9 @@ const {
 	getTotalXIRR,
 	getPeriodStatsWithReturn,
 } = require("../../utils/services/statsService");
-const { getClearedPositions, getPositionSummary, getAllPositions } = require("../../utils/services/positionService");
+const { getAllPositions } = require("../../utils/services/positionService");
 const { Stock, Transaction, Dividend } = require("../../utils/models/index");
-const { fmt, fmtDate } = require("../../utils/helpers/format");
+const { fmt } = require("../../utils/helpers/format");
 const { buildStockMap } = require("../../utils/helpers/stockHelpers");
 const { buildRecordView } = require("../../utils/helpers/recordView");
 const { exportMD } = require("../../utils/exporters/markdown");
@@ -116,8 +116,7 @@ Page({
 		const clearedPositions = Object.values(positions)
 			.filter(
 				(p) =>
-					p.quantity === 0 &&
-					(Math.abs(p.realizedPnL) > 0.01 || Math.abs(p.dividendIncome) > 0.01)
+					p.quantity === 0 && (Math.abs(p.realizedPnL) > 0.01 || Math.abs(p.dividendIncome) > 0.01),
 			)
 			.map((p) => {
 				const totalPnL = p.realizedPnL + p.dividendIncome;
@@ -220,8 +219,7 @@ Page({
 		const positions = this._computeAllPositions();
 		const cleared = Object.values(positions).filter(
 			(p) =>
-				p.quantity === 0 &&
-				(Math.abs(p.realizedPnL) > 0.01 || Math.abs(p.dividendIncome) > 0.01)
+				p.quantity === 0 && (Math.abs(p.realizedPnL) > 0.01 || Math.abs(p.dividendIncome) > 0.01),
 		);
 		const winCount = cleared.filter((p) => p.realizedPnL + p.dividendIncome > 0).length;
 		const winRate = cleared.length > 0 ? Math.round((winCount / cleared.length) * 100) : 0;

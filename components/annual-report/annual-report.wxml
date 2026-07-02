@@ -67,7 +67,7 @@
         <view class="ar-flow-divider"></view>
         <view class="ar-flow-item">
           <text class="ar-flow-label">分红收入</text>
-          <text class="ar-flow-value" style="color: #FF6B6B;">¥{{data.dividendIncomeText}}</text>
+          <text class="ar-flow-value" style="color: #34C759;">¥{{data.dividendIncomeText}}</text>
         </view>
       </view>
     </view>

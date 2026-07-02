@@ -24,7 +24,7 @@ function _ensureBuilt() {
 	});
 	// Replace contents
 	_byStockId.clear();
-	byStockId.forEach((v, k) => _byStockId.set(k, v));
+	for (const [k, v] of byStockId) _byStockId.set(k, v);
 	_built = true;
 }
 

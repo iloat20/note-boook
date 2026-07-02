@@ -162,7 +162,11 @@ Component({
 			// 失焦时：如果 qrPrice 仍空 + 当前代码有效，立即 try probe（兜底）
 			const d = this.data;
 			const code = formatStockCode(d.qrCode, d.qrMarket);
-			if (code && validateStockCode(code, d.qrMarket) && (!d.qrPrice || parseFloat(d.qrPrice) <= 0)) {
+			if (
+				code &&
+				validateStockCode(code, d.qrMarket) &&
+				(!d.qrPrice || parseFloat(d.qrPrice) <= 0)
+			) {
 				this._tryAutoFetch(code);
 				this._probeStockPrice(d.qrMarket, code);
 			}
@@ -301,7 +305,7 @@ Component({
 		},
 
 		// ──── 市场检测 ────
-		_detectMarket: function (code) {
+		_detectMarket: (code) => {
 			const upper = (code || "").toUpperCase();
 			// 优先：6 位数字 = A 股（先于 5 位，避免 6 位被误判为港股）
 			if (/^\d{6}$/.test(code)) return MARKETS.A_SHARE;
@@ -326,7 +330,14 @@ Component({
 				.then((result) => {
 					const valid = !!(result && result.currentPrice > 0);
 					this._stockValidCache[cacheKey] = valid;
-					console.log('[QR probe] api result for', code, ':', JSON.stringify(result), 'valid:', valid);
+					console.log(
+						"[QR probe] api result for",
+						code,
+						":",
+						JSON.stringify(result),
+						"valid:",
+						valid,
+					);
 					if (valid && this._afProbe === code) {
 						// 只要 probe 未改变输入（用户未快速输新码），无条件设置
 						const localName = searchStocks(code, market, 1)[0]?.name || "";
@@ -335,14 +346,19 @@ Component({
 							qrName: localName || existing?.name || result.name || "",
 							qrPrice: priceStr,
 						});
-						console.log('[QR probe] set qrPrice=', priceStr, '| this.data.qrPrice=', this.data.qrPrice);
+						console.log(
+							"[QR probe] set qrPrice=",
+							priceStr,
+							"| this.data.qrPrice=",
+							this.data.qrPrice,
+						);
 						this._calcQrFee();
 					} else if (!valid) {
 						wx.showToast({ title: "股票代码无效或无法获取行情", icon: "none" });
 					}
 				})
 				.catch((err) => {
-					console.error('[QR probe] fetch error:', err);
+					console.error("[QR probe] fetch error:", err);
 					wx.showToast({ title: "网络异常，请手动输入价格", icon: "none" });
 				})
 				.finally(() => {

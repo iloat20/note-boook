@@ -206,15 +206,13 @@ Page({
 					totalBuyFee += (p.totalBuyFee || 0) * rate;
 
 					// per-market 聚合（原 formattedPositions.forEach 第二遍）
-					if (!marketAgg[p.market])
-						marketAgg[p.market] = { marketValue: 0, pnl: 0 };
+					if (!marketAgg[p.market]) marketAgg[p.market] = { marketValue: 0, pnl: 0 };
 					if (p.currentPrice) {
 						marketAgg[p.market].marketValue += p.currentPrice * p.quantity * rate;
 						aggTotalMV += p.currentPrice * p.quantity * rate;
 					}
 					const pnl =
-						((p.floatingPnL || 0) + (p.realizedPnL || 0) + (p.dividendIncome || 0)) *
-						rate;
+						((p.floatingPnL || 0) + (p.realizedPnL || 0) + (p.dividendIncome || 0)) * rate;
 					marketAgg[p.market].pnl += pnl;
 					aggTotalPnL += pnl;
 				}
@@ -240,7 +238,7 @@ Page({
 				const pos = positionMap.get(t.stockId);
 				if (!pos) return;
 				const tRate = _getRate(pos.market, rates);
-				const invest = (t.price * t.quantity + t.fee) * tRate;
+				const invest = t.price * t.quantity * tRate;
 				totalInvestment += invest;
 				marketInvestment[pos.market] = (marketInvestment[pos.market] || 0) + invest;
 			});
@@ -426,9 +424,7 @@ Page({
 
 		if (addedMarketValue === 0 && addedPnL === 0) return;
 
-		const totalMarketValue = parseFloat(
-			(this.data.totalMarketValue + addedMarketValue).toFixed(2)
-		);
+		const totalMarketValue = parseFloat((this.data.totalMarketValue + addedMarketValue).toFixed(2));
 		const totalPnL = parseFloat((this.data.totalPnL + addedPnL).toFixed(2));
 		const totalInvestment = this._cachedTotalInvestment || 1;
 
@@ -438,15 +434,11 @@ Page({
 			totalPnL,
 			totalPnLText: fmt(totalPnL),
 			totalPnLPercent:
-				totalInvestment > 0
-					? parseFloat(((totalPnL / totalInvestment) * 100).toFixed(2))
-					: 0,
+				totalInvestment > 0 ? parseFloat(((totalPnL / totalInvestment) * 100).toFixed(2)) : 0,
 			"displayValues.totalMarketValue": fmt(totalMarketValue),
 			"displayValues.totalPnL": fmt(totalPnL),
 			"displayValues.totalPnLPercent": fmt(
-				totalInvestment > 0
-					? parseFloat(((totalPnL / totalInvestment) * 100).toFixed(2))
-					: 0
+				totalInvestment > 0 ? parseFloat(((totalPnL / totalInvestment) * 100).toFixed(2)) : 0,
 			),
 		});
 	},
@@ -472,9 +464,7 @@ Page({
 		if (this._tabTimer) clearTimeout(this._tabTimer);
 		this._tabTimer = setTimeout(() => {
 			const allPositions = this._allPositionsCache || [];
-			const filteredPositions = key
-				? allPositions.filter((p) => p.market === key)
-				: allPositions;
+			const filteredPositions = key ? allPositions.filter((p) => p.market === key) : allPositions;
 
 			this._positionsCache = filteredPositions;
 			this._indexById = new Map(filteredPositions.map((p, i) => [p.id, i]));
@@ -483,10 +473,9 @@ Page({
 			// Read market aggregate from cache (key null = "全部")
 			const agg = this._marketAggCache[key] || this._marketAggCache[null];
 			const marketInvestment = key
-				? (this._cachedMarketInvestment && this._cachedMarketInvestment[key]) || 0
+				? this._cachedMarketInvestment?.[key] || 0
 				: this._cachedTotalInvestment || 0;
-			const marketPnLPercent =
-				marketInvestment > 0 ? (agg.pnl / marketInvestment) * 100 : 0;
+			const marketPnLPercent = marketInvestment > 0 ? (agg.pnl / marketInvestment) * 100 : 0;
 
 			this.setData({
 				currentMarket: key,

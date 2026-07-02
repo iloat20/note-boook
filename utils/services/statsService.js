@@ -73,7 +73,7 @@ function calcStatsForRange(transactions, dividends, startDate, endDate, label) {
  * @returns {Object} 总统计数据
  */
 function getTotalStats() {
-	let totalInvestment = 0;
+	let _totalInvestment = 0;
 	let totalBuyFee = 0;
 	let totalSellFee = 0;
 	let totalHistoricalBuy = 0;
@@ -83,7 +83,7 @@ function getTotalStats() {
 	transactions.forEach((t) => {
 		const amount = parseFloat((t.price * t.quantity).toFixed(2));
 		if (t.type === "BUY") {
-			totalInvestment += amount + t.fee;
+			_totalInvestment += amount + t.fee;
 			totalBuyFee += t.fee;
 			totalHistoricalBuy += amount;
 		} else {
@@ -115,7 +115,8 @@ function getTotalStats() {
 	const totalPnLPercent = costBasisForPercent > 0 ? (totalPnL / costBasisForPercent) * 100 : 0;
 
 	return {
-		totalInvestment: parseFloat(totalInvestment.toFixed(2)),
+		totalInvestment: parseFloat(totalHistoricalBuy.toFixed(2)),
+		totalCapitalDeployed: parseFloat((totalHistoricalBuy + totalBuyFee).toFixed(2)),
 		totalBuyFee: parseFloat(totalBuyFee.toFixed(2)),
 		totalSellFee: parseFloat(totalSellFee.toFixed(2)),
 		dividendIncome: parseFloat(totalDividendIncome.toFixed(2)),

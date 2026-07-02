@@ -1,10 +1,9 @@
 // pages/detail/detail.js
 const { Stock, Transaction, Dividend, PriceCache } = require("../../../utils/models/index");
 const { calculatePosition } = require("../../../utils/services/positionService");
-const TransactionIndex = require("../../../utils/models/transactionIndex");
 const { getStrategyStats } = require("../../../utils/services/statsService");
 const { fmt, fmtShortDate, fmtTime } = require("../../../utils/helpers/format");
-const { calcFloatingPercent, calcPosition: calcPositionPure } = require("../../../utils/helpers/positionCalculator");
+const { calcFloatingPercent } = require("../../../utils/helpers/positionCalculator");
 const {
 	getMarketLabel,
 	getMarketColor,

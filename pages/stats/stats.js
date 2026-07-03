@@ -1,8 +1,8 @@
-const {
+﻿const {
 	getPeriodStatsList,
 	getStrategyStats,
 	getTotalXIRR,
-	getPeriodStatsWithReturn,
+	getTotalStats,
 } = require("../../utils/services/statsService");
 const { getAllPositions } = require("../../utils/services/positionService");
 const { Stock, Transaction, Dividend } = require("../../utils/models/index");
@@ -12,7 +12,6 @@ const { buildRecordView } = require("../../utils/helpers/recordView");
 const { exportMD } = require("../../utils/exporters/markdown");
 const { getRates, getRate } = require("../../utils/services/exchangeRate");
 const pageMixin = require("../../utils/ui/pageMixin");
-const { getByPeriod } = require("../../utils/helpers/dateRange");
 const {
 	saveData,
 	STOCK_KEY,
@@ -29,12 +28,6 @@ Page({
 		...pageMixin.initPageData(),
 		entranceDone: false,
 		loading: true,
-		currentPeriod: "MONTH",
-		periodTabs: [
-			{ key: "WEEK", label: "周" },
-			{ key: "MONTH", label: "月" },
-			{ key: "YEAR", label: "年" },
-		],
 		stats: null,
 		detailItems: [],
 		heatmapData: [],
@@ -59,23 +52,6 @@ Page({
 		if (!this.data.entranceDone) {
 			this.setData({ entranceDone: true });
 		}
-	},
-
-	switchPeriod(e) {
-		const period = e.currentTarget.dataset.period;
-		this.setData({ currentPeriod: period }, () => {
-			this.loadStats().catch((err) => {
-				console.error("[stats] switchPeriod loadStats error:", err);
-			});
-		});
-	},
-
-	_getPeriodDateRange(period) {
-		return getByPeriod(period);
-	},
-
-	async _calcPeriodStats(period) {
-		return getPeriodStatsWithReturn(period, this._getPeriodDateRange.bind(this));
 	},
 
 	_computeAllPositions() {
@@ -134,9 +110,64 @@ Page({
 
 	async loadStats() {
 		try {
-			const period = this.data.currentPeriod;
-			const { stats, detailItems } = await this._calcPeriodStats(period);
 			const { completeTrades, clearedPositions } = this._buildTradeListAndCleared();
+			const totalStats = getTotalStats();
+
+			const allTx = Transaction.getAll();
+			const allDiv = Dividend.getAll();
+			let totalBuyFee = 0,
+				totalSellFee = 0;
+			allTx.forEach((t) => {
+				if (t.type === "BUY") totalBuyFee += t.fee;
+				else totalSellFee += t.fee;
+			});
+			const cnyDividendIncome = allDiv.reduce((s, d) => s + d.totalAmount, 0);
+
+			const stats = {
+				totalPnL: totalStats.totalPnL,
+				totalPnLText: (totalStats.totalPnL >= 0 ? "+" : "") + fmt(totalStats.totalPnL),
+				returnValue: totalStats.totalPnLPercent,
+				returnText:
+					(totalStats.totalPnLPercent >= 0 ? "+" : "") +
+					totalStats.totalPnLPercent.toFixed(2) +
+					"%",
+				winRate:
+					clearedPositions.length > 0
+						? Math.round(
+								(clearedPositions.filter((p) => p.totalPnL > 0).length / clearedPositions.length) *
+									100,
+							)
+						: null,
+				winRateText:
+					clearedPositions.length > 0
+						? `${Math.round((clearedPositions.filter((p) => p.totalPnL > 0).length / clearedPositions.length) * 100)}%`
+						: "--",
+			};
+
+			const detailItems = [
+				{
+					label: "已实现盈亏",
+					value: fmt(totalStats.realizedPnL),
+					prefix: "",
+					colorClass: totalStats.realizedPnL >= 0 ? "profit" : "loss",
+				},
+				{
+					label: "收益率",
+					value:
+						(totalStats.totalPnLPercent >= 0 ? "+" : "") + totalStats.totalPnLPercent.toFixed(2),
+					prefix: "",
+					colorClass: totalStats.totalPnLPercent >= 0 ? "profit" : "loss",
+				},
+				{
+					label: "分红收益",
+					value: fmt(cnyDividendIncome),
+					prefix: "",
+					colorClass: "profit",
+				},
+				{ label: "买入手续费", value: fmt(totalBuyFee), prefix: "", colorClass: "" },
+				{ label: "卖出手续费", value: fmt(totalSellFee), prefix: "", colorClass: "" },
+			];
+
 			this.setData({
 				stats,
 				detailItems,
@@ -204,9 +235,9 @@ Page({
 
 		const yearInvestment = yearBuyAmount + yearBuyFee;
 		const yearRecovery = yearSellAmount - yearSellFee + yearDivTotal;
-		const yearPnL = yearRecovery - yearInvestment;
-		const yearPnLPercent =
-			yearInvestment > 0 ? parseFloat(((yearPnL / yearInvestment) * 100).toFixed(2)) : 0;
+		const yearPnL = yearRecovery - yearInvestment; // 净现金流（非会计盈亏）
+
+		yearInvestment > 0 ? parseFloat(((yearPnL / yearInvestment) * 100).toFixed(2)) : 0;
 
 		const periodList = getPeriodStatsList("MONTH", 12);
 		const monthlyPnL = [];
@@ -294,7 +325,8 @@ Page({
 				totalXIRRText: totalXIRR !== null ? `${totalXIRR.toFixed(2)}%` : "--",
 				totalPnL: parseFloat(yearPnL.toFixed(2)),
 				totalPnLText: fmt(Math.abs(yearPnL)),
-				totalPnLPercent: yearPnLPercent,
+				totalPnLPercent: yearXIRR !== null ? parseFloat(yearXIRR.toFixed(2)) : 0,
+
 				totalInvestmentText: fmt(yearInvestment),
 				totalRecoveryText: fmt(yearRecovery),
 				dividendIncomeText: fmt(yearDivTotal),

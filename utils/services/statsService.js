@@ -5,14 +5,18 @@
 const Stock = require("../models/stock");
 const Transaction = require("../models/transaction");
 const Dividend = require("../models/dividend");
-const { getAllPositions } = require("./positionService");
+const { getAllPositions, getClearedPositions } = require("./positionService");
 const { caches } = require("../cache/cacheManager");
 const { calcXIRRForRange, getTotalXIRR } = require("./xirrService");
 const { getRate, getRates } = require("./exchangeRate");
 const { fmt } = require("../helpers/format");
 const { getByPeriod } = require("../helpers/dateRange");
 
-// 周期统计数据缓存
+// 统计服务缓存键
+const STATS_CACHE_KEYS = {
+	TOTAL: "total",
+	STRATEGY: "strategy",
+};
 
 /**
  * 计算指定范围统计数据
@@ -73,6 +77,10 @@ function calcStatsForRange(transactions, dividends, startDate, endDate, label) {
  * @returns {Object} 总统计数据
  */
 function getTotalStats() {
+	if (caches.stats.has(STATS_CACHE_KEYS.TOTAL)) {
+		return caches.stats.get(STATS_CACHE_KEYS.TOTAL);
+	}
+
 	let _totalInvestment = 0;
 	let totalBuyFee = 0;
 	let totalSellFee = 0;
@@ -114,7 +122,7 @@ function getTotalStats() {
 	const costBasisForPercent = totalCostBasis > 0 ? totalCostBasis : totalHistoricalBuy;
 	const totalPnLPercent = costBasisForPercent > 0 ? (totalPnL / costBasisForPercent) * 100 : 0;
 
-	return {
+	const result = {
 		totalInvestment: parseFloat(totalHistoricalBuy.toFixed(2)),
 		totalCapitalDeployed: parseFloat((totalHistoricalBuy + totalBuyFee).toFixed(2)),
 		totalBuyFee: parseFloat(totalBuyFee.toFixed(2)),
@@ -125,6 +133,9 @@ function getTotalStats() {
 		totalPnL: parseFloat(totalPnL.toFixed(2)),
 		totalPnLPercent: parseFloat(totalPnLPercent.toFixed(2)),
 	};
+
+	caches.stats.set(STATS_CACHE_KEYS.TOTAL, result);
+	return result;
 }
 
 function getISOWeek(date) {
@@ -293,6 +304,11 @@ function getPeriodStatsList(periodType, count = 12) {
  * @returns {Array} 策略统计数据列表
  */
 function getStrategyStats(transactions) {
+	// 传入 transactions 时不缓存，每次返回新对象
+	if (!transactions && caches.stats.has(STATS_CACHE_KEYS.STRATEGY)) {
+		return caches.stats.get(STATS_CACHE_KEYS.STRATEGY);
+	}
+
 	const txList = transactions || Transaction.getAll();
 	const stats = {};
 	txList.forEach((t) => {
@@ -311,7 +327,7 @@ function getStrategyStats(transactions) {
 			}
 		});
 	});
-	return Object.values(stats)
+	const result = Object.values(stats)
 		.map((s) => {
 			s.netPnL = parseFloat((s.sellAmount - s.sellFee - s.buyAmount - s.buyFee).toFixed(2));
 			s.buyAmount = parseFloat(s.buyAmount.toFixed(2));
@@ -321,6 +337,11 @@ function getStrategyStats(transactions) {
 			return s;
 		})
 		.sort((a, b) => b.count - a.count);
+
+	if (!transactions) {
+		caches.stats.set(STATS_CACHE_KEYS.STRATEGY, result);
+	}
+	return result;
 }
 
 /**
@@ -419,6 +440,13 @@ async function getPeriodStatsWithReturn(period, getDateRange) {
 		totalSellFeeText: fmt(cnySellFee),
 	};
 
+	// 计算胜率（基于已清仓股票）
+	const cleared = getClearedPositions();
+	const winCount = cleared.filter((p) => p.realizedPnL + p.dividendIncome > 0).length;
+	const winRate = cleared.length > 0 ? Math.round((winCount / cleared.length) * 100) : null;
+	stats.winRate = winRate;
+	stats.winRateText = winRate !== null ? `${winRate}%` : "--";
+
 	const detailItems = [
 		{
 			label: "已实现盈亏",
@@ -454,4 +482,14 @@ module.exports = {
 	calcXIRRForRange,
 	getTotalXIRR,
 	getPeriodStatsWithReturn,
+	invalidateStatsCache,
 };
+
+/**
+ * 清除统计服务缓存（stats + periodStats）
+ * 在数据变更时调用，确保统计结果与数据一致
+ */
+function invalidateStatsCache() {
+	caches.stats.clear();
+	caches.periodStats.clear();
+}

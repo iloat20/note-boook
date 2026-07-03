@@ -221,8 +221,12 @@ describe("StockPrice Retry", () => {
 		);
 	});
 
+	afterEach(() => {
+		jest.runOnlyPendingTimers();
+	});
+
 	test("fetchStockPrice retries and succeeds after failures", async () => {
-		jest.useRealTimers();
+		jest.useFakeTimers({ advanceTimers: true });
 
 		const { request } = require("../api/request");
 		let attempts = 0;
@@ -231,9 +235,9 @@ describe("StockPrice Retry", () => {
 			if (attempts < 3) {
 				return Promise.reject(new Error("网络错误"));
 			}
-			// 第 3 次成功 — 返回 ArrayBuffer 模拟真实 API 响应
+			// 第 3 次成功 — 返回 ArrayBuffer 模拟真实 API 响应（fields[0] 必须是 "x" 才是合法腾讯行情）
 			const responseStr =
-				'="test~名称~100~99~98~1000~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~101~102~0~0~100000"';
+				'="x~名称~100~99~98~1000~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~101~102~0~0~100000"';
 			const buf = new Uint8Array(Buffer.from(responseStr, "utf8")).buffer;
 			return Promise.resolve(buf);
 		});

@@ -100,9 +100,15 @@
         </view>
 
         <view class="field-group">
-          <text class="field-label">手续费</text>
+          <view class="fee-header">
+            <text class="field-label">手续费</text>
+            <view wx:if="{{feePreview.length}}" class="fee-toggle" bindtap="toggleFee">
+              <text class="fee-toggle-text">{{fee || '0.00'}}</text>
+              <text class="fee-toggle-arrow {{feeExpanded ? 'fee-toggle-arrow-open' : ''}}">›</text>
+            </view>
+          </view>
           <input class="record-input" type="digit" placeholder="自动计算" value="{{fee}}" bindinput="onFeeInput"/>
-          <view wx:if="{{feePreview.length}}" class="fee-breakdown">
+          <view wx:if="{{feeExpanded && feePreview.length}}" class="fee-breakdown">
             <view wx:for="{{feePreview}}" wx:key="name" class="fee-item">
               <text class="fee-name">{{item.name}}</text>
               <text class="fee-value">{{item.vt}}</text>
@@ -205,33 +211,16 @@
       </view>
     </view>
 
-    <!-- 预览 -->
-    <view class="record-section">
-      <text class="section-title">🧾 交易预览</text>
-      <view class="record-card preview-card">
-        <view class="preview-row">
-          <text class="preview-label">交易金额</text>
-          <text class="preview-value">{{amountText}}</text>
-        </view>
-        <view class="preview-row">
-          <text class="preview-label">手续费</text>
-          <text class="preview-value">{{fee || '0.00'}}</text>
-        </view>
-        <view class="preview-divider"></view>
-        <view class="preview-row">
-          <text class="preview-label preview-label-bold">实际{{type === 'BUY' ? '支出' : '收入'}}</text>
-          <text class="preview-value preview-value-bold {{type === 'BUY' ? 'preview-amount-buy' : 'preview-amount-sell'}}">{{actualText}}</text>
-        </view>
-      </view>
-    </view>
-
     <view class="bottom-spacer"></view>
   </scroll-view>
 
   <!-- 底部确认按钮 -->
   <view class="submit-bar">
+    <view class="preview-sticky {{type === 'BUY' ? 'preview-sticky-buy' : 'preview-sticky-sell'}}">
+      <text class="preview-sticky-text">{{type === 'BUY' ? '买入' : '卖出'}} {{quantity || '0'}}股 × {{price || '0.00'}} = {{actualText}}</text>
+    </view>
     <view class="submit-btn {{type === 'BUY' ? 'submit-btn-buy' : 'submit-btn-sell'}}" bindtap="submit">
-      {{isEdit ? '保存修改' : '确认添加'}}
+      {{isEdit ? '保存修改' : (type === 'BUY' ? '确认买入' : '确认卖出')}} · {{actualText}}
     </view>
   </view>
 </view>

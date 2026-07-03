@@ -20,7 +20,7 @@ page {
 
 /* === 区块标题 === */
 .record-section {
-  margin-bottom: var(--xhs-space-sm);
+  margin-bottom: var(--xhs-space-xs);
 }
 
 .section-title {
@@ -37,7 +37,7 @@ page {
   background: var(--xhs-surface);
   border-radius: var(--xhs-radius-md);
   box-shadow: var(--xhs-elevation-2);
-  padding: var(--xhs-space-md);
+  padding: var(--xhs-space-sm);
 }
 
 /* === 分段控制器（市场 / 买卖） === */
@@ -196,7 +196,7 @@ page {
 
 /* === 表单字段 === */
 .field-group {
-  margin-bottom: var(--xhs-space-md);
+  margin-bottom: var(--xhs-space-sm);
 }
 
 .field-last {
@@ -331,7 +331,36 @@ page {
   color: var(--xhs-body);
 }
 
-/* === 手续费明细 === */
+/* === 手续费折叠 === */
+.fee-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.fee-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4rpx;
+  padding: 2rpx 8rpx;
+}
+
+.fee-toggle-text {
+  font-size: var(--xhs-font-xs);
+  color: var(--xhs-caption);
+}
+
+.fee-toggle-arrow {
+  font-size: 18rpx;
+  color: var(--xhs-caption);
+  transform: rotate(90deg);
+  transition: transform 200ms ease;
+}
+
+.fee-toggle-arrow-open {
+  transform: rotate(-90deg);
+}
+
 .fee-breakdown {
   margin-top: 8px;
   padding: 10px 12px;
@@ -579,6 +608,29 @@ page {
   color: var(--xhs-loss);
 }
 
+/* === 吸底预览条 === */
+.preview-sticky {
+  margin-bottom: 8px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  text-align: center;
+  transition: background 300ms ease;
+}
+
+.preview-sticky-buy {
+  background: var(--xhs-profit-bg);
+}
+
+.preview-sticky-sell {
+  background: var(--xhs-loss-bg);
+}
+
+.preview-sticky-text {
+  font-size: var(--xhs-font-sm);
+  font-weight: var(--xhs-weight-semibold);
+  color: var(--xhs-title);
+}
+
 /* === 底部间距 === */
 .bottom-spacer {
   height: 140px;
@@ -605,7 +657,7 @@ page {
   font-size: 16px;
   font-weight: var(--xhs-weight-semibold);
   border-radius: 12px;
-  transition: opacity 200ms ease, transform 200ms ease;
+  transition: opacity 200ms ease, transform 200ms ease, background 300ms ease, box-shadow 300ms ease;
   pointer-events: auto;
 }
 

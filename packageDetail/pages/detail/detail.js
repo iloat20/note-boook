@@ -4,11 +4,7 @@ const { calculatePosition } = require("../../../utils/services/positionService")
 const { getStrategyStats } = require("../../../utils/services/statsService");
 const { fmt, fmtShortDate, fmtTime } = require("../../../utils/helpers/format");
 const { calcFloatingPercent } = require("../../../utils/helpers/positionCalculator");
-const {
-	getMarketLabel,
-	getMarketColor,
-	getMarketCurrency,
-} = require("../../../utils/constants/market");
+const { getMarketLabel, getMarketColor } = require("../../../utils/constants/market");
 const pageMixin = require("../../../utils/ui/pageMixin");
 const { toast, success: fbSuccess } = require("../../../utils/ui/feedback");
 const { confirmDelete } = require("../../../utils/ui/confirmDialog");
@@ -35,8 +31,10 @@ Page({
 		dividends: [],
 		strategySummary: [],
 		formatAvgCost: "0.00",
+		formatCurrentPrice: "--",
 		formatMarketValue: "0.00",
 		formatDividendIncome: "0.00",
+		showEditSheet: false,
 		floatingPnLClass: "loss",
 		floatingPnLText: "0.00",
 		floatingPnLPercent: "0.00",
@@ -46,17 +44,17 @@ Page({
 		totalPnLText: "0.00",
 		disTransId: null,
 		disDivId: null,
-		editMode: false,
 		editQuantity: "",
 		editAvgCost: "",
 		editCurrentPrice: "",
 		heroPnLPercentText: "",
 		heroBgClass: "",
+		transactionGroups: [],
 	},
 
 	onLoad(options) {
 		pageMixin.onLoadMixin(this);
-
+		console.log("[detail] onLoad options:", JSON.stringify(options));
 		if (options?.stockId) {
 			this._stockId = parseInt(options.stockId, 10);
 			this.loadData();
@@ -64,7 +62,9 @@ Page({
 	},
 
 	onShow() {
-		if (pageMixin.onShowSubPackage() || !this._dataLoaded) {
+		const dirty = pageMixin.onShowSubPackage();
+		console.log("[detail] onShow dirty:", dirty, "_dataLoaded:", this._dataLoaded);
+		if (dirty || !this._dataLoaded) {
 			this.loadData();
 		}
 		if (!this.data.entranceDone) {
@@ -78,17 +78,35 @@ Page({
 	},
 
 	loadData() {
+		console.log(
+			"[detail] loadData start, _stockId:",
+			this._stockId,
+			"data.stockId:",
+			this.data.stockId,
+		);
 		let stockId = this._stockId;
 		if (!stockId) {
 			stockId = this.data.stockId;
 		}
+		console.log("[detail] resolved stockId:", stockId);
 		const stock = Stock.getById(stockId);
+		console.log("[detail] Stock.getById:", stock ? `found ${stock.name}` : "null");
 		if (!stock) {
 			this.setData({ stockId: stockId });
+			this._dataLoaded = true;
+			wx.showToast({ title: "股票不存在或已删除", icon: "none" });
 			return;
 		}
+		this._dataLoaded = true;
 
-		const position = calculatePosition(stock.id);
+		let position;
+		try {
+			position = calculatePosition(stock.id);
+		} catch (err) {
+			console.error("[detail] calculatePosition error:", err?.message);
+			wx.showToast({ title: "持仓计算失败", icon: "none" });
+			return;
+		}
 		const rawTransactions = Transaction.getByStockId(stock.id);
 		const transactions = rawTransactions.map(this._formatTransaction.bind(this));
 		const dividends = Dividend.getByStockId(stock.id).map(this._formatDividend.bind(this));
@@ -99,50 +117,59 @@ Page({
 
 		// Cache for reuse
 		this._rawTransactions = rawTransactions;
-		this._currency = getMarketCurrency(stock.market);
 
 		const marketValue =
 			position.currentPrice && position.quantity > 0
 				? position.currentPrice * position.quantity
 				: 0;
 		const totalPnL = position.realizedPnL + position.floatingPnL + position.dividendIncome;
-		const currency = this._currency;
 
 		const costBasis = position.avgCost * (position.quantity || 0);
 		const totalPnLPercent = costBasis > 0 ? (totalPnL / costBasis) * 100 : 0;
-
-		wx.setNavigationBarTitle({ title: stock.name || "股票详情" });
-
-		this._dataLoaded = true;
-		this.setData({
-			stock: stock,
-			stockId: stock.id,
-			stockName: stock.name || "股票详情",
-			marketLabel: getMarketLabel(stock.market),
-			marketColor: getMarketColor(stock.market),
-			position: position,
-			transactions: transactions,
-			dividends: dividends,
-			disTransId: null,
-			disDivId: null,
-			strategySummary: strategySummary,
-			formatAvgCost: currency + fmt(position.avgCost),
-			formatCurrentPrice: position.currentPrice ? currency + fmt(position.currentPrice) : "--",
-			formatMarketValue: currency + fmt(marketValue),
-			formatDividendIncome:
-				(position.dividendIncome >= 0 ? "+" : "") + currency + fmt(position.dividendIncome),
-			floatingPnLClass: position.floatingPnL >= 0 ? "profit" : "loss",
-			floatingPnLText:
-				(position.floatingPnL >= 0 ? "+" : "") + currency + fmt(Math.abs(position.floatingPnL)),
-			floatingPnLPercent: calcFloatingPercent(position),
-			realizedPnLClass: position.realizedPnL >= 0 ? "profit" : "loss",
-			realizedPnLText:
-				(position.realizedPnL >= 0 ? "+" : "") + currency + fmt(Math.abs(position.realizedPnL)),
-			totalPnLClass: totalPnL >= 0 ? "profit" : "loss",
-			totalPnLText: (totalPnL >= 0 ? "+" : "") + currency + fmt(Math.abs(totalPnL)),
-			heroPnLPercentText: `${(totalPnLPercent >= 0 ? "+" : "") + totalPnLPercent.toFixed(2)}%`,
-			heroBgClass: totalPnL > 0 ? "hero-profit" : totalPnL < 0 ? "hero-loss" : "hero-flat",
+		const transactionGroups = this._groupTransactionsByMonth(transactions);
+		transactionGroups.forEach((g, idx) => {
+			g.expanded = idx < 2;
 		});
+
+		try {
+			wx.setNavigationBarTitle({ title: stock.name || "股票详情" });
+		} catch (_e) {}
+
+		try {
+			this.setData({
+				stock: stock,
+				stockId: stock.id,
+				stockName: stock.name || "股票详情",
+				marketLabel: getMarketLabel(stock.market),
+				marketColor: getMarketColor(stock.market),
+				position: position,
+				transactions: transactions,
+				transactionGroups: transactionGroups,
+				dividends: dividends,
+				disTransId: null,
+				disDivId: null,
+				strategySummary: strategySummary,
+				formatAvgCost: fmt(position.avgCost),
+				formatCurrentPrice: position.currentPrice != null ? fmt(position.currentPrice) : "--",
+				formatMarketValue: fmt(marketValue),
+				formatDividendIncome:
+					(position.dividendIncome >= 0 ? "+" : "") + fmt(position.dividendIncome),
+				floatingPnLClass: position.floatingPnL >= 0 ? "profit" : "loss",
+				floatingPnLText:
+					(position.floatingPnL >= 0 ? "+" : "") + fmt(Math.abs(position.floatingPnL)),
+				floatingPnLPercent: calcFloatingPercent(position),
+				realizedPnLClass: position.realizedPnL >= 0 ? "profit" : "loss",
+				realizedPnLText:
+					(position.realizedPnL >= 0 ? "+" : "") + fmt(Math.abs(position.realizedPnL)),
+				totalPnLClass: totalPnL >= 0 ? "profit" : "loss",
+				totalPnLText: (totalPnL >= 0 ? "+" : "") + fmt(Math.abs(totalPnL)),
+				heroPnLPercentText: `${(totalPnLPercent >= 0 ? "+" : "") + totalPnLPercent.toFixed(2)}%`,
+				heroBgClass: totalPnL > 0 ? "hero-profit" : totalPnL < 0 ? "hero-loss" : "hero-flat",
+			});
+		} catch (err) {
+			console.error("[detail] setData error:", err?.message);
+			wx.showToast({ title: "渲染失败", icon: "none" });
+		}
 	},
 
 	_formatTransaction(transaction) {
@@ -187,6 +214,30 @@ Page({
 		};
 	},
 
+	_groupTransactionsByMonth(transactions) {
+		const groupMap = {};
+		transactions.forEach((t) => {
+			const d = new Date(t.date);
+			const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+			if (!groupMap[key]) {
+				groupMap[key] = [];
+			}
+			groupMap[key].push(t);
+		});
+		return Object.keys(groupMap)
+			.sort((a, b) => (b > a ? 1 : -1))
+			.map((key) => {
+				const parts = key.split("-");
+				return {
+					key: key,
+					label: `${parseInt(parts[0], 10)}年${parseInt(parts[1], 10)}月`,
+					count: groupMap[key].length,
+					items: groupMap[key],
+					expanded: false,
+				};
+			});
+	},
+
 	updatePrice(e) {
 		const price = parseFloat(e.detail.value);
 		const stockId = this.data.stockId || this._stockId;
@@ -203,7 +254,6 @@ Page({
 		const position = this.data.position;
 		const quantity = position.quantity || 0;
 		const avgCost = position.avgCost || 0;
-		const currency = this._currency || getMarketCurrency(this.data.stock?.market);
 
 		const marketValue = price * quantity;
 		const floatingPnL = quantity > 0 ? (price - avgCost) * quantity : 0;
@@ -215,13 +265,12 @@ Page({
 		this.setData({
 			"position.currentPrice": price,
 			"position.floatingPnL": floatingPnL,
-			formatCurrentPrice: currency + fmt(price),
-			formatMarketValue: currency + fmt(marketValue),
+			formatMarketValue: fmt(marketValue),
 			floatingPnLClass: floatingPnL >= 0 ? "profit" : "loss",
-			floatingPnLText: (floatingPnL >= 0 ? "+" : "") + currency + fmt(Math.abs(floatingPnL)),
+			floatingPnLText: (floatingPnL >= 0 ? "+" : "") + fmt(Math.abs(floatingPnL)),
 			floatingPnLPercent: pnlPercent.toFixed(2),
 			totalPnLClass: totalPnL >= 0 ? "profit" : "loss",
-			totalPnLText: (totalPnL >= 0 ? "+" : "") + currency + fmt(Math.abs(totalPnL)),
+			totalPnLText: (totalPnL >= 0 ? "+" : "") + fmt(Math.abs(totalPnL)),
 			heroPnLPercentText: `${(totalPnLPercent >= 0 ? "+" : "") + totalPnLPercent.toFixed(2)}%`,
 			heroBgClass: totalPnL > 0 ? "hero-profit" : totalPnL < 0 ? "hero-loss" : "hero-flat",
 		});
@@ -243,6 +292,17 @@ Page({
 		wx.navigateTo({
 			url: `/packageDetail/pages/dividend/dividend?stockId=${stockId}`,
 		});
+	},
+
+	toggleTransactionGroup(e) {
+		const key = e.currentTarget.dataset.key;
+		const groups = this.data.transactionGroups.map((g) => {
+			if (g.key === key) {
+				return { ...g, expanded: !g.expanded };
+			}
+			return g;
+		});
+		this.setData({ transactionGroups: groups });
 	},
 
 	showTransactionActions(e) {
@@ -298,13 +358,13 @@ Page({
 	},
 
 	toggleEditMode() {
-		if (this.data.editMode) {
+		if (this.data.showEditSheet) {
 			this.cancelEdit();
 			return;
 		}
 		const position = this.data.position;
 		this.setData({
-			editMode: true,
+			showEditSheet: true,
 			editQuantity: String(position.quantity),
 			editAvgCost: String(position.avgCost),
 			editCurrentPrice: position.currentPrice ? String(position.currentPrice) : "",
@@ -324,7 +384,7 @@ Page({
 	},
 
 	cancelEdit() {
-		this.setData({ editMode: false });
+		this.setData({ showEditSheet: false });
 	},
 
 	savePosition() {
@@ -356,7 +416,7 @@ Page({
 				PriceCache.set(stockId, currentPrice);
 			}
 			toast("持仓已是最新的");
-			this.setData({ editMode: false });
+			this.setData({ showEditSheet: false });
 			if (currentPrice > 0) {
 				this.loadData();
 			}
@@ -430,7 +490,7 @@ Page({
 		}
 
 		fbSuccess("持仓已更新");
-		this.setData({ editMode: false });
+		this.setData({ showEditSheet: false });
 		this.loadData();
 	},
 });

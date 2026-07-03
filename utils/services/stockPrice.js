@@ -9,7 +9,7 @@ const { request } = require("../../api/request");
 const DEBUG = false;
 const log = DEBUG ? console.log.bind(console) : () => {};
 const warn = DEBUG ? console.warn.bind(console) : () => {};
-const errLog = console.error.bind(console); // 保留错误日志
+const errLog = DEBUG ? console.error.bind(console) : () => {};
 
 // 请求并发控制
 const MAX_CONCURRENT_REQUESTS = 5;

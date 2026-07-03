@@ -1,8 +1,10 @@
 const { getRate, getRates } = require("./exchangeRate");
-const { Stock, Transaction, Dividend } = require("../models/index");
+const { Stock, Dividend } = require("../models/index");
 const PriceCache = require("../models/priceCache");
 const { caches } = require("../cache/cacheManager");
 const { xirr } = require("../helpers/xirr");
+const DateIndex = require("../models/dateIndex");
+const { getCached, setCached } = require("../cache/computedCache");
 
 function _buildCashFlowsCore(
 	transactions,
@@ -87,7 +89,7 @@ async function calcXIRRForRange(startDate, endDate) {
 	});
 	const rates = await getRates();
 
-	const transactions = Transaction.getByDateRange(startDate, endDate);
+	const transactions = DateIndex.getByDateRange(startDate, endDate);
 	const dividends = Dividend.getAll().filter((d) => {
 		const dd = new Date(d.date);
 		return dd >= startDate && dd <= endDate;
@@ -106,9 +108,24 @@ async function calcXIRRForRange(startDate, endDate) {
 }
 
 async function getTotalXIRR() {
+	const cacheKey = "total_xirr";
+
+	const memHit = caches.periodStats.get(cacheKey);
+	if (memHit !== undefined) return memHit;
+
+	const diskHit = getCached(cacheKey);
+	if (diskHit !== null && diskHit !== undefined) {
+		caches.periodStats.set(cacheKey, diskHit);
+		return diskHit;
+	}
+
 	const today = new Date();
 	today.setHours(23, 59, 59, 999);
-	return calcXIRRForRange(new Date(0), today);
+	const result = await calcXIRRForRange(new Date(0), today);
+
+	caches.periodStats.set(cacheKey, result);
+	setCached(cacheKey, result);
+	return result;
 }
 
 module.exports = {

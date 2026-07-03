@@ -55,6 +55,7 @@ Page({
 		allStrategies: [],
 		showStrategyPicker: false,
 		customStrategyInput: "",
+		feeExpanded: false,
 	},
 
 	onLoad(options) {
@@ -425,6 +426,10 @@ Page({
 
 	confirmStrategyPicker() {
 		this.setData({ showStrategyPicker: false });
+	},
+
+	toggleFee() {
+		this.setData({ feeExpanded: !this.data.feeExpanded });
 	},
 
 	goBack() {

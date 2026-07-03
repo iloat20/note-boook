@@ -100,6 +100,7 @@ Page({
 	async onLoad() {
 		pageMixin.onLoadMixin(this);
 		this.updateDate();
+		this._dataLoaded = false;
 
 		const systemInfo = getApp().globalData.systemInfo || wx.getWindowInfo() || {};
 		const windowHeight = systemInfo.windowHeight || 667;
@@ -115,8 +116,12 @@ Page({
 		const dirty = pageMixin.onShowMixin(this, 0);
 		if (dirty) {
 			await this.refresh();
-		} else if (this._allPositionsCache?.length > 0) {
-			await this.refresh();
+			return;
+		}
+		// 首次冷启动：onLoad 里的 await refresh() 尚未完成，
+		// 或上一轮 refresh 已成功但缓存为空(=无持仓)，此时需主动触发一次。
+		if (!this._dataLoaded) {
+			await this.refresh({ fetchPrices: false });
 		}
 	},
 
@@ -162,13 +167,17 @@ Page({
 		this.setData({ loading: true });
 
 		try {
+			_ensureNetworkModules();
+
+			// [优化] 汇率请求提前发起，与持仓计算并行（网络 I/O 与 CPU 计算重叠）
+			const ratesPromise = _getRates();
+
 			// 使用 positionService 获取数据（已封装缓存逻辑）
 			// 注意：getAllPositions 内部使用同步 storage 操作，无需 Promise
 			const allPositions = positionService.getAllPositions(forceRefresh);
 
-			// 获取汇率（港股/美股 → 人民币换算）
-			_ensureNetworkModules();
-			const rates = await _getRates();
+			// 等待汇率请求完成（通常此时已 ready）
+			const rates = await ratesPromise;
 			this._rates = rates;
 
 			// [优化] 单次遍历 allPositions：同时完成指标聚合 + marketAgg 构建 + positionMap
@@ -396,6 +405,7 @@ Page({
 			}
 
 			this._loading = false;
+			this._dataLoaded = true;
 			this.setData(setDataUpdates);
 		} catch (err) {
 			console.error("[Index] loadData error:", err);
@@ -406,42 +416,7 @@ Page({
 		}
 	},
 
-	// Incremental summary update: only recompute contribution from stocks whose price changed
-	_updateSummaryIncremental(priceResults) {
-		const rates = this.data._rates || { usdToCny: 1, hkdToCny: 1 };
-		let addedMarketValue = 0,
-			addedPnL = 0;
-
-		priceResults.forEach((r) => {
-			const idx = this._allIndexById ? this._allIndexById.get(r.stockId) : undefined;
-			const pos = idx != null && this._allPositionsCache ? this._allPositionsCache[idx] : null;
-			if (!pos || pos.quantity <= 0) return;
-			const rate = _getRate(pos.market, rates);
-			const oldPrice = pos.currentPrice || 0;
-			addedMarketValue += (r.price - oldPrice) * pos.quantity * rate;
-			addedPnL += (r.price - oldPrice) * pos.quantity * rate;
-		});
-
-		if (addedMarketValue === 0 && addedPnL === 0) return;
-
-		const totalMarketValue = parseFloat((this.data.totalMarketValue + addedMarketValue).toFixed(2));
-		const totalPnL = parseFloat((this.data.totalPnL + addedPnL).toFixed(2));
-		const totalInvestment = this._cachedTotalInvestment || 1;
-
-		this.setData({
-			totalMarketValue,
-			totalMarketValueText: fmt(totalMarketValue),
-			totalPnL,
-			totalPnLText: fmt(totalPnL),
-			totalPnLPercent:
-				totalInvestment > 0 ? parseFloat(((totalPnL / totalInvestment) * 100).toFixed(2)) : 0,
-			"displayValues.totalMarketValue": fmt(totalMarketValue),
-			"displayValues.totalPnL": fmt(totalPnL),
-			"displayValues.totalPnLPercent": fmt(
-				totalInvestment > 0 ? parseFloat(((totalPnL / totalInvestment) * 100).toFixed(2)) : 0,
-			),
-		});
-	},
+	// _updateSummaryIncremental 已内联到 _fetchPrices 中（含 per-position PnL 重算 + marketAgg 重建）
 
 	// 更新市场 tab 计数（已内联到 _loadData）
 	// _updateMarketTabs removed - counts computed in _loadData main setData
@@ -600,9 +575,9 @@ Page({
 			if (validResults.length > 0) {
 				// 批量写入缓存
 				PriceCache.setBatch(validResults);
-				// [优化] positions / _allPositions 已移出 data：
-				//   - 全量缓存 + 当前 tab 缓存直接内存赋值（不进 setData）
-				//   - 仅 displayPositions（渲染层）用 data path 精确更新
+				// 更新全量缓存 + 当前 tab 缓存 + 渲染层
+				// 同时重算浮动盈亏（首次加载时 PriceCache 为空，floatingPnL 初始为 0）
+				const rates = this.data._rates || { usdToCny: 1, hkdToCny: 1 };
 				const allCache = this._allPositionsCache || [];
 				const allIndexById = this._allIndexById;
 				const tabCache = this._positionsCache || [];
@@ -614,34 +589,112 @@ Page({
 					if (r.price == null) return;
 					const priceText = fmt(r.price);
 
-					// 1) 全量缓存：直接内存赋值（_updateSummary 会读到最新值）
+					// 1) 全量缓存：更新价格 + 重算浮动盈亏
 					const allIdx = allIndexById ? allIndexById.get(r.stockId) : undefined;
 					if (allIdx != null && allCache[allIdx]) {
-						allCache[allIdx].currentPrice = r.price;
-						allCache[allIdx].currentPriceText = priceText;
-						allCache[allIdx].displayPriceText = priceText;
+						const pos = allCache[allIdx];
+						pos.currentPrice = r.price;
+						pos.currentPriceText = priceText;
+						pos.displayPriceText = priceText;
+						if (pos.quantity > 0) {
+							pos.floatingPnL = parseFloat(((r.price - pos.avgCost) * pos.quantity).toFixed(2));
+							pos.floatingPnLText = fmt(pos.floatingPnL);
+							pos.pnlPercentText = calcFloatingPercent(pos);
+						}
 					}
 
-					// 2) 当前 tab 缓存：直接内存赋值
+					// 2) 当前 tab 缓存：更新价格 + 重算浮动盈亏
 					const idx = tabIndexById ? tabIndexById.get(r.stockId) : undefined;
 					if (idx != null && tabCache[idx]) {
-						tabCache[idx].currentPrice = r.price;
-						tabCache[idx].currentPriceText = priceText;
-						tabCache[idx].displayPriceText = priceText;
+						const tpos = tabCache[idx];
+						tpos.currentPrice = r.price;
+						tpos.currentPriceText = priceText;
+						tpos.displayPriceText = priceText;
+						if (tpos.quantity > 0) {
+							tpos.floatingPnL = parseFloat(((r.price - tpos.avgCost) * tpos.quantity).toFixed(2));
+							tpos.floatingPnLText = fmt(tpos.floatingPnL);
+							tpos.pnlPercentText = calcFloatingPercent(tpos);
+						}
 						// 3) 渲染层：仅当前 tab 前 displayCount 条做 data path 更新
 						if (idx < displayCnt) {
 							updates[`displayPositions[${idx}].currentPrice`] = r.price;
 							updates[`displayPositions[${idx}].currentPriceText`] = priceText;
 							updates[`displayPositions[${idx}].displayPriceText`] = priceText;
+							if (tpos.quantity > 0) {
+								updates[`displayPositions[${idx}].floatingPnL`] = tpos.floatingPnL;
+								updates[`displayPositions[${idx}].floatingPnLText`] = tpos.floatingPnLText;
+								updates[`displayPositions[${idx}].pnlPercentText`] = tpos.pnlPercentText;
+							}
 						}
 					}
 				});
 
-				if (Object.keys(updates).length > 0) {
-					this.setData(updates);
-					// cache 有变化且渲染层已更新，增量重算汇总
-					this._updateSummaryIncremental(validResults);
+				// 从更新后的全量缓存重建市场聚合（_marketAggCache 在首次加载时基于空价格计算，需要刷新）
+				const newMarketAgg = {};
+				let totalMV = 0,
+					totalFL = 0;
+				allCache.forEach((p) => {
+					if (p.quantity <= 0) return;
+					const rate = _getRate(p.market, rates);
+					if (!newMarketAgg[p.market]) newMarketAgg[p.market] = { marketValue: 0, pnl: 0 };
+					if (p.currentPrice) {
+						const mv = p.currentPrice * p.quantity * rate;
+						newMarketAgg[p.market].marketValue += mv;
+						totalMV += mv;
+					}
+					const fl = (p.floatingPnL || 0) * rate;
+					newMarketAgg[p.market].pnl += fl;
+					totalFL += fl;
+				});
+				// 补上已实现盈亏 + 分红（不受价格变动影响，含已清仓股票）
+				allCache.forEach((p) => {
+					const rate = _getRate(p.market, rates);
+					const realized = ((p.realizedPnL || 0) + (p.dividendIncome || 0)) * rate;
+					if (realized !== 0) {
+						if (p.quantity > 0 && newMarketAgg[p.market]) {
+							newMarketAgg[p.market].pnl += realized;
+						} else if (p.quantity <= 0) {
+							if (!newMarketAgg[p.market]) newMarketAgg[p.market] = { marketValue: 0, pnl: 0 };
+							newMarketAgg[p.market].pnl += realized;
+						}
+					}
+				});
+				let aggTotalPnL = 0;
+				for (const mkt in newMarketAgg) {
+					newMarketAgg[mkt].marketValue = parseFloat(newMarketAgg[mkt].marketValue.toFixed(2));
+					newMarketAgg[mkt].pnl = parseFloat(newMarketAgg[mkt].pnl.toFixed(2));
+					aggTotalPnL += newMarketAgg[mkt].pnl;
 				}
+				newMarketAgg[null] = {
+					marketValue: parseFloat(totalMV.toFixed(2)),
+					pnl: parseFloat(aggTotalPnL.toFixed(2)),
+				};
+				this._marketAggCache = newMarketAgg;
+
+				// 更新汇总（全量重算，避免增量方案在 cache mutate 后读到新价格导致 delta 错误）
+				const newTotalMarketValue = parseFloat(totalMV.toFixed(2));
+				const totalRealized = allCache.reduce(
+					(s, p) =>
+						s + ((p.realizedPnL || 0) + (p.dividendIncome || 0)) * _getRate(p.market, rates),
+					0,
+				);
+				const newTotalPnL = parseFloat((totalFL + totalRealized).toFixed(2));
+				const totalInvestment = this._cachedTotalInvestment || 0;
+
+				updates._rates = rates;
+				updates.totalMarketValue = newTotalMarketValue;
+				updates.totalMarketValueText = fmt(newTotalMarketValue);
+				updates.totalPnL = newTotalPnL;
+				updates.totalPnLText = fmt(newTotalPnL);
+				updates.totalPnLPercent =
+					totalInvestment > 0 ? parseFloat(((newTotalPnL / totalInvestment) * 100).toFixed(2)) : 0;
+				updates["displayValues.totalMarketValue"] = fmt(newTotalMarketValue);
+				updates["displayValues.totalPnL"] = fmt(newTotalPnL);
+				updates["displayValues.totalPnLPercent"] = fmt(
+					totalInvestment > 0 ? parseFloat(((newTotalPnL / totalInvestment) * 100).toFixed(2)) : 0,
+				);
+
+				this.setData(updates);
 			} else {
 				// 无有效结果时仍刷新持仓（可能清理过期缓存等）
 				this.refresh({ fetchPrices: false });

@@ -8,6 +8,7 @@ App({
 		// [优化] 启动后延迟执行非关键路径，让首屏优先渲染
 		_defer(() => this._checkStorageQuota(), 3000);
 		_defer(() => this._pruneStaleData(), 5000);
+		_defer(() => this._warmUpComputedCache(), 7000);
 	},
 
 	_initSystemInfo() {
@@ -102,6 +103,18 @@ App({
 			}
 		} catch (e) {
 			console.warn("[App] 过期数据清理失败:", e);
+		}
+	},
+
+	/**
+	 * 预热计算缓存（延迟执行，避免阻塞首屏）
+	 */
+	_warmUpComputedCache() {
+		try {
+			const { warmUpCache } = require("./utils/cache/computedCache");
+			warmUpCache();
+		} catch (e) {
+			console.warn("[App] 计算缓存预热失败:", e);
 		}
 	},
 

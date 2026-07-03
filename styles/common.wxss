@@ -221,6 +221,6 @@
 }
 
 /* === Profit/Loss Colors === */
-.profit { color: var(--xhs-profit); }
-.loss { color: var(--xhs-loss); }
+.profit { color: var(--xhs-profit) !important; }
+.loss { color: var(--xhs-loss) !important; }
 

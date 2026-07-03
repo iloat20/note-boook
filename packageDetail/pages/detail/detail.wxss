@@ -153,6 +153,23 @@ page {
   letter-spacing: -0.01em;
 }
 
+.profit-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4rpx 12rpx;
+  border-radius: 20rpx;
+  font-size: var(--xhs-font-sm);
+  font-weight: var(--xhs-weight-semibold);
+}
+
+.profit-badge.profit {
+  background: var(--xhs-profit-bg);
+}
+
+.profit-badge.loss {
+  background: var(--xhs-loss-bg);
+}
+
 /* =============================
    数据面板
    ============================= */
@@ -616,3 +633,114 @@ page {
   color: var(--xhs-caption);
   font-weight: var(--xhs-weight-regular);
 }
+
+ /* =============================
+    交易记录按月分组
+    ============================= */
+ .trans-group:first-child .trans-group-header {
+   border-top: none;
+ }
+
+ .trans-group-header {
+   display: flex;
+   align-items: center;
+   gap: 8rpx;
+   padding: 20rpx var(--page-margin);
+   margin: 0 var(--page-margin);
+   border-top: 1px solid var(--xhs-divider);
+   transition: var(--xhs-transition);
+ }
+
+ .trans-group-header:active {
+   background: rgba(0, 0, 0, 0.02);
+ }
+
+ .trans-group-arrow {
+   font-size: 20rpx;
+   color: var(--xhs-caption);
+   transition: transform 200ms ease;
+   flex-shrink: 0;
+ }
+
+ .trans-group-arrow-expanded {
+   transform: rotate(90deg);
+ }
+
+ .trans-group-label {
+   font-size: var(--xhs-font-sm);
+   font-weight: var(--xhs-weight-semibold);
+   color: var(--xhs-title);
+ }
+
+ .trans-group-count {
+   font-size: var(--xhs-font-xs);
+   color: var(--xhs-caption);
+ }
+
+ .trans-group-body {
+   overflow: hidden;
+ }
+
+ /* =============================
+    编辑底部抽屉
+    ============================= */
+ .sheet-mask {
+   position: fixed;
+   top: 0;
+   left: 0;
+   right: 0;
+   bottom: 0;
+   background: rgba(0, 0, 0, 0.4);
+   z-index: 998;
+ }
+
+ .edit-sheet {
+   position: fixed;
+   left: 0;
+   right: 0;
+   bottom: 0;
+   background: var(--xhs-surface);
+   border-radius: 24rpx 24rpx 0 0;
+   box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.12);
+   z-index: 999;
+   padding-bottom: env(safe-area-inset-bottom);
+ }
+
+ .sheet-header {
+   display: flex;
+   align-items: center;
+   justify-content: space-between;
+   padding: 32rpx var(--page-margin) 24rpx;
+ }
+
+ .sheet-title {
+   font-size: var(--xhs-font-lg);
+   font-weight: var(--xhs-weight-bold);
+   color: var(--xhs-title);
+ }
+
+ .sheet-close {
+   display: flex;
+   align-items: center;
+   justify-content: center;
+   width: 48rpx;
+   height: 48rpx;
+   border-radius: var(--xhs-radius-round);
+   background: var(--xhs-bg-secondary);
+ }
+
+ .sheet-close-icon {
+   font-size: 24rpx;
+   color: var(--xhs-caption);
+   line-height: 1;
+ }
+
+ .sheet-body {
+   padding: 0 var(--page-margin) 32rpx;
+ }
+
+ .sheet-footer {
+   display: flex;
+   gap: var(--xhs-space-sm);
+   padding: 0 var(--page-margin) 32rpx;
+ }

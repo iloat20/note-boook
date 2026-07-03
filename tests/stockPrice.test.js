@@ -15,6 +15,7 @@ describe("Stock price batching", () => {
 	beforeEach(() => {
 		jest.resetModules();
 		jest.useRealTimers();
+		jest.runOnlyPendingTimers();
 		request.get.mockClear();
 	});
 

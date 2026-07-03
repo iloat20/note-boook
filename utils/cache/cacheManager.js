@@ -11,6 +11,7 @@ const caches = {
 	position: new LRUCache(100), // 持仓计算结果缓存
 	heatmap: new LRUCache(50), // 热力图数据缓存
 	periodStats: new LRUCache(50), // 周期统计数据缓存
+	stats: new LRUCache(20), // 统计服务缓存（totalStats/strategyStats）
 	mem: new LRUCache(100), // 内存缓存（避免频繁读取本地存储）
 };
 
@@ -27,6 +28,7 @@ function markDataDirty(types, stockId) {
 	try {
 		const appStore = require("../state/appStore");
 		appStore.commit("MARK_DIRTY");
+		require("./computedCache").bumpVersion();
 	} catch (e) {
 		console.warn("[markDataDirty]", e);
 	}
@@ -36,6 +38,7 @@ function markDataDirty(types, stockId) {
 		caches.position.clear();
 		caches.heatmap.clear();
 		caches.periodStats.clear();
+		caches.stats.clear();
 		return;
 	}
 

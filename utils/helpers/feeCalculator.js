@@ -1,4 +1,4 @@
-// utils/helpers/feeCalculator.js
+﻿// utils/helpers/feeCalculator.js
 // Fee calculation with shared constants — getFeeBreakdown is canonical
 const { MARKETS, TRANSACTION_TYPE, FEE_CONFIG } = require("../constants/index");
 
@@ -24,21 +24,20 @@ function _calcAShare(type, amount) {
 
 function _calcHKShare(_type, amount) {
 	const config = FEE_CONFIG.HK_SHARE;
-	let commission = amount * config.commissionRate;
-	if (commission < config.commissionMin) commission = config.commissionMin;
-	let stampDuty = amount * config.stampDutyRate;
-	stampDuty = Math.ceil(stampDuty);
-	const transactionLevy = amount * config.transactionLevyRate;
-	let transactionFee = amount * config.transactionFeeRate;
-	if (transactionFee < config.transactionFeeMin) transactionFee = config.transactionFeeMin;
-	let clearingFee = amount * config.clearingFeeRate;
-	if (clearingFee < config.clearingFeeMin) clearingFee = config.clearingFeeMin;
+	const round2 = (n) => Math.round(n * 100) / 100;
+	const commission = round2(Math.max(amount * config.commissionRate, config.commissionMin));
+	const stampDuty = Math.ceil(amount * config.stampDutyRate);
+	const transactionLevy = round2(amount * config.transactionLevyRate);
+	const transactionFee = round2(
+		Math.max(amount * config.transactionFeeRate, config.transactionFeeMin),
+	);
+	const clearingFee = round2(Math.max(amount * config.clearingFeeRate, config.clearingFeeMin));
 	return {
-		commission: Math.round(commission * 100) / 100,
+		commission: commission,
 		stampDuty: stampDuty,
-		transactionLevy: Math.round(transactionLevy * 100) / 100,
-		transactionFee: Math.round(transactionFee * 100) / 100,
-		clearingFee: Math.round(clearingFee * 100) / 100,
+		transactionLevy: transactionLevy,
+		transactionFee: transactionFee,
+		clearingFee: clearingFee,
 	};
 }
 

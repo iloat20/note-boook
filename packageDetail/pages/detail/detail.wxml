@@ -13,11 +13,10 @@
             <text class="hero-stock-code">{{stock.code}}</text>
           </view>
         </view>
-        <view bindtap="toggleEditMode" class="hero-edit-btn {{editMode ? 'hero-edit-btn-active' : ''}}">
-          <text class="hero-edit-text">{{editMode ? '完成' : '编辑'}}</text>
-        </view>
+         <view bindtap="toggleEditMode" class="hero-edit-btn {{showEditSheet ? 'hero-edit-btn-active' : ''}}">
+           <text class="hero-edit-text">{{showEditSheet ? '完成' : '编辑'}}</text>
+         </view>
       </view>
-      <view class="hero-price">{{formatCurrentPrice}}</view>
       <view class="hero-pnl-row">
         <text class="hero-pnl-amount {{totalPnLClass}}">{{totalPnLText}}</text>
         <view class="profit-badge {{totalPnLClass}}">
@@ -51,30 +50,7 @@
         </view>
       </view>
 
-      <!-- 编辑模式 -->
-      <block wx:if="{{editMode}}">
-        <view class="data-panel-divider"></view>
-        <view class="data-panel-edit">
-          <view class="edit-field-row">
-            <text class="edit-field-label">数量</text>
-            <input class="edit-input" type="digit" placeholder="0" value="{{editQuantity}}" bindinput="onEditQuantityInput"/>
-          </view>
-          <view class="edit-field-row">
-            <text class="edit-field-label">成本</text>
-            <input class="edit-input" type="digit" placeholder="0.00" value="{{editAvgCost}}" bindinput="onEditAvgCostInput"/>
-          </view>
-          <view class="edit-field-row">
-            <text class="edit-field-label">现价</text>
-            <input class="edit-input" type="digit" placeholder="0.00" value="{{editCurrentPrice}}" bindinput="onEditCurrentPriceInput"/>
-          </view>
-          <view class="edit-actions">
-            <view class="btn-cancel" bindtap="cancelEdit">取消</view>
-            <view class="btn-save" bindtap="savePosition">保存修改</view>
-          </view>
-        </view>
-      </block>
-
-      <!-- 盈亏明细 -->
+       <!-- 盈亏明细 -->
       <view class="data-panel-divider"></view>
       <view class="data-panel-section">
         <text class="data-panel-title">盈亏明细</text>
@@ -107,30 +83,39 @@
         <view class="detail-card-action" bindtap="goToRecord">添加</view>
       </view>
       <view wx:if="{{transactions.length > 0}}">
-        <view wx:for="{{transactions}}" wx:key="id"
-          class="record-item {{disTransId === item.id ? 'dissolving' : ''}}"
-          bindtap="showTransactionActions" data-id="{{item.id}}" data-type="transaction">
-          <view class="record-main">
-            <view class="record-left">
-              <view class="record-tag-row">
-                <view class="tag {{item.type === 'BUY' ? 'tag-buy' : 'tag-sell'}}">{{item.typeText}}</view>
-                <text class="record-date">{{item.dateText}}</text>
-              </view>
-              <text class="record-qty">{{item.quantity}}股</text>
-            </view>
-            <view class="record-right">
-              <text class="record-price {{item.type === 'BUY' ? 'record-price--buy' : 'record-price--sell'}}">{{item.priceText}}</text>
-              <text class="record-amount">{{item.amountText}}</text>
-            </view>
-          </view>
-          <view wx:if="{{item.fee > 0}}" class="record-fee-row">
-            <text class="record-fee-text">手续费 {{item.feeText}}</text>
-          </view>
-          <view wx:if="{{item.hasJournal}}" class="record-journal-wrap">
-            <strategy-tags wx:if="{{item.strategies.length > 0}}" tags="{{item.strategies}}" />
-            <text wx:if="{{item.reason}}" class="record-reason">{{item.reason}}</text>
-          </view>
-        </view>
+         <view wx:for="{{transactionGroups}}" wx:key="key" class="trans-group">
+           <view class="trans-group-header" bindtap="toggleTransactionGroup" data-key="{{item.key}}">
+             <text class="trans-group-arrow {{item.expanded ? 'trans-group-arrow-expanded' : ''}}">▶</text>
+             <text class="trans-group-label">{{item.label}}</text>
+             <text class="trans-group-count">({{item.count}}笔)</text>
+           </view>
+           <view wx:if="{{item.expanded}}" class="trans-group-body">
+             <view wx:for="{{item.items}}" wx:key="id" wx:for-item="t"
+               class="record-item {{disTransId === t.id ? 'dissolving' : ''}}"
+               bindtap="showTransactionActions" data-id="{{t.id}}" data-type="transaction">
+               <view class="record-main">
+                 <view class="record-left">
+                   <view class="record-tag-row">
+                     <view class="tag {{t.type === 'BUY' ? 'tag-buy' : 'tag-sell'}}">{{t.typeText}}</view>
+                     <text class="record-date">{{t.dateText}}</text>
+                   </view>
+                   <text class="record-qty">{{t.quantity}}股</text>
+                 </view>
+                 <view class="record-right">
+                   <text class="record-price {{t.type === 'BUY' ? 'record-price--buy' : 'record-price--sell'}}">{{t.priceText}}</text>
+                   <text class="record-amount">{{t.amountText}}</text>
+                 </view>
+               </view>
+               <view wx:if="{{t.fee > 0}}" class="record-fee-row">
+                 <text class="record-fee-text">手续费 {{t.feeText}}</text>
+               </view>
+               <view wx:if="{{t.hasJournal}}" class="record-journal-wrap">
+                 <strategy-tags wx:if="{{t.strategies.length > 0}}" tags="{{t.strategies}}" />
+                 <text wx:if="{{t.reason}}" class="record-reason">{{t.reason}}</text>
+               </view>
+             </view>
+           </view>
+         </view>
       </view>
       <view wx:else class="detail-card-empty">
         <text class="detail-card-empty-text">暂无交易记录</text>
@@ -182,7 +167,36 @@
     <view style="height: 60px;"></view>
   </scroll-view>
 
-  <empty-state
+   <!-- ===== 编辑底部抽屉 ===== -->
+   <view wx:if="{{showEditSheet}}" class="sheet-mask" bindtap="cancelEdit"></view>
+   <view wx:if="{{showEditSheet}}" class="edit-sheet">
+     <view class="sheet-header">
+       <text class="sheet-title">编辑持仓</text>
+       <view class="sheet-close" bindtap="cancelEdit">
+         <text class="sheet-close-icon">✕</text>
+       </view>
+     </view>
+     <view class="sheet-body">
+       <view class="edit-field-row">
+         <text class="edit-field-label">数量</text>
+         <input class="edit-input" type="digit" placeholder="0" value="{{editQuantity}}" bindinput="onEditQuantityInput"/>
+       </view>
+       <view class="edit-field-row">
+         <text class="edit-field-label">成本</text>
+         <input class="edit-input" type="digit" placeholder="0.00" value="{{editAvgCost}}" bindinput="onEditAvgCostInput"/>
+       </view>
+       <view class="edit-field-row">
+         <text class="edit-field-label">现价</text>
+         <input class="edit-input" type="digit" placeholder="0.00" value="{{editCurrentPrice}}" bindinput="onEditCurrentPriceInput"/>
+       </view>
+     </view>
+     <view class="sheet-footer">
+       <view class="btn-cancel" bindtap="cancelEdit">取消</view>
+     <view class="btn-save" bindtap="savePosition">保存修改</view>
+     </view>
+    </view>
+ 
+    <empty-state
     wx:else
     icon="📈"
     title="股票不存在"

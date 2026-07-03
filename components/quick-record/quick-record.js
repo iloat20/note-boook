@@ -209,10 +209,7 @@ Component({
 			fetchStockPrice(this.data.qrMarket, code)
 				.then((data) => {
 					if (data?.name && this.data.qrCode === code) {
-						const localResults = searchStocks(code, this.data.qrMarket, 1);
-						const localName = localResults.length > 0 ? localResults[0].name : null;
-						const finalName = localName || data.name;
-						const updates = { qrName: finalName, qrFetching: false };
+						const updates = { qrName: data.name, qrFetching: false };
 						if (!this.data.qrPrice || parseFloat(this.data.qrPrice) === 0) {
 							updates.qrPrice = String(data.currentPrice);
 						}
@@ -340,10 +337,9 @@ Component({
 					);
 					if (valid && this._afProbe === code) {
 						// 只要 probe 未改变输入（用户未快速输新码），无条件设置
-						const localName = searchStocks(code, market, 1)[0]?.name || "";
 						const priceStr = String(result.currentPrice);
 						this.setData({
-							qrName: localName || existing?.name || result.name || "",
+							qrName: result.name || existing?.name || "",
 							qrPrice: priceStr,
 						});
 						console.log(

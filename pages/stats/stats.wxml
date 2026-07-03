@@ -23,17 +23,6 @@
   </view>
 
   <scroll-view wx:else class="xhs-scroll" scroll-y>
-    <!-- 时段选择 (黑色文字 + 红色下划线) -->
-    <view class="period-tabs animate-stagger" style="animation-delay:160ms">
-      <view
-        wx:for="{{periodTabs}}"
-        wx:key="key"
-        class="period-tab {{currentPeriod === item.key ? 'active' : ''}}"
-        data-period="{{item.key}}"
-        bindtap="switchPeriod"
-      >{{item.label}}</view>
-    </view>
-
     <!-- 双列统计卡片 (小红书笔记风格) -->
     <view class="xhs-feed-grid animate-stagger" style="animation-delay:240ms">
       <!-- 盈亏 -->
@@ -58,25 +47,25 @@
             <text class="xhs-feed-card-emoji">📊</text>
           </view>
           <view class="xhs-feed-card-body">
-            <text class="xhs-feed-card-value {{stats.totalPnL >= 0 ? 'xhs-profit' : 'xhs-loss'}}">
-              {{stats.totalReturnRateText || '0.00%'}}
+            <text class="xhs-feed-card-value {{stats.returnValue > 0 ? 'xhs-profit' : stats.returnValue < 0 ? 'xhs-loss' : ''}}">
+              {{stats.returnText || '--'}}
             </text>
             <text class="xhs-feed-card-label">收益率</text>
           </view>
         </view>
       </view>
 
-      <!-- 收益率指标 (XIRR/周收益率) -->
+      <!-- 胜率 -->
       <view class="xhs-feed-card">
         <view class="xhs-feed-card-inner">
-          <view class="xhs-feed-card-cover cover-pnl">
+          <view class="xhs-feed-card-cover cover-rate">
             <text class="xhs-feed-card-emoji">🎯</text>
           </view>
           <view class="xhs-feed-card-body">
-            <text class="xhs-feed-card-value {{stats.returnValue >= 0 ? 'xhs-profit' : stats.returnValue < 0 ? 'xhs-loss' : ''}}">
-              {{stats.returnText || '--'}}
+            <text class="xhs-feed-card-value {{stats.winRate !== null ? (stats.winRate >= 50 ? 'xhs-profit' : 'xhs-loss') : ''}}">
+              {{stats.winRateText || '--'}}
             </text>
-            <text class="xhs-feed-card-label">{{stats.returnLabel || 'XIRR'}}</text>
+            <text class="xhs-feed-card-label">胜率</text>
           </view>
         </view>
       </view>

@@ -37,7 +37,7 @@ function buildMarkdown() {
 
 	// —— 交易记录 ——
 	const transactions = Transaction.getAll();
-	transactions.sort((a, b) => (b.date || "").localeCompare(a.date || "") || b.id - a.id);
+	[...transactions].sort((a, b) => (b.date || "").localeCompare(a.date || "") || b.id - a.id);
 
 	lines.push(`## 交易记录（${transactions.length} 笔）`);
 	lines.push("");
@@ -91,7 +91,7 @@ function buildMarkdown() {
 
 	// —— 分红记录 ——
 	const dividends = Dividend.getAll();
-	dividends.sort((a, b) => (b.date || "").localeCompare(a.date || "") || b.id - a.id);
+	[...dividends].sort((a, b) => (b.date || "").localeCompare(a.date || "") || b.id - a.id);
 
 	lines.push("");
 	lines.push(`## 分红记录（${dividends.length} 笔）`);

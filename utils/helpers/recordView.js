@@ -92,6 +92,7 @@ function buildRecordView(entity, stock, options = {}) {
 		marketColor,
 		code,
 		name,
+		strategies: [],
 	};
 
 	if (includeTypeBar) {
@@ -125,9 +126,7 @@ function buildRecordView(entity, stock, options = {}) {
 		const price = parseFloat(entity.price) || 0;
 		const quantity = parseFloat(entity.quantity) || 0;
 		const fee = parseFloat(entity.fee) || 0;
-		const amount = isBuy
-			? -(price * quantity + fee)
-			: price * quantity - fee;
+		const amount = isBuy ? -(price * quantity + fee) : price * quantity - fee;
 
 		record.price = price;
 		record.priceText = fmt(price);

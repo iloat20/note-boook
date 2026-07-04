@@ -54,6 +54,7 @@ Component({
 	lifetimes: {
 		attached() {
 			this._marketLocked = false;
+			this._detached = false;
 			this._afTimer = null;
 			this._afFetching = null;
 			this._afProbe = null;
@@ -62,9 +63,13 @@ Component({
 			this._stockValidCache = {};
 		},
 		detached() {
+			// C2 契约：标记 detached，清理所有 timer 与进行中的异步标记（bug #9）
+			this._detached = true;
 			if (this._afTimer) clearTimeout(this._afTimer);
 			if (this._feeTimer) clearTimeout(this._feeTimer);
 			if (this._blurTimer) clearTimeout(this._blurTimer);
+			this._afFetching = null;
+			this._afProbe = null;
 			this._stockValidCache = {};
 		},
 	},
@@ -190,6 +195,8 @@ Component({
 
 		// ──── 自动获取（防抖） ────
 		_scheduleAutoFetch: function (code) {
+			// C2 detached 守卫（bug #9）
+			if (this._detached) return;
 			if (this._afTimer) {
 				clearTimeout(this._afTimer);
 				this._afTimer = null;
@@ -201,6 +208,8 @@ Component({
 		},
 
 		_tryAutoFetch: function (code) {
+			// C2 detached 守卫（bug #9）
+			if (this._detached) return;
 			if (!code || !validateStockCode(code, this.data.qrMarket)) return;
 			if (this._afFetching === code) return;
 			this._afFetching = code;
@@ -208,6 +217,10 @@ Component({
 
 			fetchStockPrice(this.data.qrMarket, code)
 				.then((data) => {
+					if (this._detached) {
+						this._afFetching = null;
+						return;
+					}
 					if (data?.name && this.data.qrCode === code) {
 						const updates = { qrName: data.name, qrFetching: false };
 						if (!this.data.qrPrice || parseFloat(this.data.qrPrice) === 0) {
@@ -221,6 +234,10 @@ Component({
 					this._afFetching = null;
 				})
 				.catch(() => {
+					if (this._detached) {
+						this._afFetching = null;
+						return;
+					}
 					this.setData({ qrFetching: false });
 					this._afFetching = null;
 				});
@@ -316,6 +333,8 @@ Component({
 		// 异步探测代码有效性 + 自动填充名称和价格（缓存结果）
 		_probeStockPrice: function (market, code) {
 			if (!code || !validateStockCode(code, market)) return;
+			// C2 detached 守卫（bug #9）
+			if (this._detached) return;
 			const existing = Stock.getByCode(code, market);
 			if (!this._stockValidCache) this._stockValidCache = {};
 			const cacheKey = `${market}_${code}`;
@@ -325,16 +344,10 @@ Component({
 			this.setData({ qrFetching: true });
 			fetchStockPrice(market, code)
 				.then((result) => {
+					if (this._detached) return;
 					const valid = !!(result && result.currentPrice > 0);
 					this._stockValidCache[cacheKey] = valid;
-					console.log(
-						"[QR probe] api result for",
-						code,
-						":",
-						JSON.stringify(result),
-						"valid:",
-						valid,
-					);
+
 					if (valid && this._afProbe === code) {
 						// 只要 probe 未改变输入（用户未快速输新码），无条件设置
 						const priceStr = String(result.currentPrice);
@@ -342,22 +355,18 @@ Component({
 							qrName: result.name || existing?.name || "",
 							qrPrice: priceStr,
 						});
-						console.log(
-							"[QR probe] set qrPrice=",
-							priceStr,
-							"| this.data.qrPrice=",
-							this.data.qrPrice,
-						);
+
 						this._calcQrFee();
 					} else if (!valid) {
 						wx.showToast({ title: "股票代码无效或无法获取行情", icon: "none" });
 					}
 				})
 				.catch((err) => {
-					console.error("[QR probe] fetch error:", err);
+					if (this._detached) return;
 					wx.showToast({ title: "网络异常，请手动输入价格", icon: "none" });
 				})
 				.finally(() => {
+					if (this._detached) return;
 					if (this._afProbe === code) {
 						this.setData({ qrFetching: false });
 					}

@@ -73,8 +73,11 @@ Page({
 	},
 
 	onUnload() {
-		if (this._deleteTransTimer) clearTimeout(this._deleteTransTimer);
-		if (this._deleteDivTimer) clearTimeout(this._deleteDivTimer);
+		// C2 契约：per-id 删除定时器 Map，unload 时全部清理（bug #16）
+		if (this._deleteTimers) {
+			this._deleteTimers.forEach((timer) => clearTimeout(timer));
+			this._deleteTimers.clear();
+		}
 	},
 
 	loadData() {
@@ -290,11 +293,17 @@ Page({
 						content: "确定要删除这笔交易记录吗？",
 						onConfirm: () => {
 							this.setData({ disTransId: Number(id) });
-							if (this._deleteTransTimer) clearTimeout(this._deleteTransTimer);
-							this._deleteTransTimer = setTimeout(() => {
-								Transaction.delete(id);
-								this.loadData();
-							}, 400);
+							if (!this._deleteTimers) this._deleteTimers = new Map();
+							const key = `t:${id}`;
+							if (this._deleteTimers.has(key)) clearTimeout(this._deleteTimers.get(key));
+							this._deleteTimers.set(
+								key,
+								setTimeout(() => {
+									this._deleteTimers.delete(key);
+									Transaction.delete(id);
+									this.loadData();
+								}, 400),
+							);
 						},
 					});
 				}
@@ -317,11 +326,17 @@ Page({
 						content: "确定要删除这笔分红记录吗？",
 						onConfirm: () => {
 							this.setData({ disDivId: Number(id) });
-							if (this._deleteDivTimer) clearTimeout(this._deleteDivTimer);
-							this._deleteDivTimer = setTimeout(() => {
-								Dividend.delete(id);
-								this.loadData();
-							}, 400);
+							if (!this._deleteTimers) this._deleteTimers = new Map();
+							const key = `d:${id}`;
+							if (this._deleteTimers.has(key)) clearTimeout(this._deleteTimers.get(key));
+							this._deleteTimers.set(
+								key,
+								setTimeout(() => {
+									this._deleteTimers.delete(key);
+									Dividend.delete(id);
+									this.loadData();
+								}, 400),
+							);
 						},
 					});
 				}

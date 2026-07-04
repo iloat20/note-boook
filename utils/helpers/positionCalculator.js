@@ -21,6 +21,9 @@ function calcPosition(stockId, transactions, dividends, currentPrice) {
 	let totalBuyFee = 0;
 	let totalSellFee = 0;
 
+	// 统一精度：浮盈公式与展示共用同一份 2 位小数价格，避免"心算对不上"
+	const priceForCalc = currentPrice != null ? parseFloat(currentPrice.toFixed(2)) : currentPrice;
+
 	transactions.forEach((t) => {
 		if (t.type === "BUY") {
 			totalBuyQuantity += t.quantity;
@@ -43,19 +46,29 @@ function calcPosition(stockId, transactions, dividends, currentPrice) {
 		}
 	});
 
-	const positionQuantity = totalBuyQuantity + shareDividendQty - totalSellQuantity;
+	const positionQuantity = Math.max(0, totalBuyQuantity + shareDividendQty - totalSellQuantity);
+
+	// avgCost denominator includes SHARE dividend qty (zero-cost shares dilute per-share cost).
+	// This is intentional for floating P&L (held shares genuinely have lower cost basis).
 	const avgCost =
 		totalBuyQuantity + shareDividendQty > 0
 			? (totalBuyAmount + totalBuyFee) / (totalBuyQuantity + shareDividendQty)
 			: 0;
 
+	// realizedPnL must use a cost-only avgCost denominator (excluding SHARE dividends).
+	// Rationale: SHARE dividends add zero cost, so including them would dilute the
+	// cost basis of sold shares and inflate realizedPnL when sell qty < held qty.
+	// Verification: buy 100@10, 10:10 share dividend, sell 100@10 → realizedPnL = 0
+	//   (using diluted avgCost=5: 1000 - 5*100 = 500 ✗; using cost-only avgCost=10: 1000 - 10*100 = 0 ✓).
+	const realizedAvgCost =
+		totalBuyQuantity > 0 ? (totalBuyAmount + totalBuyFee) / totalBuyQuantity : avgCost;
 	const realizedPnL =
 		totalBuyQuantity + shareDividendQty > 0
-			? totalSellAmount - totalSellFee - avgCost * totalSellQuantity
+			? totalSellAmount - totalSellFee - realizedAvgCost * totalSellQuantity
 			: totalSellAmount - totalSellFee;
 
 	const floatingPnL =
-		currentPrice != null && positionQuantity > 0 ? (currentPrice - avgCost) * positionQuantity : 0;
+		priceForCalc != null && positionQuantity > 0 ? (priceForCalc - avgCost) * positionQuantity : 0;
 
 	return {
 		stockId: stockId,
@@ -63,10 +76,7 @@ function calcPosition(stockId, transactions, dividends, currentPrice) {
 		avgCost: avgCost,
 		realizedPnL: parseFloat(realizedPnL.toFixed(2)),
 		dividendIncome: parseFloat(dividendIncome.toFixed(2)),
-		currentPrice:
-			currentPrice !== null && currentPrice !== undefined
-				? parseFloat(currentPrice.toFixed(2))
-				: null,
+		currentPrice: priceForCalc !== null && priceForCalc !== undefined ? priceForCalc : null,
 		floatingPnL: parseFloat(floatingPnL.toFixed(2)),
 		totalPnL: parseFloat((realizedPnL + floatingPnL + dividendIncome).toFixed(2)),
 	};

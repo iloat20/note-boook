@@ -46,26 +46,72 @@ function calcPosition(stockId, transactions, dividends, currentPrice) {
 		}
 	});
 
+	// 第 1 段：基于 lot 数组 + FIFO 批次匹配计算 realizedPnL。
+	// 跨轮次结算（清仓后重新买入）: 前一轮清仓利润不污染新一轮。
+	// 验证示例: buy100@10 fee5 → sell100@12 → buy50@11 fee5 → sell50@15
+	//   第一轮 lot: costBasis=1005, matchedSell=100, sellAmt=1200, realized=1200-1005=195
+	//   第二轮 lot: costBasis=555, matchedSell=50, sellAmt=150, realized=150-555=-405 (待 fee 分摊)
+	//   realized 总计 = 195 + (-405) = -210 (再扣除 sellFee 即 total realized)
+	const lots = [];
+	for (const t of transactions) {
+		if (t.type === "BUY") {
+			lots.push({ buy: t.quantity, costBasis: t.price * t.quantity + t.fee, matchedSell: 0, sellAmount: 0 });
+		} else {
+			let qtyToMatch = t.quantity;
+			let amtToMatch = t.price * t.quantity;
+			for (const lot of lots) {
+				if (qtyToMatch <= 0) break;
+				if (lot.matchedSell >= lot.buy) continue;
+				const avail = lot.buy - lot.matchedSell;
+				const matched = Math.min(avail, qtyToMatch);
+				const ratio = t.quantity > 0 ? matched / t.quantity : 0;
+				const sellAmt = amtToMatch * ratio;
+				lot.matchedSell += matched;
+				lot.sellAmount += sellAmt;
+				qtyToMatch -= matched;
+				amtToMatch -= sellAmt;
+			}
+		}
+	}
+	const costofMatched = lots.reduce((s, l) => s + (l.costBasis / l.buy) * l.matchedSell, 0);
+	const matchedSellAmt = lots.reduce((s, l) => s + l.sellAmount, 0);
+	const realizedPnL = totalSellFee > 0
+		? matchedSellAmt - costofMatched - (totalSellFee * (matchedSellAmt / totalSellAmount))
+		: matchedSellAmt - costofMatched;
+
+	// 第 2 段：累计持仓从未归零"的连续批 + 平均成本计算（不含历史清仓批次）。
+	let cumQty = 0;
+	let lastResetIdx = 0;
+	for (let k = 0; k < transactions.length; k++) {
+		const t = transactions[k];
+		if (t.type === "BUY") {
+			cumQty += t.quantity;
+		} else {
+			cumQty -= t.quantity;
+		}
+		if (cumQty <= 0) {
+			lastResetIdx = k + 1;
+		}
+	}
+	let liveBuyQty = 0;
+	let liveBuyCost = 0;
+	let liveSellMatched = 0;
+	for (let k = lastResetIdx; k < transactions.length; k++) {
+		const t = transactions[k];
+		if (t.type === "BUY") {
+			liveBuyQty += t.quantity;
+			liveBuyCost += t.price * t.quantity + t.fee;
+		} else {
+			// 同一轮内的卖出匹配数量（不跨 reset）
+			const before = liveBuyQty - liveSellMatched;
+			const matched = Math.min(before, t.quantity);
+			liveSellMatched += matched;
+		}
+	}
+	const liveHoldings = Math.max(0, liveBuyQty - liveSellMatched + (liveBuyQty > 0 ? shareDividendQty : 0));
+	const avgCost = liveHoldings > 0 ? liveBuyCost / liveHoldings : 0;
+
 	const positionQuantity = Math.max(0, totalBuyQuantity + shareDividendQty - totalSellQuantity);
-
-	// avgCost denominator includes SHARE dividend qty (zero-cost shares dilute per-share cost).
-	// This is intentional for floating P&L (held shares genuinely have lower cost basis).
-	const avgCost =
-		totalBuyQuantity + shareDividendQty > 0
-			? (totalBuyAmount + totalBuyFee) / (totalBuyQuantity + shareDividendQty)
-			: 0;
-
-	// realizedPnL must use a cost-only avgCost denominator (excluding SHARE dividends).
-	// Rationale: SHARE dividends add zero cost, so including them would dilute the
-	// cost basis of sold shares and inflate realizedPnL when sell qty < held qty.
-	// Verification: buy 100@10, 10:10 share dividend, sell 100@10 → realizedPnL = 0
-	//   (using diluted avgCost=5: 1000 - 5*100 = 500 ✗; using cost-only avgCost=10: 1000 - 10*100 = 0 ✓).
-	const realizedAvgCost =
-		totalBuyQuantity > 0 ? (totalBuyAmount + totalBuyFee) / totalBuyQuantity : avgCost;
-	const realizedPnL =
-		totalBuyQuantity + shareDividendQty > 0
-			? totalSellAmount - totalSellFee - realizedAvgCost * totalSellQuantity
-			: totalSellAmount - totalSellFee;
 
 	const floatingPnL =
 		priceForCalc != null && positionQuantity > 0 ? (priceForCalc - avgCost) * positionQuantity : 0;

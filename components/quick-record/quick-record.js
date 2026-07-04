@@ -270,9 +270,10 @@ Component({
 
 		// ──── 数量快捷预设 ────
 		onQrQtyPreset: function (e) {
-			const qty = parseInt(e.currentTarget.dataset.qty, 10) || 0;
+			const raw = e.currentTarget.dataset.qty;
+			const qty = parseInt(String(raw).replace(/,/g, ""), 10) || 0;
 			if (qty === 0) {
-				// 全仓：TODO 后续可接持仓数据
+				// 全仓：TODO 后续可接持仓数据（需从 positionService.getSellableQuantity 获取当前持仓量，再反向计算市价全仓股数）
 				wx.showToast({ title: "全仓功能开发中", icon: "none" });
 				return;
 			}

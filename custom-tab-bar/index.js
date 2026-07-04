@@ -60,7 +60,7 @@ Component({
 
 		switchTab(e) {
 			const url = e.currentTarget.dataset.path;
-			const index = e.currentTarget.dataset.index;
+			const index = Number(e.currentTarget.dataset.index);
 
 			// 如果点击的是当前页面，不执行切换
 			if (index === this.data.selected) return;

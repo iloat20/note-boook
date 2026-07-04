@@ -135,7 +135,6 @@ Page({
 		this._priceReqId++;
 		// 清理定时器
 		if (this._animTimer) clearTimeout(this._animTimer);
-		if (this._cleanupTimer) clearTimeout(this._cleanupTimer);
 		if (this._tabTimer) clearTimeout(this._tabTimer);
 		if (this._deleteTimer) clearTimeout(this._deleteTimer);
 		if (this._shareTimer) clearTimeout(this._shareTimer);

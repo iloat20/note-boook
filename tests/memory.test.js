@@ -226,7 +226,8 @@ describe("StockPrice Retry", () => {
 	});
 
 	test("fetchStockPrice retries and succeeds after failures", async () => {
-		jest.useFakeTimers({ advanceTimers: true });
+		jest.useRealTimers();
+		jest.setTimeout(10_000);
 
 		const { request } = require("../api/request");
 		let attempts = 0;

@@ -213,4 +213,14 @@ function _today() {
 	return `${d.getFullYear()}-${m < 10 ? `0${m}` : m}-${day < 10 ? `0${day}` : day}`;
 }
 
-module.exports = { getRates, getRate, DEFAULTS };
+/**
+ * Synchronous read of the cached USD→CNY rate (no network call).
+ * Used by fee calculators that need to cap USD fees but operate in CNY.
+ * @returns {number} cached rate, falling back to DEFAULTS.usdToCny
+ */
+function getCachedUsdToCnyRate() {
+	const cached = getData(CACHE_KEY);
+	return cached && cached.usdToCny ? cached.usdToCny : DEFAULTS.usdToCny;
+}
+
+module.exports = { getRates, getRate, DEFAULTS, getCachedUsdToCnyRate };

@@ -1,6 +1,7 @@
 ﻿// utils/helpers/feeCalculator.js
 // Fee calculation with shared constants — getFeeBreakdown is canonical
 const { MARKETS, TRANSACTION_TYPE, FEE_CONFIG } = require("../constants/index");
+const { DEFAULTS: EXCHANGE_DEFAULTS } = require("../services/exchangeRate");
 
 function _calcAShare(type, amount) {
 	const config = FEE_CONFIG.A_SHARE;
@@ -48,10 +49,33 @@ function _calcUSShare(type, amount, quantity) {
 	let tafFee = 0;
 	if (type === TRANSACTION_TYPE.SELL) {
 		secFee = amount * config.secFeeRate;
-		if (secFee > 21.84) secFee = 21.84;
+		// SEC fee cap (21.84 USD) must be compared against the USD amount.
+		// The incoming `amount` is in CNY for US stock trades (since prices
+		// are stored in local currency). Convert cap comparison to USD.
+		const usdToCny = getUsdToCnyRate();
+		const secFeeUsd = secFee / usdToCny;
+		if (secFeeUsd > 21.84) secFee = 21.84 * usdToCny;
 		tafFee = quantity * config.tafFeePerShare;
 	}
-	return { commission: commission, secFee: secFee, tafFee: tafFee };
+	const round2 = (n) => Math.round(n * 100) / 100;
+	return {
+		commission: round2(commission),
+		secFee: round2(secFee),
+		tafFee: round2(tafFee),
+	};
+}
+
+/**
+ * Get USD/CNY rate synchronously (cached, falls back to default).
+ * @returns {number}
+ */
+function getUsdToCnyRate() {
+	try {
+		const { getCachedUsdToCnyRate } = require("../services/exchangeRate");
+		return getCachedUsdToCnyRate();
+	} catch (_e) {
+		return EXCHANGE_DEFAULTS.usdToCny || 6.8;
+	}
 }
 
 /**

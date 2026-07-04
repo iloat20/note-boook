@@ -61,6 +61,8 @@ Page({
 			wx.navigateBack();
 			return;
 		}
+		// bug #7：记录原始 stockId，submit 时校验不可改股
+		this._editStockId = d.stockId;
 		const s = Stock.getById(d.stockId);
 		const dt = new Date(d.date);
 		const idx = this.data.stockOptions.findIndex((o) => o.stock && o.stock.id === d.stockId);
@@ -153,6 +155,12 @@ Page({
 		const s = op?.stock;
 		if (!s) {
 			toast("请选择股票");
+			this._submitting = false;
+			return;
+		}
+		// bug #7：编辑模式下不允许改写关联股票
+		if (this._isEdit && this._editStockId != null && s.id !== this._editStockId) {
+			toast("分红记录不可改股票");
 			this._submitting = false;
 			return;
 		}

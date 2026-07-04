@@ -1,6 +1,5 @@
 const { getRate, getRates } = require("./exchangeRate");
 const { Stock, Dividend } = require("../models/index");
-const PriceCache = require("../models/priceCache");
 const { caches } = require("../cache/cacheManager");
 const { xirr } = require("../helpers/xirr");
 const DateIndex = require("../models/dateIndex");
@@ -56,8 +55,12 @@ function _buildCashFlowsCore(
 		const pos = holdingPositions[stockId];
 		if (pos.quantity > 0) {
 			const r = getRate(stockMarket[stockId], rates);
-			const latestPrice = PriceCache.get(stockId);
-			if (latestPrice) totalValue += pos.quantity * latestPrice * r;
+			// Terminal value uses cost basis (avg cost = pos.cost / pos.quantity),
+			// not market price. Using market price inflated XIRR and made it
+			// jump on every price refresh. This also eliminates the dividend
+			// double-counting (#11): with a cost-basis terminal, dividends
+			// are no longer embedded in the terminal value.
+			totalValue += pos.cost * r;
 		}
 	}
 
@@ -69,7 +72,7 @@ function _buildCashFlowsCore(
 	return { cashFlows, dates };
 }
 
-async function buildCashFlows(transactions, dividends, stocks) {
+async function _buildCashFlows(transactions, dividends, stocks) {
 	const stockMarket = {};
 	stocks.forEach((s) => {
 		stockMarket[s.id] = s.market;
@@ -129,7 +132,6 @@ async function getTotalXIRR() {
 }
 
 module.exports = {
-	buildCashFlows,
 	calcXIRRForRange,
 	getTotalXIRR,
 };

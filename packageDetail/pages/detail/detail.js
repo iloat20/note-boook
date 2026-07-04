@@ -54,7 +54,7 @@ Page({
 
 	onLoad(options) {
 		pageMixin.onLoadMixin(this);
-		console.log("[detail] onLoad options:", JSON.stringify(options));
+
 		if (options?.stockId) {
 			this._stockId = parseInt(options.stockId, 10);
 			this.loadData();
@@ -63,7 +63,7 @@ Page({
 
 	onShow() {
 		const dirty = pageMixin.onShowSubPackage();
-		console.log("[detail] onShow dirty:", dirty, "_dataLoaded:", this._dataLoaded);
+
 		if (dirty || !this._dataLoaded) {
 			this.loadData();
 		}
@@ -78,19 +78,14 @@ Page({
 	},
 
 	loadData() {
-		console.log(
-			"[detail] loadData start, _stockId:",
-			this._stockId,
-			"data.stockId:",
-			this.data.stockId,
-		);
+
 		let stockId = this._stockId;
 		if (!stockId) {
 			stockId = this.data.stockId;
 		}
-		console.log("[detail] resolved stockId:", stockId);
+
 		const stock = Stock.getById(stockId);
-		console.log("[detail] Stock.getById:", stock ? `found ${stock.name}` : "null");
+
 		if (!stock) {
 			this.setData({ stockId: stockId });
 			this._dataLoaded = true;
@@ -242,38 +237,15 @@ Page({
 		const price = parseFloat(e.detail.value);
 		const stockId = this.data.stockId || this._stockId;
 		if (!Number.isNaN(price) && price > 0) {
+			// Persist price — PriceCache.set marks the position cache dirty,
+			// so loadData() will recalculate from a fresh (non-frozen) state.
+			// Never mutate this.data.position directly — it is the LRU-cached
+			// frozen position object and will throw under the C1 freeze contract.
 			PriceCache.set(stockId, price);
-			// Incremental update: only recalculate price-dependent fields
-			this._updatePriceFields(price);
+			this.loadData();
 		} else {
 			this.loadData();
 		}
-	},
-
-	_updatePriceFields(price) {
-		const position = this.data.position;
-		const quantity = position.quantity || 0;
-		const avgCost = position.avgCost || 0;
-
-		const marketValue = price * quantity;
-		const floatingPnL = quantity > 0 ? (price - avgCost) * quantity : 0;
-		const totalPnL = position.realizedPnL + floatingPnL + position.dividendIncome;
-		const pnlPercent = avgCost > 0 ? ((price - avgCost) / avgCost) * 100 : 0;
-		const costBasis = avgCost * quantity;
-		const totalPnLPercent = costBasis > 0 ? (totalPnL / costBasis) * 100 : 0;
-
-		this.setData({
-			"position.currentPrice": price,
-			"position.floatingPnL": floatingPnL,
-			formatMarketValue: fmt(marketValue),
-			floatingPnLClass: floatingPnL >= 0 ? "profit" : "loss",
-			floatingPnLText: (floatingPnL >= 0 ? "+" : "") + fmt(Math.abs(floatingPnL)),
-			floatingPnLPercent: pnlPercent.toFixed(2),
-			totalPnLClass: totalPnL >= 0 ? "profit" : "loss",
-			totalPnLText: (totalPnL >= 0 ? "+" : "") + fmt(Math.abs(totalPnL)),
-			heroPnLPercentText: `${(totalPnLPercent >= 0 ? "+" : "") + totalPnLPercent.toFixed(2)}%`,
-			heroBgClass: totalPnL > 0 ? "hero-profit" : totalPnL < 0 ? "hero-loss" : "hero-flat",
-		});
 	},
 
 	goBack() {

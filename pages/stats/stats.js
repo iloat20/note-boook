@@ -285,10 +285,27 @@ Page({
 
 		let strategyStats = getStrategyStats();
 		const totalStrategyCount = strategyStats.reduce((sum, s) => sum + (s.count || 0), 0);
-		strategyStats = strategyStats.slice(0, 8).map((s) => ({
-			...s,
-			percent: totalStrategyCount > 0 ? Math.round((s.count / totalStrategyCount) * 100) : 0,
-		}));
+		if (totalStrategyCount > 0) {
+			// Largest-remainder rounding so displayed top-N always sums to exactly 100%.
+			// Per-spec: "sum to ~100%". Exact-100 avoids confusing UX when rounding residue
+			// would otherwise drop the total below 100 for small slice sizes.
+			const raw = strategyStats.slice(0, 8).map((s) => (s.count / totalStrategyCount) * 100);
+			const floored = raw.map((v) => Math.floor(v));
+			let remainder = 100 - floored.reduce((sum, v) => sum + v, 0);
+			// Indices sorted by descending fractional part to determine who gets +1
+			const order = raw
+				.map((v, i) => ({ i, frac: v - Math.floor(v) }))
+				.sort((a, b) => b.frac - a.frac);
+			for (let k = 0; k < remainder; k++) {
+				floored[order[k].i]++;
+			}
+			strategyStats = strategyStats.slice(0, 8).map((s, i) => ({
+				...s,
+				percent: floored[i],
+			}));
+		} else {
+			strategyStats = strategyStats.slice(0, 8).map((s) => ({ ...s, percent: 0 }));
+		}
 
 		let yearXIRR = null;
 		let totalXIRR = null;

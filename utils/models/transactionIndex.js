@@ -18,11 +18,17 @@ function _ensureBuilt() {
 		if (!byStockId.has(t.stockId)) byStockId.set(t.stockId, []);
 		byStockId.get(t.stockId).push(t);
 	});
-	// Sort each stockId's list by date descending
-	byStockId.forEach((list) => {
-		list.sort((a, b) => (b.date > a.date ? 1 : b.date < a.date ? -1 : 0));
+	// Sort each stockId's list by date descending.
+	// Use slice() to create a copy before sorting so we never mutate the storage-derived array.
+	const sortedEntries = [];
+	byStockId.forEach((list, key) => {
+		sortedEntries.push([
+			key,
+			list.slice().sort((a, b) => (b.date > a.date ? 1 : b.date < a.date ? -1 : 0)),
+		]);
 	});
-	// Replace contents
+	byStockId.clear();
+	sortedEntries.forEach(([k, v]) => byStockId.set(k, v));
 	_byStockId.clear();
 	for (const [k, v] of byStockId) _byStockId.set(k, v);
 	_built = true;

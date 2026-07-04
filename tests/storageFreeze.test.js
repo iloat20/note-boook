@@ -34,10 +34,11 @@ describe("Storage freeze-on-write", () => {
 		expect(second).toBe(first);
 	});
 
-	test("getData on first load returns mutable data (for slice/copy)", () => {
+	test("getData on first load returns frozen data (C1 freeze contract)", () => {
 		_mockStorage["tx_key"] = [{ id: 1 }];
 		const data = core.getData("tx_key");
-		expect(Object.isFrozen(data)).toBe(false);
+		expect(Object.isFrozen(data)).toBe(true);
+		expect(Object.isFrozen(data[0])).toBe(true);
 	});
 
 	test("getDataCopy returns mutable copy even when cache is frozen", () => {

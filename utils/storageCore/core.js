@@ -106,9 +106,7 @@ function saveData(key, data) {
  * @returns {any} 数据
  */
 function getData(key) {
-	if (_memCache.has(key)) {
-		return _memCache.get(key); // Already frozen (from saveData) or first-load mutable
-	}
+	if (_memCache.has(key)) return _memCache.get(key);
 	let data = wx.getStorageSync(key);
 	if (
 		data === undefined ||
@@ -122,9 +120,9 @@ function getData(key) {
 			data = [];
 		}
 	}
-	// First load: store mutable (callers like upsertAndSave use .slice() before mutating)
-	_memCache.set(key, data);
-	return data;
+	// C1 freeze contract: freeze on every read so callers cannot mutate the shared cache ref
+	_memCache.set(key, deepFreeze(data));
+	return _memCache.get(key);
 }
 
 /**

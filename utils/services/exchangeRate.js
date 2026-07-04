@@ -213,4 +213,24 @@ function _today() {
 	return `${d.getFullYear()}-${m < 10 ? `0${m}` : m}-${day < 10 ? `0${day}` : day}`;
 }
 
-module.exports = { getRates, getRate, DEFAULTS };
+/**
+ * 同步读取缓存汇率（供调用方在 getRates() 失败或 stockId 已孤儿时做快速回退）
+ * @param {string} market - A_SHARE / HK_SHARE / US_SHARE
+ * @returns {number|null} 缓存汇率；缓存缺失或过期返回 null
+ */
+function getCachedRate(market) {
+	const cached = getData(CACHE_KEY);
+	if (!cached || !cached.timestamp) return null;
+	const now = Date.now();
+	if (now - cached.timestamp >= RATE_CACHE_TTL) return null;
+	switch (market) {
+		case "HK_SHARE":
+			return cached.hkdToCny || null;
+		case "US_SHARE":
+			return cached.usdToCny || null;
+		default:
+			return 1; // A股无需换算
+	}
+}
+
+module.exports = { getRates, getRate, getCachedRate, DEFAULTS };

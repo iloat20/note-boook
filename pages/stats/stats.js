@@ -10,18 +10,9 @@ const { fmt } = require("../../utils/helpers/format");
 const { buildStockMap } = require("../../utils/helpers/stockHelpers");
 const { buildRecordView } = require("../../utils/helpers/recordView");
 const { exportMD } = require("../../utils/exporters/markdown");
-const { getRates, getRate } = require("../../utils/services/exchangeRate");
+const { getRates, getRate, getCachedRate } = require("../../utils/services/exchangeRate");
+const { wipeAll } = require("../../utils/services/dataService");
 const pageMixin = require("../../utils/ui/pageMixin");
-const {
-	saveData,
-	STOCK_KEY,
-	TRANSACTION_KEY,
-	DIVIDEND_KEY,
-	PRICE_KEY,
-	STRATEGY_KEY,
-	clearMemCache,
-} = require("../../utils/storageCore/core");
-const { markDataDirty } = require("../../utils/cache/cacheManager");
 
 Page({
 	data: {
@@ -213,7 +204,8 @@ Page({
 			yearBuyFee = 0,
 			yearSellFee = 0;
 		yearTx.forEach((t) => {
-			const r = getRate(stockMarket[t.stockId], rates);
+			const market = stockMarket[t.stockId];
+			const r = getRate(market, rates) || getCachedRate(market) || 1;
 			const amt = t.price * t.quantity;
 			if (t.type === "BUY") {
 				yearBuyAmount += amt * r;
@@ -228,7 +220,8 @@ Page({
 		Dividend.getAll().forEach((d) => {
 			const dd = new Date(d.date);
 			if (dd >= yearStart && dd <= yearEnd) {
-				const r = getRate(stockMarket[d.stockId], rates);
+				const market = stockMarket[d.stockId];
+				const r = getRate(market, rates) || getCachedRate(market) || 1;
 				yearDivTotal += d.totalAmount * r;
 			}
 		});
@@ -291,11 +284,11 @@ Page({
 			});
 
 		let strategyStats = getStrategyStats();
-		const maxStrategyCount = strategyStats.length > 0 ? strategyStats[0].count : 1;
-		strategyStats = strategyStats.slice(0, 8).map((s) => {
-			s.percent = Math.round((s.count / maxStrategyCount) * 100);
-			return s;
-		});
+		const totalStrategyCount = strategyStats.reduce((sum, s) => sum + (s.count || 0), 0);
+		strategyStats = strategyStats.slice(0, 8).map((s) => ({
+			...s,
+			percent: totalStrategyCount > 0 ? Math.round((s.count / totalStrategyCount) * 100) : 0,
+		}));
 
 		let yearXIRR = null;
 		let totalXIRR = null;
@@ -351,13 +344,7 @@ Page({
 			cancelText: "取消",
 			success: (res) => {
 				if (res.confirm) {
-					saveData(STOCK_KEY, []);
-					saveData(TRANSACTION_KEY, []);
-					saveData(DIVIDEND_KEY, []);
-					saveData(PRICE_KEY, {});
-					saveData(STRATEGY_KEY, []);
-					clearMemCache();
-					markDataDirty("all");
+					wipeAll();
 					this.setData({
 						stats: null,
 						detailItems: [],

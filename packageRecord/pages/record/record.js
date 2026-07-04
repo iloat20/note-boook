@@ -524,6 +524,12 @@ Page({
 		}, 1000);
 	},
 
+	// C4 bail：校验失败早期 return — toast + 解锁 + return（bug #6）
+	bail(msg) {
+		toast(msg);
+		this._resetSubmit();
+	},
+
 	/**
 	 * 输入时异步探测代码有效性（缓存结果，submit 时同步读）
 	 * 在 onCodeInput / selectMarket 时调用，避免 submit 阻塞
@@ -539,6 +545,8 @@ Page({
 
 		fetchStockPrice(market, code)
 			.then((result) => {
+				// 页面已卸载时不要写回 detached 实例（防泄漏 + 防 write-after-unload）
+				if (this._detached) return;
 				this._stockValidCache[cacheKey] = result && result.currentPrice > 0;
 			})
 			.catch(() => {
@@ -567,7 +575,7 @@ Page({
 				if (!this._stockValidCache) this._stockValidCache = {};
 				this._stockValidCache[`${market}_${code}`] = valid;
 				if (!valid) {
-					toast("股票代码无效或不在该市场，请检查");
+					this.bail("股票代码无效或不在该市场，请检查");
 					return;
 				}
 				this._doSubmit(
@@ -657,6 +665,7 @@ Page({
 	},
 
 	onUnload() {
+		this._detached = true;
 		if (this._fetchTimer) clearTimeout(this._fetchTimer);
 		if (this._navTimer) clearTimeout(this._navTimer);
 		if (this._subTimer) clearTimeout(this._subTimer);

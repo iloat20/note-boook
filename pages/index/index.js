@@ -1,11 +1,10 @@
 /**
  * 持仓页（重构版 - 使用新架构）
- * 使用 positionService + positionStore + pageMixin
+ * 使用 positionService + pageMixin + touchGestureMixin
  * 数据变更通过 appStore.dataDirty 驱动页面刷新
  */
 
 const positionService = require("../../utils/services/positionService");
-const positionStore = require("../../utils/state/positionStore");
 const pageMixin = require("../../utils/ui/pageMixin");
 const touchGestureMixin = require("../../utils/ui/touchGestureMixin");
 const { fmt, fmtDate } = require("../../utils/helpers/format");
@@ -99,6 +98,11 @@ Page({
 	// ========== 生命周期 ==========
 	async onLoad() {
 		pageMixin.onLoadMixin(this);
+		// C2 契约（bug #10/#15）：标记未分离 + 行情请求版本计数器
+		this._detached = false;
+		this._priceReqId = 0;
+		// bug #15：stockId-keyed 动画清理 timers（替换闭包捕获数组索引）
+		this._flashTimers = new Map();
 		this.updateDate();
 		this._dataLoaded = false;
 
@@ -126,12 +130,20 @@ Page({
 	},
 
 	onUnload() {
+		// C2 契约（bug #10）：标记分离 + 递增行情请求版本，使 in-flight 回调 bail out
+		this._detached = true;
+		this._priceReqId++;
 		// 清理定时器
 		if (this._animTimer) clearTimeout(this._animTimer);
 		if (this._cleanupTimer) clearTimeout(this._cleanupTimer);
 		if (this._tabTimer) clearTimeout(this._tabTimer);
 		if (this._deleteTimer) clearTimeout(this._deleteTimer);
 		if (this._shareTimer) clearTimeout(this._shareTimer);
+		// bug #15：清理所有 stockId-keyed 动画 timers
+		if (this._flashTimers) {
+			this._flashTimers.forEach((t) => clearTimeout(t));
+			this._flashTimers.clear();
+		}
 	},
 
 	// ========== 统一刷新管道 ==========
@@ -232,9 +244,6 @@ Page({
 			};
 			this._marketAggCache = marketAgg;
 			this._positionMap = positionMap;
-
-			// 更新 Store（会触发订阅回调）
-			positionStore.commit("SET_POSITIONS", positions);
 
 			// [优化] 单次遍历 Transaction：同时完成 totalInvestment + marketInvestment（复用 positionMap）
 			const allTransactions = Transaction.getAll();
@@ -369,39 +378,34 @@ Page({
 				),
 			};
 
-			// 清除 flash + entering 动画标记（延迟后合并到单次 setData）
+			// 清除 flash + entering 动画标记（bug #15：per-stockId timers，不再捕获数组索引）
 			const hasFlash = formattedPositions.some((p) => p.priceFlashClass !== "");
 			const hasEntering = newIds.size > 0;
 			if (hasFlash || hasEntering) {
-				const delay = Math.max(
-					TIMING_CONFIG.PRICE_FLASH_CLEAR_DELAY,
-					TIMING_CONFIG.ENTER_ANIM_DELAY,
-				);
-				this._cleanupTimer = setTimeout(() => {
-					const dispLen = Math.min(displayCount, displaySlice.length);
-					const cleanupUpdates = {};
-					for (let i = 0; i < dispLen; i++) {
-						if (hasFlash) {
-							cleanupUpdates[`displayPositions[${i}].priceFlashClass`] = "";
-							displaySlice[i].priceFlashClass = "";
-						}
-						if (hasEntering) {
-							cleanupUpdates[`displayPositions[${i}].entering`] = false;
-							displaySlice[i].entering = false;
-						}
-					}
-					if (hasFlash) {
-						for (let i = dispLen; i < filteredPositions.length; i++) {
-							filteredPositions[i].priceFlashClass = "";
-						}
-					}
-					if (hasEntering) {
-						for (let i = dispLen; i < filteredPositions.length; i++) {
-							filteredPositions[i].entering = false;
-						}
-					}
-					if (Object.keys(cleanupUpdates).length > 0) this.setData(cleanupUpdates);
-				}, delay);
+				const flashDelay = TIMING_CONFIG.PRICE_FLASH_CLEAR_DELAY;
+				const enterDelay = TIMING_CONFIG.ENTER_ANIM_DELAY;
+				formattedPositions.forEach((fp) => {
+					const stockId = fp.id;
+					const needsFlash = hasFlash && fp.priceFlashClass !== "";
+					const needsEnter = hasEntering && fp.entering;
+					if (!needsFlash && !needsEnter) return;
+					const delay = Math.max(
+						needsFlash ? flashDelay : 0,
+						needsEnter ? enterDelay : 0,
+					);
+					if (this._flashTimers.has(stockId)) clearTimeout(this._flashTimers.get(stockId));
+					const timer = setTimeout(() => {
+						this._flashTimers.delete(stockId);
+						if (this._detached || !this.data) return;
+						const idx = this.data.displayPositions.findIndex((p) => p.id === stockId);
+						if (idx === -1) return;
+						const upd = {};
+						if (needsFlash) upd[`displayPositions[${idx}].priceFlashClass`] = "";
+						if (needsEnter) upd[`displayPositions[${idx}].entering`] = false;
+						if (Object.keys(upd).length > 0) this.setData(upd);
+					}, delay);
+					this._flashTimers.set(stockId, timer);
+				});
 			}
 
 			this._loading = false;
@@ -569,7 +573,10 @@ Page({
 
 		try {
 			_ensureNetworkModules();
+			// C2 契约（bug #10）：捕获请求版本，await 后校验
+			const reqId = this._priceReqId;
 			const results = await _fetchAllPrices(needFetch);
+			if (this._detached || reqId !== this._priceReqId) return;
 			const validResults = results.filter((r) => r.price !== null);
 
 			if (validResults.length > 0) {

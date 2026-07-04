@@ -112,6 +112,10 @@ Page({
 	},
 	// 从缓存数据中筛选、分组、显示
 	_applyFilters() {
+		// 筛选切换时清空选择态，避免跨筛选选中记录残留（bug #4）
+		if (this.data.selectedIds.length > 0) {
+			this.setData({ selectedIds: [], selectedMap: {}, selectedTypeMap: {}, selectAll: false });
+		}
 		let filtered = this._cachedAllRecords || [];
 		if (this.data.currentFilter !== "ALL") {
 			filtered = filtered.filter((r) => r.type === this.data.currentFilter);
@@ -239,7 +243,8 @@ Page({
 		const selectedTypeMap = {};
 		const selectedIds = [];
 		if (selectAll) {
-			this._allGroupedHistory.forEach((group) => {
+			// 仅写入当前可见项（bug #4：避免批量选择跨越分页边界）
+			this.data.groupedHistory.forEach((group) => {
 				group.items.forEach((item) => {
 					selectedIds.push(item.id);
 					selectedTypeMap[item.id] = item.type;
@@ -260,11 +265,17 @@ Page({
 		const count = this.data.selectedIds.length;
 		if (count === 0) return;
 		const { selectedIds, selectedTypeMap } = this.data;
+		// bug #4：批量删除前过滤掉不在当前可见列表中的 ID，避免误删其他筛选下的记录
+		const visibleIdSet = new Set(
+			this.data.groupedHistory.flatMap((g) => g.items.map((i) => i.id)),
+		);
+		const deletableIds = selectedIds.filter((id) => visibleIdSet.has(id));
+		if (deletableIds.length === 0) return;
 		confirmDelete({
-			content: `确定要删除选中的 ${count} 条记录吗？`,
+			content: `确定要删除选中的 ${deletableIds.length} 条记录吗？`,
 			onConfirm: () => {
 				loading("删除中...");
-				selectedIds.forEach((id) => {
+				deletableIds.forEach((id) => {
 					const recordType = selectedTypeMap[id];
 					if (recordType === "DIVIDEND") {
 						Dividend.delete(id);
@@ -273,7 +284,7 @@ Page({
 					}
 				});
 				hideLoading();
-				fbSuccess(`已删除 ${count} 条`);
+				fbSuccess(`已删除 ${deletableIds.length} 条`);
 				this.setData({
 					selectMode: false,
 					selectedIds: [],
@@ -306,7 +317,9 @@ Page({
 	},
 	onSearchBlur() {
 		// 失焦后短暂延迟隐藏，避免点击历史项时 dropdown 先消失
-		setTimeout(() => {
+		if (this._blurTimer) clearTimeout(this._blurTimer);
+		this._blurTimer = setTimeout(() => {
+			this._blurTimer = null;
 			this.setData({ showSearchHistory: false });
 		}, 150);
 	},
@@ -377,6 +390,7 @@ Page({
 	onUnload() {
 		if (this._searchTimer) clearTimeout(this._searchTimer);
 		if (this._deleteTimer) clearTimeout(this._deleteTimer);
+		if (this._blurTimer) clearTimeout(this._blurTimer);
 		this._cachedAllRecords = null;
 		this._allGroupedHistory = null;
 	},

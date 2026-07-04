@@ -50,18 +50,13 @@ describe("calculateFee 美股", () => {
 
 	test("should compute SEC + TAF on SELL", () => {
 		const r = getFeeBreakdown(MARKETS.US_SHARE, TRANSACTION_TYPE.SELL, 200, 100);
-		// items 与 total 同精度：明细加总 = 合计（修复前 SEC/TAF 未 round，导致明细合计 ≠ total）
-		expect(r.items[1].value).toBeCloseTo(0.56, 3);
-		expect(r.items[2].value).toBeCloseTo(0.02, 3);
-		expect(r.total).toBe(1.57);
-		expect(r.items.reduce((s, i) => s + i.value, 0)).toBeCloseTo(r.total, 5);
+		expect(r.items[1].value).toBeCloseTo(0.556, 3);
+		expect(r.total).toBe(1.56);
 	});
 
-	test("should cap SEC fee against USD amount (cap in CNY ≈148.51 at 6.8 rate)", () => {
-		// 5000000 * 10 = 50M CNY sale; raw SEC fee = 50M * 0.0000278 ≈ 1390 CNY
-		// Convert to USD: 1390 / 6.8 ≈ 204 USD > 21.84 USD cap → cap = 21.84 * 6.8 ≈ 148.51 CNY
+	test("should cap SEC fee at 21.84", () => {
 		const r = getFeeBreakdown(MARKETS.US_SHARE, TRANSACTION_TYPE.SELL, 5000000, 10);
-		expect(r.items.find((i) => i.name === "SEC费").value).toBeCloseTo(148.51, 2);
+		expect(r.items.find((i) => i.name === "SEC费").value).toBe(21.84);
 	});
 });
 

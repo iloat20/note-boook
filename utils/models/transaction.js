@@ -125,11 +125,11 @@ const Transaction = {
 	 * @returns {Array} 交易记录列表
 	 */
 	getByDateRange(startDate, endDate) {
-		const start = startDate.toISOString().slice(0, 10);
-		const end = endDate.toISOString().slice(0, 10);
-		return this.getAll().filter((t) => {
-			const d = t.date.length > 10 ? t.date.slice(0, 10) : t.date;
-			return d >= start && d <= end;
+		const startMs = startDate instanceof Date ? startDate.getTime() : new Date(startDate).getTime();
+		const endMs = endDate instanceof Date ? endDate.getTime() : new Date(endDate).getTime();
+		return Transaction.getAll().filter((t) => {
+			const sortKey = t._sortKey != null ? t._sortKey : new Date(t.date).getTime();
+			return sortKey >= startMs && sortKey <= endMs;
 		});
 	},
 };

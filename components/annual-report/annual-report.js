@@ -23,6 +23,13 @@ Component({
 		attached: function () {
 			this._processData();
 		},
+		detached: function () {
+			// bug #8（C2 契约）：detached 时清理导出假 timer
+			if (this._exportTimer) {
+				clearTimeout(this._exportTimer);
+				this._exportTimer = null;
+			}
+		},
 	},
 
 	observers: {
@@ -80,7 +87,10 @@ Component({
 			if (this.data.exporting) return;
 			this.setData({ exporting: true });
 			wx.showToast({ title: "导出功能开发中", icon: "none" });
-			setTimeout(() => {
+			// bug #8（C2 契约）：存 timer handle 供 detached 清理，回调内守卫 !this.data
+			this._exportTimer = setTimeout(() => {
+				this._exportTimer = null;
+				if (!this.data) return;
 				this.setData({ exporting: false });
 			}, 1000);
 		},

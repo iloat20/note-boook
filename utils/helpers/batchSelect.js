@@ -2,7 +2,9 @@
 function collectFilterIds(grouped) {
 	const ids = [];
 	(grouped || []).forEach((g) => {
-		(g.items || []).forEach((it) => ids.push(it.id));
+		(g.items || []).forEach((it) => {
+			ids.push(it.id);
+		});
 	});
 	return ids;
 }

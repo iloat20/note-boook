@@ -142,11 +142,6 @@
 }
 
 /* === 筛选 Chip === */
-.filter-chips {
-  white-space: nowrap;
-  padding: 0 var(--page-margin);
-  margin-bottom: var(--xhs-space-sm);
-}
 
 .chip-row {
   display: inline-flex;
@@ -194,12 +189,6 @@
   border-radius: 1px;
 }
 
-.chip-divider {
-  width: 1rpx;
-  height: 32rpx;
-  background: var(--xhs-divider);
-  flex-shrink: 0;
-}
 
 .batch-icon {
   width: 14rpx;
@@ -221,13 +210,7 @@
   background: currentColor;
 }
 
-.chip-batch.chip-active .batch-icon {
-  background: currentColor;
-}
 
-.chip-batch.chip-active .batch-icon::before {
-  background: #fff;
-}
 
 /* === 日期标题 === */
 .date-header {
@@ -252,7 +235,7 @@
   font-weight: var(--xhs-weight-semibold);
 }
 
-/* === 交易卡片 === */
+/* === 资产卡片 === */
 .record-card {
   display: flex;
   background: var(--xhs-surface);
@@ -360,7 +343,7 @@
   flex-shrink: 0;
 }
 
-/* === 完整交易明细行 === */
+/* === 完整资产明细行 === */
 .record-detail {
   display: flex;
   align-items: flex-end;
@@ -599,4 +582,81 @@
 .search-empty-text {
   font-size: var(--xhs-font-md);
   color: var(--xhs-caption);
+}
+
+/* === 筛选区（毛玻璃一致性） === */
+.filter-bar {
+  padding: var(--xhs-space-xs) 0 var(--xhs-space-sm);
+  margin-bottom: var(--xhs-space-xs);
+}
+.filter-top-row {
+  display: flex;
+  align-items: center;
+  gap: var(--xhs-space-sm);
+  padding: 0 var(--page-margin);
+}
+.filter-slider {
+  flex: 1;
+  min-width: 0;
+}
+.select-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6rpx;
+  padding: var(--xhs-space-xs) var(--xhs-space-md);
+  background: var(--xhs-bg-secondary);
+  border-radius: var(--xhs-radius-pill);
+  font-size: var(--xhs-font-sm);
+  color: var(--xhs-title);
+  font-weight: var(--xhs-weight-medium);
+  white-space: nowrap;
+  transition: var(--xhs-transition);
+  flex-shrink: 0;
+}
+.select-toggle:active { transform: scale(0.96); }
+.select-toggle-active {
+  background: var(--xhs-primary-bg);
+  color: var(--xhs-primary);
+}
+.select-toggle-active .batch-icon { background: currentColor; }
+.select-toggle-active .batch-icon::before { background: #fff; }
+
+/* 策略次级 chip（更淡更小，与分段拉开层级） */
+.strategy-chips {
+  white-space: nowrap;
+  padding: var(--xhs-space-xs) var(--page-margin) 0;
+}
+.chip-secondary {
+  font-size: var(--xhs-font-xs);
+  color: var(--xhs-caption);
+  padding: 4rpx var(--xhs-space-md);
+}
+.chip-secondary.chip-active {
+  color: var(--xhs-primary);
+  background: var(--xhs-primary-bg);
+  border-radius: var(--xhs-radius-pill);
+}
+.chip-secondary.chip-active text::after { display: none; }
+
+/* === 毛玻璃胶囊批量栏 === */
+.batch-bar.glass-bar {
+  left: var(--page-margin);
+  right: var(--page-margin);
+  bottom: calc(104rpx + env(safe-area-inset-bottom));
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(20rpx);
+  -webkit-backdrop-filter: blur(20rpx);
+  border-top: none;
+  border-radius: var(--xhs-radius-pill);
+  box-shadow: var(--xhs-elevation-3);
+  padding: var(--xhs-space-xs) var(--xhs-space-md);
+  animation: slide-up-scale 250ms ease-out;
+}
+@keyframes slide-up-scale {
+  from { transform: translateY(20rpx) scale(0.96); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+@keyframes slide-down-scale {
+  from { transform: translateY(0) scale(1); opacity: 1; }
+  to { transform: translateY(20rpx) scale(0.96); opacity: 0; }
 }

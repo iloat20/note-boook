@@ -2,6 +2,7 @@ const { MARKETS, TIMING_CONFIG } = require("../../utils/constants/index");
 const { Stock, Transaction, Dividend, Strategy } = require("../../utils/models/index");
 const { buildStockMap } = require("../../utils/helpers/stockHelpers");
 const { buildRecordView } = require("../../utils/helpers/recordView");
+const { collectFilterIds, isAllSelected } = require("../../utils/helpers/batchSelect");
 const {
 	loadSearchHistory,
 	saveSearchHistory,
@@ -21,15 +22,14 @@ Page({
 		activeStrategies: [],
 		filterTabs: [
 			{ key: "ALL", label: "全部" },
-			{ key: "BUY", label: "买入" },
-			{ key: "SELL", label: "卖出" },
-			{ key: "DIVIDEND", label: "分红" },
+		{ key: "BUY", label: "转入" },
+		{ key: "SELL", label: "转出" },
 		],
 		marketTabs: [
 			{ key: null, label: "全部" },
-			{ key: MARKETS.A_SHARE, label: "A股" },
-			{ key: MARKETS.HK_SHARE, label: "港股" },
-			{ key: MARKETS.US_SHARE, label: "美股" },
+			{ key: MARKETS.A_SHARE, label: "境内" },
+			{ key: MARKETS.HK_SHARE, label: "香港" },
+			{ key: MARKETS.US_SHARE, label: "海外" },
 		],
 		groupedHistory: [],
 		displayCount: TIMING_CONFIG.PAGE_LOAD_COUNT, // 初始显示天数
@@ -48,6 +48,7 @@ Page({
 		// 批量选择
 		selectMode: false,
 		selectedIds: [],
+		totalInFilter: 0,
 		selectedMap: {},
 		selectedTypeMap: {},
 		selectAll: false,
@@ -112,10 +113,7 @@ Page({
 	},
 	// 从缓存数据中筛选、分组、显示
 	_applyFilters() {
-		// 筛选切换时清空选择态，避免跨筛选选中记录残留（bug #4）
-		if (this.data.selectedIds.length > 0) {
-			this.setData({ selectedIds: [], selectedMap: {}, selectedTypeMap: {}, selectAll: false });
-		}
+		// 注意：切换筛选不再清空已选，仅重算全选态
 		let filtered = this._cachedAllRecords || [];
 		if (this.data.currentFilter !== "ALL") {
 			filtered = filtered.filter((r) => r.type === this.data.currentFilter);
@@ -128,7 +126,6 @@ Page({
 				(r) => r.strategies && r.strategies.indexOf(this.data.currentStrategy) >= 0,
 			);
 		}
-		// Use pending keyword if available (debounced input not yet flushed)
 		const keyword = this._pendingKeyword || this.data.searchKeyword;
 		if (keyword) {
 			const kw = keyword.toLowerCase();
@@ -147,18 +144,26 @@ Page({
 			date,
 			items: grouped[date],
 		}));
-		// Store as instance variable to avoid sending through setData
 		this._allGroupedHistory = groupedArray;
 		const displayCount = this.data.displayCount;
 		const displayData = groupedArray.slice(0, displayCount);
 		const hasMore = groupedArray.length > displayCount;
+		const filterIds = collectFilterIds(groupedArray);
+		const selectAll = isAllSelected(this.data.selectedIds, filterIds);
+		const selectedMap = {};
+		this.data.selectedIds.forEach((sid) => {
+			selectedMap[sid] = true;
+		});
 		this.setData({
 			groupedHistory: displayData,
 			recordCount: groupedArray.length,
+			totalInFilter: filterIds.length,
 			hasMore: hasMore,
 			loadingMore: false,
 			isFromCache: false,
 			cacheTimestamp: Date.now(),
+			selectAll,
+			selectedMap,
 		});
 	},
 	loadHistory() {
@@ -243,8 +248,8 @@ Page({
 		const selectedTypeMap = {};
 		const selectedIds = [];
 		if (selectAll) {
-			// 仅写入当前可见项（bug #4：避免批量选择跨越分页边界）
-			this.data.groupedHistory.forEach((group) => {
+			// 当前筛选下全部记录（含未展开页），而非仅可见项
+			(this._allGroupedHistory || []).forEach((group) => {
 				group.items.forEach((item) => {
 					selectedIds.push(item.id);
 					selectedTypeMap[item.id] = item.type;
@@ -265,11 +270,11 @@ Page({
 		const count = this.data.selectedIds.length;
 		if (count === 0) return;
 		const { selectedIds, selectedTypeMap } = this.data;
-		// bug #4：批量删除前过滤掉不在当前可见列表中的 ID，避免误删其他筛选下的记录
-		const visibleIdSet = new Set(
-			this.data.groupedHistory.flatMap((g) => g.items.map((i) => i.id)),
+		// 只删当前筛选范围内的 id（含未展开页），防误删其它筛选记录
+		const filterIdSet = new Set(
+			(this._allGroupedHistory || []).flatMap((g) => g.items.map((i) => i.id)),
 		);
-		const deletableIds = selectedIds.filter((id) => visibleIdSet.has(id));
+		const deletableIds = selectedIds.filter((id) => filterIdSet.has(id));
 		if (deletableIds.length === 0) return;
 		confirmDelete({
 			content: `确定要删除选中的 ${deletableIds.length} 条记录吗？`,
@@ -340,24 +345,18 @@ Page({
 	},
 	showActions(e) {
 		const record = e.currentTarget.dataset.record;
-		const actions = [
-			{ text: "编辑", value: "edit" },
-			{ text: "删除", value: "delete" },
-		];
+		const actions = [{ text: "删除", value: "delete" }];
+		if (record.type !== "DIVIDEND") {
+			actions.unshift({ text: "编辑", value: "edit" });
+		}
 		wx.showActionSheet({
 			itemList: actions.map((a) => a.text),
 			success: (res) => {
 				const action = actions[res.tapIndex];
 				if (action.value === "edit") {
-					if (record.type === "DIVIDEND") {
-						wx.navigateTo({
-							url: `/packageDetail/pages/dividend/dividend?id=${record.id}`,
-						});
-					} else {
-						wx.navigateTo({
-							url: `/packageRecord/pages/record/record?id=${record.id}`,
-						});
-					}
+					wx.navigateTo({
+						url: `/packageRecord/pages/record/record?id=${record.id}`,
+					});
 				} else if (action.value === "delete") {
 					confirmDelete({
 						content: `确定要删除这笔${record.typeText}记录吗？`,
@@ -380,12 +379,6 @@ Page({
 				}
 			},
 		});
-	},
-	goToRecord() {
-		wx.navigateTo({ url: "/packageRecord/pages/record/record" });
-	},
-	goToDividend() {
-		wx.navigateTo({ url: "/packageDetail/pages/dividend/dividend" });
 	},
 	onUnload() {
 		if (this._searchTimer) clearTimeout(this._searchTimer);

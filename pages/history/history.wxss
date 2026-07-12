@@ -598,6 +598,12 @@
 .filter-slider {
   flex: 1;
   min-width: 0;
+  /* 抵消组件内部 .xhs-slider 的 margin-bottom（页面样式无法穿透组件，故在宿主层收掉） */
+  margin-bottom: calc(-1 * var(--xhs-space-lg));
+}
+.filter-slider-host {
+  width: 100%;
+  display: block;
 }
 .select-toggle {
   display: inline-flex;

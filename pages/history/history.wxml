@@ -49,12 +49,14 @@
   <!-- 筛选区：分段(全部/转入/转出) + 右上选择按钮 + 策略次级行 -->
   <view class="filter-bar">
     <view class="filter-top-row">
-      <liquid-slider
-        class="filter-slider"
-        tabs="{{filterTabs}}"
-        currentKey="{{currentFilter}}"
-        bind:change="onFilterTabChange"
-      />
+      <view class="filter-slider">
+        <liquid-slider
+          class="filter-slider-host"
+          tabs="{{filterTabs}}"
+          currentKey="{{currentFilter}}"
+          bind:change="onFilterTabChange"
+        />
+      </view>
       <view class="select-toggle {{selectMode ? 'select-toggle-active' : ''}}" bindtap="toggleSelectMode">
         <view class="batch-icon"></view>
         <text>{{selectMode ? '取消' : '选择'}}</text>

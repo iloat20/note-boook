@@ -12,7 +12,7 @@
   <view class="search-bar-wrap animate-stagger" style="animation-delay:160ms">
     <view class="search-bar">
       <image src="/images/search.svg" mode="aspectFit" class="search-icon" />
-      <input class="search-input" placeholder="搜索股票代码/名称..." value="{{searchKeyword}}" bindinput="onSearchInput" bindfocus="onSearchFocus" bindblur="onSearchBlur" />
+      <input class="search-input" placeholder="搜索代码或名称..." value="{{searchKeyword}}" bindinput="onSearchInput" bindfocus="onSearchFocus" bindblur="onSearchBlur" />
       <view wx:if="{{searchKeyword}}" class="search-clear" bindtap="clearSearch">
         <text class="search-clear-icon">✕</text>
       </view>
@@ -46,41 +46,30 @@
     </view>
   </view>
 
-  <!-- 类型筛选 (买入/卖出/分红) -->
-  <liquid-slider
-    class="animate-stagger" style="animation-delay:240ms"
-    tabs="{{filterTabs}}"
-    currentKey="{{currentFilter}}"
-    bind:change="onFilterTabChange"
-  />
-
-  <!-- 市场和策略筛选 (合并为一行滑动) -->
-  <scroll-view scroll-x class="filter-chips animate-stagger" style="animation-delay:320ms" enhanced show-scrollbar="{{false}}">
-    <view class="chip-row">
-      <!-- 市场筛选 -->
-      <view
-        wx:for="{{marketTabs}}"
-        wx:key="key"
-        class="chip {{currentMarket === item.key ? 'chip-active' : ''}}"
-        bindtap="switchMarket"
-        data-market="{{item.key}}"
-      ><text>{{item.label}}</text></view>
-
-      <!-- 策略筛选分隔 -->
-      <view wx:if="{{activeStrategies.length > 0}}" class="chip-divider"></view>
-
-      <!-- 策略筛选 -->
-      <view wx:for="{{activeStrategies}}" wx:key="tag"
-            class="chip {{currentStrategy === item.tag ? 'chip-active' : ''}}"
-            bindtap="switchStrategy" data-strategy="{{item.tag}}">
-        <text>{{item.tag}}</text>
+  <!-- 筛选区：分段(全部/转入/转出) + 右上选择按钮 + 策略次级行 -->
+  <view class="filter-bar">
+    <view class="filter-top-row">
+      <liquid-slider
+        class="filter-slider"
+        tabs="{{filterTabs}}"
+        currentKey="{{currentFilter}}"
+        bind:change="onFilterTabChange"
+      />
+      <view class="select-toggle {{selectMode ? 'select-toggle-active' : ''}}" bindtap="toggleSelectMode">
+        <view class="batch-icon"></view>
+        <text>{{selectMode ? '取消' : '选择'}}</text>
       </view>
-
-      <!-- 批量选择 -->
-      <view class="chip-divider"></view>
-      <view class="chip {{selectMode ? 'chip-active chip-batch' : ''}}" bindtap="toggleSelectMode"><view class="batch-icon"></view><text>批量</text></view>
     </view>
-  </scroll-view>
+    <scroll-view wx:if="{{activeStrategies.length > 0}}" scroll-x class="strategy-chips" enhanced show-scrollbar="{{false}}">
+      <view class="chip-row">
+        <view wx:for="{{activeStrategies}}" wx:key="tag"
+              class="chip chip-secondary {{currentStrategy === item.tag ? 'chip-active' : ''}}"
+              bindtap="switchStrategy" data-strategy="{{item.tag}}">
+          <text>{{item.tag}}</text>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
 
   <!-- 记录列表/空状态 -->
   <block wx:if="{{groupedHistory.length > 0}}">
@@ -92,7 +81,7 @@
           <text class="date-text">{{item.date}}</text>
         </view>
 
-        <!-- 交易卡片 (XHS feed 风格) -->
+        <!-- 资产卡片 (XHS feed 风格) -->
         <view wx:for="{{item.items}}" wx:key="id" wx:for-index="itemIdx" wx:for-item="record"
           class="record-card {{dissolvingId === record.id ? 'dissolving' : ''}} {{selectMode ? 'record-card-selectable' : ''}} {{selectMode && selectedMap[record.id] ? 'record-card-selected' : ''}}"
           data-record="{{record}}"
@@ -111,11 +100,10 @@
 
           <!-- 主内容 -->
           <view class="record-main">
-            <!-- 第一行: 交易信息(居左) + 买卖标签 + 时间(居右) -->
+            <!-- 第一行: 资产信息(居左) + 买卖标签 + 时间(居右) -->
             <view class="record-top">
               <view class="record-info">
-                <market-tag market="{{record.market}}" label="{{record.marketLabel}}" />
-                <text class="record-code">{{record.code}}</text>
+              <text class="record-code">{{record.code}}</text>
                 <text class="record-name">{{record.name}}</text>
               </view>
               <view class="{{record.typeTagClass}}">
@@ -124,19 +112,14 @@
               <text class="record-time">{{record.time}}</text>
             </view>
 
-            <!-- 第二行: 股价 × 股数 (左)  ...  金额 (右) -->
+            <!-- 第二行: 单价 × 数量 (左)  ...  金额 (右) -->
             <view wx:if="{{record.type !== 'DIVIDEND'}}" class="record-detail">
               <text class="detail-price mono-num">¥{{record.priceText}}</text>
               <text class="detail-multiply">×</text>
-              <text class="detail-quantity">{{record.quantity}}股</text>
+              <text class="detail-quantity">{{record.quantity}}份</text>
               <text class="{{record.amountClass}}">
                 {{record.amountText}}
               </text>
-            </view>
-
-            <!-- 分红: 金额 (右) -->
-            <view wx:if="{{record.type === 'DIVIDEND'}}" class="record-detail">
-              <text class="{{record.amountClass}}">{{record.amountText}}</text>
             </view>
 
             <!-- 策略标签 -->
@@ -154,26 +137,23 @@
           <view class="dot"></view>
         </view>
       </view>
-      <view wx:else class="no-more animate-stagger" style="animation-delay:480ms">
-        <text class="no-more-text">— 已经到底了 —</text>
-      </view>
-      <view style="height: {{selectMode ? '300rpx' : '160rpx'}};"></view>
+      <view style="height: {{selectMode ? '220rpx' : '160rpx'}};"></view>
     </scroll-view>
 
-    <!-- 批量选择底部工具栏 -->
-    <view wx:if="{{selectMode}}" class="batch-bar">
+    <!-- 毛玻璃胶囊批量栏 -->
+    <view wx:if="{{selectMode}}" class="batch-bar glass-bar">
       <view class="batch-bar-inner">
         <view class="batch-left" bindtap="toggleSelectAll">
           <view class="xhs-checkbox {{selectAll ? 'xhs-checkbox-checked' : ''}}"></view>
           <text class="batch-label">全选</text>
         </view>
         <view class="batch-center">
-          <text class="batch-count">已选 {{selectedIds.length}} 项</text>
+          <text class="batch-count">已选 {{selectedIds.length}} · 共 {{totalInFilter}}</text>
         </view>
         <view class="batch-right">
           <view class="batch-btn-cancel" bindtap="toggleSelectMode">取消</view>
           <view class="batch-btn-delete {{selectedIds.length === 0 ? 'batch-btn-disabled' : ''}}" bindtap="batchDelete">
-            删除 ({{selectedIds.length}})
+            删除
           </view>
         </view>
       </view>
@@ -192,10 +172,5 @@
   </view>
 
   <!-- 空状态（无任何记录） -->
-  <empty-state wx:else icon="📝" title="暂无记录" desc="记录每一笔交易，让投资有迹可循" showSlot="{{true}}">
-    <view slot="actions" class="empty-actions">
-      <view class="empty-btn animate-scale-in" bindtap="goToRecord">📈 添加买入记录</view>
-      <view class="empty-btn animate-scale-in" style="animation-delay: 100ms;" bindtap="goToDividend">💰 添加分红记录</view>
-    </view>
-  </empty-state>
+  <empty-state wx:else icon="📝" title="暂无记录" desc="记录您的资产，让资产有迹可循" />
 </view>

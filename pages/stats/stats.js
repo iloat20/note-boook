@@ -1,12 +1,10 @@
 ﻿const {
-	getPeriodStatsList,
-	getStrategyStats,
-	getTotalXIRR,
 	getTotalStats,
 } = require("../../utils/services/statsService");
 const { getAllPositions } = require("../../utils/services/positionService");
 const { Stock, Transaction, Dividend } = require("../../utils/models/index");
 const { fmt } = require("../../utils/helpers/format");
+const { computeAssetHoldingPortrait, computeAllTimeAssetFlow, assembleAnnualReport } = require("../../utils/helpers/annualReport");
 const { buildStockMap } = require("../../utils/helpers/stockHelpers");
 const { buildRecordView } = require("../../utils/helpers/recordView");
 const { exportMD } = require("../../utils/exporters/markdown");
@@ -104,19 +102,10 @@ Page({
 			const { completeTrades, clearedPositions } = this._buildTradeListAndCleared();
 			const totalStats = getTotalStats();
 
-			const allTx = Transaction.getAll();
-			const allDiv = Dividend.getAll();
-			let totalBuyFee = 0,
-				totalSellFee = 0;
-			allTx.forEach((t) => {
-				if (t.type === "BUY") totalBuyFee += t.fee;
-				else totalSellFee += t.fee;
-			});
-			const cnyDividendIncome = allDiv.reduce((s, d) => s + d.totalAmount, 0);
-
-			const stats = {
+		const stats = {
 				totalPnL: totalStats.totalPnL,
 				totalPnLText: (totalStats.totalPnL >= 0 ? "+" : "") + fmt(totalStats.totalPnL),
+				recordCount: completeTrades.length,
 				returnValue: totalStats.totalPnLPercent,
 				returnText:
 					(totalStats.totalPnLPercent >= 0 ? "+" : "") +
@@ -137,7 +126,7 @@ Page({
 
 			const detailItems = [
 				{
-					label: "已实现盈亏",
+					label: "已实现收益",
 					value: fmt(totalStats.realizedPnL),
 					prefix: "",
 					colorClass: totalStats.realizedPnL >= 0 ? "profit" : "loss",
@@ -148,16 +137,8 @@ Page({
 						(totalStats.totalPnLPercent >= 0 ? "+" : "") + totalStats.totalPnLPercent.toFixed(2),
 					prefix: "",
 					colorClass: totalStats.totalPnLPercent >= 0 ? "profit" : "loss",
-				},
-				{
-					label: "分红收益",
-					value: fmt(cnyDividendIncome),
-					prefix: "",
-					colorClass: "profit",
-				},
-				{ label: "买入手续费", value: fmt(totalBuyFee), prefix: "", colorClass: "" },
-				{ label: "卖出手续费", value: fmt(totalSellFee), prefix: "", colorClass: "" },
-			];
+			},
+		];
 
 			this.setData({
 				stats,
@@ -179,173 +160,48 @@ Page({
 
 	async onOpenAnnualReport() {
 		const year = new Date().getFullYear();
-		const yearPrefix = `${year}-`;
 
 		const yearStart = new Date(year, 0, 1);
 		const yearEnd = new Date(year, 11, 31, 23, 59, 59, 999);
 		const yearTx = Transaction.getByDateRange(yearStart, yearEnd);
-		let buyCount = 0,
-			sellCount = 0;
-		yearTx.forEach((t) => {
-			if (t.type === "BUY") buyCount++;
-			else sellCount++;
-		});
-
 		const rates = await getRates();
+		const stockMap = buildStockMap(); // {stockId:{name,market}}
+		const rateOf = (id) => {
+			const m = stockMap[id] && stockMap[id].market;
+			return getRate(m, rates) || getCachedRate(m) || 1;
+		};
 
-		const stocks = Stock.getAll();
-		const stockMarket = {};
-		stocks.forEach((s) => {
-			stockMarket[s.id] = s.market;
-		});
-
-		let yearBuyAmount = 0,
-			yearSellAmount = 0,
-			yearBuyFee = 0,
-			yearSellFee = 0;
+		// 本年流水（资产持有口径）
+		let yearInflow = 0, yearOutflow = 0;
 		yearTx.forEach((t) => {
-			const market = stockMarket[t.stockId];
-			const r = getRate(market, rates) || getCachedRate(market) || 1;
-			const amt = t.price * t.quantity;
-			if (t.type === "BUY") {
-				yearBuyAmount += amt * r;
-				yearBuyFee += t.fee * r;
-			} else {
-				yearSellAmount += amt * r;
-				yearSellFee += t.fee * r;
-			}
+			const r = rateOf(t.stockId);
+			const amt = t.price * t.quantity * r;
+			if (t.type === "BUY") yearInflow += amt + t.fee * r;
+			else yearOutflow += amt - t.fee * r;
 		});
-
-		let yearDivTotal = 0;
 		Dividend.getAll().forEach((d) => {
 			const dd = new Date(d.date);
 			if (dd >= yearStart && dd <= yearEnd) {
-				const market = stockMarket[d.stockId];
-				const r = getRate(market, rates) || getCachedRate(market) || 1;
-				yearDivTotal += d.totalAmount * r;
+				const m = stockMap[d.stockId] && stockMap[d.stockId].market;
+				const r = getRate(m, rates) || getCachedRate(m) || 1;
+				yearInflow += d.totalAmount * r;
 			}
 		});
 
-		const yearInvestment = yearBuyAmount + yearBuyFee;
-		const yearRecovery = yearSellAmount - yearSellFee + yearDivTotal;
-		const yearPnL = yearRecovery - yearInvestment; // 净现金流（非会计盈亏）
-
-		yearInvestment > 0 ? parseFloat(((yearPnL / yearInvestment) * 100).toFixed(2)) : 0;
-
-		const periodList = getPeriodStatsList("MONTH", 12);
-		const monthlyPnL = [];
-		for (let m = 1; m <= 12; m++) {
-			const label = yearPrefix + String(m).padStart(2, "0");
-			const found = periodList.find((item) => item.label === label);
-			monthlyPnL.push({ month: m, pnL: found ? found.pnL : 0 });
-		}
-
-		const positions = this._computeAllPositions();
-		const cleared = Object.values(positions).filter(
-			(p) =>
-				p.quantity === 0 && (Math.abs(p.realizedPnL) > 0.01 || Math.abs(p.dividendIncome) > 0.01),
+		// 全历史期末资产
+		const { endingAsset } = computeAllTimeAssetFlow(
+			Transaction.getAll(), Dividend.getAll(), rateOf,
 		);
-		const winCount = cleared.filter((p) => p.realizedPnL + p.dividendIncome > 0).length;
-		const winRate = cleared.length > 0 ? Math.round((winCount / cleared.length) * 100) : 0;
 
-		const allPositions = Object.values(positions)
-			.filter((p) => p.quantity > 0)
-			.concat(cleared.map((p) => Object.assign({}, p, { floatingPnL: 0 })));
-		const stockPnL = {};
-		allPositions.forEach((p) => {
-			const key = p.code;
-			const r = getRate(p.market, rates);
-			if (!stockPnL[key]) {
-				stockPnL[key] = {
-					code: p.code,
-					name: p.name,
-					market: p.market,
-					totalPnL: 0,
-				};
-			}
-			stockPnL[key].totalPnL +=
-				((p.realizedPnL || 0) + (p.floatingPnL || 0) + (p.dividendIncome || 0)) * r;
+		// 资产持有画像（全历史）
+		const holdingPortrait = computeAssetHoldingPortrait(
+			Transaction.getAll(), stockMap, Date.now(),
+		);
+
+		const annualReportData = assembleAnnualReport({
+			year, yearInflow, yearOutflow, endingAsset, holdingPortrait, fmt,
 		});
-		const stockList = Object.values(stockPnL)
-			.map((s) => {
-				s.totalPnL = parseFloat(s.totalPnL.toFixed(2));
-				s.totalPnLText = fmt(Math.abs(s.totalPnL));
-				return s;
-			})
-			.sort((a, b) => b.totalPnL - a.totalPnL);
-		const topStocks = stockList.slice(0, 5);
-		const bottomStocks = stockList
-			.filter((s) => s.totalPnL < 0)
-			.reverse()
-			.slice(0, 5)
-			.map((s) => {
-				s.totalPnLText = fmt(Math.abs(s.totalPnL));
-				return s;
-			});
-
-		let strategyStats = getStrategyStats();
-		const totalStrategyCount = strategyStats.reduce((sum, s) => sum + (s.count || 0), 0);
-		if (totalStrategyCount > 0) {
-			// Largest-remainder rounding so displayed top-N always sums to exactly 100%.
-			// Per-spec: "sum to ~100%". Exact-100 avoids confusing UX when rounding residue
-			// would otherwise drop the total below 100 for small slice sizes.
-			const raw = strategyStats.slice(0, 8).map((s) => (s.count / totalStrategyCount) * 100);
-			const floored = raw.map((v) => Math.floor(v));
-			let remainder = 100 - floored.reduce((sum, v) => sum + v, 0);
-			// Indices sorted by descending fractional part to determine who gets +1
-			const order = raw
-				.map((v, i) => ({ i, frac: v - Math.floor(v) }))
-				.sort((a, b) => b.frac - a.frac);
-			for (let k = 0; k < remainder; k++) {
-				floored[order[k].i]++;
-			}
-			strategyStats = strategyStats.slice(0, 8).map((s, i) => ({
-				...s,
-				percent: floored[i],
-			}));
-		} else {
-			strategyStats = strategyStats.slice(0, 8).map((s) => ({ ...s, percent: 0 }));
-		}
-
-		let yearXIRR = null;
-		let totalXIRR = null;
-		try {
-			const { calcXIRRForRange } = require("../../utils/services/xirrService");
-			const xirrResults = await Promise.all([
-				calcXIRRForRange(yearStart, yearEnd).catch(() => null),
-				getTotalXIRR().catch(() => null),
-			]);
-			yearXIRR = xirrResults[0];
-			totalXIRR = xirrResults[1];
-		} catch (e) {
-			console.error("XIRR 计算失败:", e);
-		}
-
-		this.setData({
-			showAnnualReport: true,
-			annualReportData: {
-				year: year,
-				tradeCount: yearTx.length,
-				buyCount: buyCount,
-				sellCount: sellCount,
-				winRate: winRate,
-				yearXIRR: yearXIRR,
-				yearXIRRText: yearXIRR !== null ? `${yearXIRR.toFixed(2)}%` : "--",
-				totalXIRR: totalXIRR,
-				totalXIRRText: totalXIRR !== null ? `${totalXIRR.toFixed(2)}%` : "--",
-				totalPnL: parseFloat(yearPnL.toFixed(2)),
-				totalPnLText: fmt(Math.abs(yearPnL)),
-				totalPnLPercent: yearXIRR !== null ? parseFloat(yearXIRR.toFixed(2)) : 0,
-
-				totalInvestmentText: fmt(yearInvestment),
-				totalRecoveryText: fmt(yearRecovery),
-				dividendIncomeText: fmt(yearDivTotal),
-				monthlyPnL: monthlyPnL,
-				topStocks: topStocks,
-				bottomStocks: bottomStocks,
-				strategyStats: strategyStats,
-			},
-		});
+		this.setData({ showAnnualReport: true, annualReportData });
 	},
 
 	onCloseAnnualReport() {
@@ -355,7 +211,7 @@ Page({
 	onClearAllData() {
 		wx.showModal({
 			title: "⚠️ 确认清除",
-			content: "将永久删除所有股票、交易、分红记录，此操作不可恢复！",
+			content: "将永久删除所有资产记录，此操作不可恢复！",
 			confirmText: "确认清除",
 			confirmColor: "#FF4D4F",
 			cancelText: "取消",

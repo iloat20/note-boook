@@ -23,9 +23,9 @@
   </view>
 
   <scroll-view wx:else class="xhs-scroll" scroll-y>
-    <!-- 双列统计卡片 (小红书笔记风格) -->
+    <!-- 双列统计卡片 (小红书笔记风格，资产中性) -->
     <view class="xhs-feed-grid animate-stagger" style="animation-delay:240ms">
-      <!-- 盈亏 -->
+      <!-- 资产变动 -->
       <view class="xhs-feed-card">
         <view class="xhs-feed-card-inner">
           <view class="xhs-feed-card-cover cover-pnl">
@@ -35,37 +35,7 @@
             <text class="xhs-feed-card-value {{stats.totalPnL >= 0 ? 'xhs-profit' : 'xhs-loss'}}">
               {{stats.totalPnLText}}
             </text>
-            <text class="xhs-feed-card-label">总收益</text>
-          </view>
-        </view>
-      </view>
-
-      <!-- 收益率 -->
-      <view class="xhs-feed-card">
-        <view class="xhs-feed-card-inner">
-          <view class="xhs-feed-card-cover cover-rate">
-            <text class="xhs-feed-card-emoji">📊</text>
-          </view>
-          <view class="xhs-feed-card-body">
-            <text class="xhs-feed-card-value {{stats.returnValue > 0 ? 'xhs-profit' : stats.returnValue < 0 ? 'xhs-loss' : ''}}">
-              {{stats.returnText || '--'}}
-            </text>
-            <text class="xhs-feed-card-label">收益率</text>
-          </view>
-        </view>
-      </view>
-
-      <!-- 胜率 -->
-      <view class="xhs-feed-card">
-        <view class="xhs-feed-card-inner">
-          <view class="xhs-feed-card-cover cover-rate">
-            <text class="xhs-feed-card-emoji">🎯</text>
-          </view>
-          <view class="xhs-feed-card-body">
-            <text class="xhs-feed-card-value {{stats.winRate !== null ? (stats.winRate >= 50 ? 'xhs-profit' : 'xhs-loss') : ''}}">
-              {{stats.winRateText || '--'}}
-            </text>
-            <text class="xhs-feed-card-label">盈利占比</text>
+            <text class="xhs-feed-card-label">资产变动</text>
           </view>
         </view>
       </view>
@@ -81,6 +51,21 @@
               {{stats.recordCount}}
             </text>
             <text class="xhs-feed-card-label">记录次数</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 期末资产 -->
+      <view class="xhs-feed-card">
+        <view class="xhs-feed-card-inner">
+          <view class="xhs-feed-card-cover cover-recover">
+            <text class="xhs-feed-card-emoji">💰</text>
+          </view>
+          <view class="xhs-feed-card-body">
+            <text class="xhs-feed-card-value">
+              {{stats.endingAssetText}}
+            </text>
+            <text class="xhs-feed-card-label">期末资产</text>
           </view>
         </view>
       </view>
@@ -123,10 +108,10 @@
       </view>
     </view>
 
-    <!-- 已结清资产 -->
+    <!-- 已结束资产 -->
     <view class="xhs-feed-card-full">
       <view class="xhs-feed-card-full-header">
-        <text class="xhs-feed-card-full-title">💼 已结清资产</text>
+        <text class="xhs-feed-card-full-title">💼 已结束资产</text>
       </view>
       <view class="xhs-feed-card-full-body">
         <view wx:if="{{clearedPositions.length > 0}}" class="detail-list">
@@ -141,11 +126,11 @@
               </text>
             </view>
             <view class="detail-meta">
-              <text class="detail-meta-text">已实现: {{item.realizedPnLText}}</text>
+              <text class="detail-meta-text">净变动: {{item.realizedPnLText}}</text>
             </view>
           </view>
         </view>
-        <view wx:else class="detail-empty">暂无已结清资产</view>
+        <view wx:else class="detail-empty">暂无已结束资产</view>
       </view>
     </view>
 

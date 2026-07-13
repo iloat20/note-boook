@@ -102,43 +102,31 @@ Page({
 			const { completeTrades, clearedPositions } = this._buildTradeListAndCleared();
 			const totalStats = getTotalStats();
 
-		const stats = {
+			// 期末资产（全历史资产持有口径，复用 computeAllTimeAssetFlow）
+			const stockMap = buildStockMap(Stock.getAll());
+			const rateOf = (id) => {
+				const m = stockMap[id] && stockMap[id].market;
+				return getCachedRate(m) || 1;
+			};
+			const { endingAsset } = computeAllTimeAssetFlow(
+				Transaction.getAll(), Dividend.getAll(), rateOf,
+			);
+
+			const stats = {
 				totalPnL: totalStats.totalPnL,
 				totalPnLText: (totalStats.totalPnL >= 0 ? "+" : "") + fmt(totalStats.totalPnL),
 				recordCount: completeTrades.length,
-				returnValue: totalStats.totalPnLPercent,
-				returnText:
-					(totalStats.totalPnLPercent >= 0 ? "+" : "") +
-					totalStats.totalPnLPercent.toFixed(2) +
-					"%",
-				winRate:
-					clearedPositions.length > 0
-						? Math.round(
-								(clearedPositions.filter((p) => p.totalPnL > 0).length / clearedPositions.length) *
-									100,
-							)
-						: null,
-				winRateText:
-					clearedPositions.length > 0
-						? `${Math.round((clearedPositions.filter((p) => p.totalPnL > 0).length / clearedPositions.length) * 100)}%`
-						: "--",
+				endingAssetText: fmt(endingAsset),
 			};
 
 			const detailItems = [
 				{
-					label: "已实现收益",
+					label: "累计净变动",
 					value: fmt(totalStats.realizedPnL),
 					prefix: "",
 					colorClass: totalStats.realizedPnL >= 0 ? "profit" : "loss",
 				},
-				{
-					label: "收益率",
-					value:
-						(totalStats.totalPnLPercent >= 0 ? "+" : "") + totalStats.totalPnLPercent.toFixed(2),
-					prefix: "",
-					colorClass: totalStats.totalPnLPercent >= 0 ? "profit" : "loss",
-			},
-		];
+			];
 
 			this.setData({
 				stats,

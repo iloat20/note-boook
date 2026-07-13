@@ -91,86 +91,160 @@ Component({
 			});
 		},
 
-		_drawReport: function (ctx, W, H) {
-			const d = this.properties.data;
-			ctx.fillStyle = "#F5F5F7";
-			ctx.fillRect(0, 0, W, H);
-			let y = 90;
-			ctx.textAlign = "center";
-			ctx.fillStyle = "#1C1C1E";
-			ctx.font = "28px sans-serif";
-			ctx.fillText(String(d.year), W / 2, y);
-			y += 48;
-			ctx.font = "40px sans-serif";
-			ctx.fillText("年度资产复盘", W / 2, y);
-		y += 76;
-		ctx.fillStyle = d.netChange >= 0 ? "#FF3B30" : "#34C759";
-		ctx.font = "bold 64px sans-serif";
-		ctx.fillText((d.netChangeSign || "") + (d.netChangeText || ""), W / 2, y);
-			y += 52;
-			ctx.font = "26px sans-serif";
-			ctx.fillStyle = "#999999";
-			ctx.fillText(d.conclusion || "", W / 2, y);
+	_drawReport: function (ctx, W, H) {
+		const d = this.properties.data;
+		// 浅色设计系统配色（与屏幕一致）
+		const C = {
+			bg: "#FAFAFC",       // --xhs-bg
+			surface: "#FFFFFF",  // --xhs-surface
+			title: "#1C1C1E",    // --xhs-title
+			caption: "#999999",  // --xhs-caption
+			sub: "#F2F2F7",      // --xhs-bg-secondary
+			profit: "#FF0000",   // --xhs-profit
+			loss: "#00AA00",     // --xhs-loss
+			in: "#007AFF",       // --xhs-secondary
+			out: "#E5E5EA",      // --xhs-bg-tertiary
+		};
 
-			y += 90;
-			const items = [
-				{ label: "年度流入", value: "¥" + (d.inflowText || "") },
-				{ label: "年度流出", value: "¥" + (d.outflowText || "") },
-				{ label: "年度净变化", value: (d.netChangeSign || "") + "¥" + (d.netChangeText || "") },
-				{ label: "期末资产", value: "¥" + (d.endingAssetText || "") },
-			];
-			const gx = 40;
-			const gap = 16;
-			const gw = (W - 80 - gap) / 2;
-			const gh = 140;
-			items.forEach(function (it, i) {
-				const cx = gx + (i % 2) * (gw + gap);
-				const cy = y + Math.floor(i / 2) * (gh + gap);
-				ctx.fillStyle = "#FFFFFF";
-				roundRect(ctx, cx, cy, gw, gh, 16);
+		ctx.fillStyle = C.bg;
+		ctx.fillRect(0, 0, W, H);
+
+		const cardX = 40;
+		const cardW = W - 80;
+		const cardR = 16;
+		let y = 48;
+		const newCard = function (h) {
+			ctx.fillStyle = C.surface;
+			roundRect(ctx, cardX, y, cardW, h, cardR);
+			ctx.fill();
+			return y;
+		};
+		const sign = d.netChange >= 0 ? C.profit : C.loss;
+
+		// ── Hero：白底巨号年份 + 净变化红绿大数字 ──
+		let cy = newCard(320);
+		let iy = cy + 72;
+		ctx.textAlign = "center";
+		ctx.fillStyle = C.title;
+		ctx.font = "bold 72px sans-serif";
+		ctx.fillText(String(d.year), W / 2, iy);
+		iy += 56;
+		ctx.fillStyle = C.caption;
+		ctx.font = "28px sans-serif";
+		ctx.fillText("年度资产复盘", W / 2, iy);
+		iy += 92;
+		ctx.fillStyle = sign;
+		ctx.font = "bold 72px sans-serif";
+		ctx.fillText("¥" + (d.netChangeSign || "") + (d.netChangeText || ""), W / 2, iy);
+		iy += 56;
+		ctx.fillStyle = C.caption;
+		ctx.font = "26px sans-serif";
+		ctx.fillText(d.conclusion || "", W / 2, iy);
+
+		// ── 年度资产总览：对比条 + 四宫格 ──
+		y += 320 + 24;
+		cy = newCard(470);
+		const tx = cardX + 32;
+		let iy2 = cy + 56;
+		ctx.textAlign = "left";
+		ctx.fillStyle = C.title;
+		ctx.font = "bold 30px sans-serif";
+		ctx.fillText("年度资产总览", tx, iy2);
+
+		// 流入/流出对比条
+		const drawBar = function (label, pct, amount, isIn) {
+			iy2 += 44;
+			ctx.fillStyle = C.caption;
+			ctx.font = "24px sans-serif";
+			ctx.fillText(label, tx, iy2);
+			const trackX = tx + 56;
+			const trackW = cardW - 64 - 56 - 210;
+			const trackY = iy2 - 16;
+			ctx.fillStyle = C.sub;
+			roundRect(ctx, trackX, trackY, trackW, 16, 8);
+			ctx.fill();
+			const fw = Math.max(0, Math.round((Math.min(100, Math.max(0, pct)) / 100) * trackW));
+			if (fw > 0) {
+				ctx.fillStyle = isIn ? C.in : C.out;
+				roundRect(ctx, trackX, trackY, fw, 16, 8);
 				ctx.fill();
-				ctx.textAlign = "left";
-				ctx.fillStyle = "#1C1C1E";
-				ctx.font = "34px sans-serif";
-				ctx.fillText(it.value, cx + 24, cy + 72);
-				ctx.fillStyle = "#999999";
-				ctx.font = "24px sans-serif";
-				ctx.fillText(it.label, cx + 24, cy + 112);
-			});
+			}
+			ctx.textAlign = "right";
+			ctx.fillStyle = isIn ? C.in : C.title;
+			ctx.font = "bold 24px sans-serif";
+			ctx.fillText("¥" + amount, cardX + cardW - 32, iy2);
+			ctx.textAlign = "left";
+		};
+		drawBar("流入", d.inflowPct || 0, d.inflowText || "", true);
+		drawBar("流出", d.outflowPct || 0, d.outflowText || "", false);
+		iy2 += 56;
 
+		// 2×2 四宫格（浅灰内卡）
+		const gap = 16;
+		const gw = (cardW - 64 - gap) / 2;
+		const gh = 110;
+		const items = [
+			{ label: "年度流入", value: "¥" + (d.inflowText || ""), color: C.title },
+			{ label: "年度流出", value: "¥" + (d.outflowText || ""), color: C.title },
+			{ label: "年度净变化", value: "¥" + (d.netChangeSign || "") + (d.netChangeText || ""), color: sign },
+			{ label: "期末资产", value: "¥" + (d.endingAssetText || ""), color: C.title },
+		];
+		items.forEach(function (it, i) {
+			const cx = tx + (i % 2) * (gw + gap);
+			const ccy = iy2 + Math.floor(i / 2) * (gh + gap);
+			ctx.fillStyle = C.sub;
+			roundRect(ctx, cx, ccy, gw, gh, 12);
+			ctx.fill();
+			ctx.textAlign = "left";
+			ctx.fillStyle = it.color;
+			ctx.font = "bold 30px sans-serif";
+			ctx.fillText(it.value, cx + 20, ccy + 50);
+			ctx.fillStyle = C.caption;
+			ctx.font = "22px sans-serif";
+			ctx.fillText(it.label, cx + 20, ccy + 86);
+		});
+
+		// ── 资产持有画像 ──
 		const p = d.holdingPortrait || {};
 		if (p && p.longest) {
-			y += 2 * (gh + gap) + 48;
+			y += 470 + 24;
+			cy = newCard(230);
+			let py = cy + 56;
+			ctx.textAlign = "left";
+			ctx.fillStyle = C.title;
+			ctx.font = "bold 30px sans-serif";
+			ctx.fillText("资产持有画像", tx, py);
+			py += 36;
 			const pitems = [
-				{ label: "在册最久", name: p.longest && p.longest.name, val: p.longest && (p.longest.days + "天") },
-				{ label: "在册最短", name: p.shortest && p.shortest.name, val: p.shortest && (p.shortest.days + "天") },
-				{ label: "变动最多", name: p.mostActive && p.mostActive.name, val: p.mostActive && (p.mostActive.count + "笔") },
+				{ label: "在册最久", name: (p.longest && p.longest.name) || "-", val: (p.longest && (p.longest.days + "天")) || "-" },
+				{ label: "在册最短", name: (p.shortest && p.shortest.name) || "-", val: (p.shortest && (p.shortest.days + "天")) || "-" },
+				{ label: "变动最多", name: (p.mostActive && p.mostActive.name) || "-", val: (p.mostActive && (p.mostActive.count + "笔")) || "-" },
 			];
-			const pw = (W - 80 - 24) / 3;
-			const pG = 12;
+			const pw = (cardW - 64 - 24) / 3;
 			pitems.forEach(function (it, i) {
-				const cx = gx + i * (pw + pG);
-				ctx.fillStyle = "#FFFFFF";
-				roundRect(ctx, cx, y, pw, 160, 16);
+				const cx = tx + i * (pw + 12);
+				ctx.fillStyle = C.sub;
+				roundRect(ctx, cx, py, pw, 130, 12);
 				ctx.fill();
 				ctx.textAlign = "center";
-				ctx.fillStyle = "#1C1C1E";
-				ctx.font = "26px sans-serif";
-				ctx.fillText(it.name || "-", cx + pw / 2, y + 64);
-				ctx.fillStyle = "#FF3B30";
-				ctx.font = "bold 30px sans-serif";
-				ctx.fillText(it.val || "-", cx + pw / 2, y + 104);
-				ctx.fillStyle = "#999999";
-				ctx.font = "22px sans-serif";
-				ctx.fillText(it.label, cx + pw / 2, y + 144);
+				ctx.fillStyle = C.title;
+				ctx.font = "24px sans-serif";
+				ctx.fillText(it.name, cx + pw / 2, py + 54);
+				ctx.fillStyle = C.in;
+				ctx.font = "bold 28px sans-serif";
+				ctx.fillText(it.val, cx + pw / 2, py + 90);
+				ctx.fillStyle = C.caption;
+				ctx.font = "20px sans-serif";
+				ctx.fillText(it.label, cx + pw / 2, py + 118);
 			});
 		}
 
-			ctx.fillStyle = "#999999";
-			ctx.font = "22px sans-serif";
-			ctx.textAlign = "center";
-			ctx.fillText("茄子笔记本 · " + d.year + " 年度资产复盘", W / 2, H - 60);
-		},
+		// ── 页脚 ──
+		ctx.fillStyle = C.caption;
+		ctx.font = "22px sans-serif";
+		ctx.textAlign = "center";
+		ctx.fillText("茄子笔记本 · " + d.year + " 年度资产复盘", W / 2, H - 48);
+	},
 	},
 });
 

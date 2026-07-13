@@ -15,18 +15,39 @@
 
   <scroll-view scroll-y class="ar-scroll">
     <view class="ar-scroll-spacer" style="height: {{statusBarHeight + navBarHeight}}px;"></view>
-    <view class="ar-hero">
+
+    <!-- Hero：白底巨号年份 + 净变化红绿大数字 -->
+    <view class="ar-hero ar-card">
       <text class="ar-year">{{data.year}}</text>
       <text class="ar-title">年度资产复盘</text>
       <view class="ar-hero-pnl">
-        <text class="ar-hero-sign">{{data.netChangeSign}}</text>
-        <text class="ar-hero-value">{{data.netChangeText}}</text>
+        <text class="ar-hero-sign {{data.netChange >= 0 ? 'ar-profit' : 'ar-loss'}}">¥{{data.netChangeSign}}</text>
+        <text class="ar-hero-value {{data.netChange >= 0 ? 'ar-profit' : 'ar-loss'}}">{{data.netChangeText}}</text>
       </view>
       <text class="ar-hero-conclusion">{{data.conclusion}}</text>
     </view>
 
-    <view class="ar-section">
+    <!-- 年度资产总览：流入/流出对比条 + 2×2 四宫格 -->
+    <view class="ar-section ar-card">
       <text class="ar-section-title">年度资产总览</text>
+
+      <view class="ar-bar-wrap">
+        <view class="ar-bar-row">
+          <text class="ar-bar-label">流入</text>
+          <view class="ar-bar-track">
+            <view class="ar-bar-fill ar-bar-in" style="width: {{data.inflowPct}}%;"></view>
+          </view>
+          <text class="ar-bar-amount ar-bar-amount-in">¥{{data.inflowText}}</text>
+        </view>
+        <view class="ar-bar-row">
+          <text class="ar-bar-label">流出</text>
+          <view class="ar-bar-track">
+            <view class="ar-bar-fill ar-bar-out" style="width: {{data.outflowPct}}%;"></view>
+          </view>
+          <text class="ar-bar-amount">¥{{data.outflowText}}</text>
+        </view>
+      </view>
+
       <view class="ar-grid">
         <view class="ar-grid-item">
           <text class="ar-grid-value">¥{{data.inflowText}}</text>
@@ -47,7 +68,8 @@
       </view>
     </view>
 
-    <view class="ar-section" wx:if="{{data.holdingPortrait && data.holdingPortrait.longest}}">
+    <!-- 资产持有画像 -->
+    <view class="ar-section ar-card" wx:if="{{data.holdingPortrait && data.holdingPortrait.longest}}">
       <text class="ar-section-title">资产持有画像</text>
       <view class="ar-portrait">
         <view class="ar-portrait-item">

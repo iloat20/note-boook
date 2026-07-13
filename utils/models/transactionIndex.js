@@ -28,7 +28,9 @@ function _ensureBuilt() {
 		]);
 	});
 	byStockId.clear();
-	sortedEntries.forEach(([k, v]) => byStockId.set(k, v));
+	sortedEntries.forEach(([k, v]) => {
+		byStockId.set(k, v);
+	});
 	_byStockId.clear();
 	for (const [k, v] of byStockId) _byStockId.set(k, v);
 	_built = true;

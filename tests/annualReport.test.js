@@ -105,4 +105,47 @@ describe("assembleAnnualReport", () => {
 		expect(r.netChangeSign).toBe("+");
 		expect(r.conclusion).toBe("本年资产净增加");
 	});
+
+	describe("inflowPct / outflowPct 对比条比例", () => {
+		test("按比例计算（取 max 为分母，0-100 整数）", () => {
+			const r = assembleAnnualReport({
+				year: 2025, yearInflow: 82000, yearOutflow: 69000, endingAsset: 235000,
+				holdingPortrait: { longest: null, shortest: null, mostActive: null },
+				fmt: (n) => `${Math.round(n)}`,
+			});
+			// max=82000 -> inflowPct=100, outflowPct≈84
+			expect(r.inflowPct).toBe(100);
+			expect(r.outflowPct).toBe(84);
+		});
+		test("零边界：双方为 0 -> 均 0", () => {
+			const r = assembleAnnualReport({
+				year: 2025, yearInflow: 0, yearOutflow: 0, endingAsset: 0,
+				holdingPortrait: null,
+			});
+			expect(r.inflowPct).toBe(0);
+			expect(r.outflowPct).toBe(0);
+		});
+		test("仅一方有值 -> 该方 100，另一方 0", () => {
+			const r = assembleAnnualReport({
+				year: 2025, yearInflow: 0, yearOutflow: 500, endingAsset: 0,
+				holdingPortrait: null,
+			});
+			expect(r.inflowPct).toBe(0);
+			expect(r.outflowPct).toBe(100);
+		});
+		test("不破坏现有字段，additive 新增 pct", () => {
+			const r = assembleAnnualReport({
+				year: 2025, yearInflow: 82000, yearOutflow: 69000, endingAsset: 235000,
+				holdingPortrait: { longest: { name: "X", days: 1 }, shortest: null, mostActive: null },
+			});
+			expect(r.netChange).toBe(13000);
+			expect(r.netChangeText).toBe("13000");
+			expect(r.inflowText).toBe("82000");
+			expect(r.outflowText).toBe("69000");
+			expect(r.endingAssetText).toBe("235000");
+			expect(r.holdingPortrait).toBeTruthy();
+			expect(typeof r.inflowPct).toBe("number");
+			expect(typeof r.outflowPct).toBe("number");
+		});
+	});
 });

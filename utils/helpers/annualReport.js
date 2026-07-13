@@ -81,6 +81,10 @@ function assembleAnnualReport(opts) {
 	const { year, yearInflow, yearOutflow, endingAsset, holdingPortrait, fmt } = opts || {};
 	const f = fmt || ((n) => `${n}`);
 	const netChange = yearInflow - yearOutflow;
+	// 对比条比例：以 流入/流出 较大者为分母，归一到 0-100（整数）。
+	// 边界：双方为 0 时 max 兜底为 1，比例均为 0；仅一方有值时该方为 100。
+	const pctMax = Math.max(yearInflow, yearOutflow, 1);
+	const toPct = (v) => Math.max(0, Math.min(100, Math.round((v / pctMax) * 100)));
 	return {
 		year,
 		netChange,
@@ -91,6 +95,8 @@ function assembleAnnualReport(opts) {
 		outflowText: f(yearOutflow),
 		endingAssetText: f(endingAsset),
 		holdingPortrait,
+		inflowPct: toPct(yearInflow),
+		outflowPct: toPct(yearOutflow),
 	};
 }
 

@@ -17,12 +17,22 @@ describe("computeAssetHoldingPortrait", () => {
 		const stockMap = { A: { name: "资产甲" }, B: { name: "资产乙" } };
 		const r = computeAssetHoldingPortrait(tx, stockMap, NOW);
 		expect(r.longest.name).toBe("资产甲");
+		expect(r.longest.days).toBe(193); // 2026-01-01 → 2026-07-13
 		expect(r.shortest.name).toBe("资产乙");
+		expect(r.shortest.days).toBe(42);  // 2026-06-01 → 2026-07-13
 		expect(r.mostActive.name).toBe("资产甲");
 		expect(r.mostActive.count).toBe(2);
 	});
 	test("缺 name 时回退到 id", () => {
 		const r = computeAssetHoldingPortrait([{ stockId: "Z", date: "2026-01-01" }], {}, NOW);
 		expect(r.longest.name).toBe("Z");
+	});
+	test("null/undefined 输入不抛错，返回全 null", () => {
+		expect(computeAssetHoldingPortrait(null, {}, NOW)).toEqual({
+			longest: null, shortest: null, mostActive: null,
+		});
+		expect(computeAssetHoldingPortrait(undefined, null, NOW)).toEqual({
+			longest: null, shortest: null, mostActive: null,
+		});
 	});
 });

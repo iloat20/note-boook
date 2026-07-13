@@ -37,7 +37,7 @@
           <text class="ar-grid-label">年度流出</text>
         </view>
         <view class="ar-grid-item">
-          <text class="ar-grid-value {{data.netChange >= 0 ? 'ar-profit' : 'ar-loss'}}">¥{{data.netChangeText}}</text>
+          <text class="ar-grid-value {{data.netChange >= 0 ? 'ar-profit' : 'ar-loss'}}">¥{{data.netChangeSign}}{{data.netChangeText}}</text>
           <text class="ar-grid-label">年度净变化</text>
         </view>
         <view class="ar-grid-item">

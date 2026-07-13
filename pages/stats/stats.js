@@ -164,7 +164,14 @@ Page({
 		const yearStart = new Date(year, 0, 1);
 		const yearEnd = new Date(year, 11, 31, 23, 59, 59, 999);
 		const yearTx = Transaction.getByDateRange(yearStart, yearEnd);
-		const rates = await getRates();
+		let rates = {};
+		try {
+			rates = await getRates();
+		} catch (e) {
+			console.error("[stats] getRates 失败", e);
+			wx.showToast({ title: "数据加载失败", icon: "none" });
+			return;
+		}
 		const stockMap = buildStockMap(Stock.getAll()); // {stockId:{name,market}}
 		const rateOf = (id) => {
 			const m = stockMap[id]?.market;
@@ -238,7 +245,4 @@ Page({
 		});
 	},
 
-	onUnload() {
-		this._annualReportData = null;
-	},
 });

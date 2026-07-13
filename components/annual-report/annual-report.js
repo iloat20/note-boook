@@ -103,9 +103,10 @@ Component({
 			y += 48;
 			ctx.font = "40px sans-serif";
 			ctx.fillText("年度资产复盘", W / 2, y);
-			y += 76;
-			ctx.font = "bold 64px sans-serif";
-			ctx.fillText((d.netChangeSign || "") + (d.netChangeText || ""), W / 2, y);
+		y += 76;
+		ctx.fillStyle = d.netChange >= 0 ? "#FF3B30" : "#34C759";
+		ctx.font = "bold 64px sans-serif";
+		ctx.fillText((d.netChangeSign || "") + (d.netChangeText || ""), W / 2, y);
 			y += 52;
 			ctx.font = "26px sans-serif";
 			ctx.fillStyle = "#999999";
@@ -115,7 +116,7 @@ Component({
 			const items = [
 				{ label: "年度流入", value: "¥" + (d.inflowText || "") },
 				{ label: "年度流出", value: "¥" + (d.outflowText || "") },
-				{ label: "年度净变化", value: "¥" + (d.netChangeText || "") },
+				{ label: "年度净变化", value: (d.netChangeSign || "") + "¥" + (d.netChangeText || "") },
 				{ label: "期末资产", value: "¥" + (d.endingAssetText || "") },
 			];
 			const gx = 40;
@@ -137,8 +138,9 @@ Component({
 				ctx.fillText(it.label, cx + 24, cy + 112);
 			});
 
+		const p = d.holdingPortrait || {};
+		if (p && p.longest) {
 			y += 2 * (gh + gap) + 48;
-			const p = d.holdingPortrait || {};
 			const pitems = [
 				{ label: "在册最久", name: p.longest && p.longest.name, val: p.longest && (p.longest.days + "天") },
 				{ label: "在册最短", name: p.shortest && p.shortest.name, val: p.shortest && (p.shortest.days + "天") },
@@ -162,6 +164,7 @@ Component({
 				ctx.font = "22px sans-serif";
 				ctx.fillText(it.label, cx + pw / 2, y + 144);
 			});
+		}
 
 			ctx.fillStyle = "#999999";
 			ctx.font = "22px sans-serif";

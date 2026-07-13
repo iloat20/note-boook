@@ -35,7 +35,7 @@
             <text class="xhs-feed-card-value {{stats.totalPnL >= 0 ? 'xhs-profit' : 'xhs-loss'}}">
               {{stats.totalPnLText}}
             </text>
-            <text class="xhs-feed-card-label">总盈亏</text>
+            <text class="xhs-feed-card-label">总收益</text>
           </view>
         </view>
       </view>
@@ -65,31 +65,32 @@
             <text class="xhs-feed-card-value {{stats.winRate !== null ? (stats.winRate >= 50 ? 'xhs-profit' : 'xhs-loss') : ''}}">
               {{stats.winRateText || '--'}}
             </text>
-            <text class="xhs-feed-card-label">胜率</text>
+            <text class="xhs-feed-card-label">盈利占比</text>
           </view>
         </view>
       </view>
 
-      <!-- 分红收益 -->
+      <!-- 记录次数 -->
       <view class="xhs-feed-card">
         <view class="xhs-feed-card-inner">
-          <view class="xhs-feed-card-cover cover-dividend">
-            <text class="xhs-feed-card-emoji">💰</text>
+          <view class="xhs-feed-card-cover cover-rate">
+            <text class="xhs-feed-card-emoji">📋</text>
           </view>
           <view class="xhs-feed-card-body">
-            <text class="xhs-feed-card-value" style="color: var(--xhs-dividend);">
-              {{stats.dividendIncomeText || '0.00'}}
+            <text class="xhs-feed-card-value">
+              {{stats.recordCount}}
             </text>
-            <text class="xhs-feed-card-label">分红收益</text>
+            <text class="xhs-feed-card-label">记录次数</text>
           </view>
         </view>
       </view>
+
     </view>
 
-    <!-- 完整交易明细 (小红书长笔记风格) -->
+    <!-- 完整资产明细 (小红书长笔记风格) -->
     <view class="xhs-feed-card-full animate-stagger" style="animation-delay:320ms">
       <view class="xhs-feed-card-full-header">
-        <text class="xhs-feed-card-full-title">📝 完整交易明细</text>
+        <text class="xhs-feed-card-full-title">📝 完整明细</text>
         <view class="xhs-feed-card-full-action" bindtap="onExportMD">
           <text class="xhs-feed-card-full-action-text">导出</text>
         </view>
@@ -108,7 +109,7 @@
             <view wx:if="{{item.type !== 'DIVIDEND'}}" class="detail-row-detail">
               <text class="detail-d-price mono-num">¥{{item.priceText || '0.00'}}</text>
               <text class="detail-d-multiply">×</text>
-              <text class="detail-d-shares">{{item.quantity || 0}}股</text>
+              <text class="detail-d-shares">{{item.quantity || 0}}份</text>
               <text class="{{item.amountClass}}">
                 ¥{{item.amountText || '0.00'}}
               </text>
@@ -118,14 +119,14 @@
             </view>
           </view>
         </view>
-        <view wx:else class="detail-empty">暂无交易记录</view>
+        <view wx:else class="detail-empty">暂无资产记录</view>
       </view>
     </view>
 
-    <!-- 已清仓股票 -->
+    <!-- 已结清资产 -->
     <view class="xhs-feed-card-full">
       <view class="xhs-feed-card-full-header">
-        <text class="xhs-feed-card-full-title">💼 已清仓股票</text>
+        <text class="xhs-feed-card-full-title">💼 已结清资产</text>
       </view>
       <view class="xhs-feed-card-full-body">
         <view wx:if="{{clearedPositions.length > 0}}" class="detail-list">
@@ -141,11 +142,10 @@
             </view>
             <view class="detail-meta">
               <text class="detail-meta-text">已实现: {{item.realizedPnLText}}</text>
-              <text class="detail-meta-text">分红: {{item.dividendIncomeText}}</text>
             </view>
           </view>
         </view>
-        <view wx:else class="detail-empty">暂无已清仓股票</view>
+        <view wx:else class="detail-empty">暂无已结清资产</view>
       </view>
     </view>
 
@@ -165,7 +165,7 @@
     <!-- 底部年度报告 CTA -->
     <view class="xhs-feed-footer animate-stagger" style="animation-delay:480ms">
       <view class="xhs-feed-cta hover-lift" bindtap="onOpenAnnualReport">
-        <text>📊 查看年度报告</text>
+        <text>📊 查看年度资产复盘</text>
       </view>
     </view>
 

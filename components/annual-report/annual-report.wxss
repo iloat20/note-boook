@@ -83,11 +83,6 @@
   font-weight: bold;
 }
 
-.ar-hero-pct {
-  font-size: 18px;
-  opacity: 0.9;
-}
-
 .ar-section {
   padding: 16px 20px;
   background: #fff;
@@ -120,12 +115,12 @@
 .ar-grid-value {
   font-size: 36rpx;
   font-weight: var(--xhs-weight-semibold);
-  color: var(--xhs-text);
+  color: var(--xhs-title);
 }
 
 .ar-grid-label {
   font-size: 24rpx;
-  color: var(--xhs-text-2);
+  color: var(--xhs-caption);
 }
 
 .ar-profit {
@@ -190,8 +185,10 @@
 
 .ar-portrait-name {
   font-size: 24rpx;
-  color: var(--xhs-text);
+  color: var(--xhs-title);
   max-width: 100%;
+  min-width: 0;
+  width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -205,11 +202,11 @@
 
 .ar-portrait-label {
   font-size: 22rpx;
-  color: var(--xhs-text-2);
+  color: var(--xhs-caption);
 }
 
 .ar-hero-conclusion {
   margin-top: 12rpx;
   font-size: 26rpx;
-  color: var(--xhs-text-2);
+  color: var(--xhs-caption);
 }

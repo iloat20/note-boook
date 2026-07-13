@@ -63,3 +63,28 @@ describe("computeAllTimeAssetFlow", () => {
 		});
 	});
 });
+
+describe("assembleAnnualReport", () => {
+	test("净变化为正 -> + 号 + 净增加", () => {
+		const r = assembleAnnualReport({
+			year: 2025, yearInflow: 82000, yearOutflow: 69000, endingAsset: 235000,
+			holdingPortrait: { longest: { name: "X", days: 412 }, shortest: { name: "Y", days: 18 }, mostActive: { name: "Z", count: 37 } },
+			fmt: (n) => `${Math.round(n)}`,
+		});
+		expect(r.netChange).toBe(13000);
+		expect(r.netChangeSign).toBe("+");
+		expect(r.conclusion).toBe("本年资产净增加");
+		expect(r.inflowText).toBe("82000");
+		expect(r.outflowText).toBe("69000");
+		expect(r.endingAssetText).toBe("235000");
+	});
+	test("净变化为负 -> - 号 + 净减少", () => {
+		const r = assembleAnnualReport({
+			year: 2025, yearInflow: 100, yearOutflow: 300, endingAsset: 0,
+			holdingPortrait: { longest: null, shortest: null, mostActive: null },
+			fmt: (n) => `${Math.round(n)}`,
+		});
+		expect(r.netChangeSign).toBe("-");
+		expect(r.conclusion).toBe("本年资产净减少");
+	});
+});

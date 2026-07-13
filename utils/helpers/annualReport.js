@@ -63,4 +63,35 @@ function computeAllTimeAssetFlow(txList, dividendList, rateResolver) {
 	return { allInflow, allOutflow, endingAsset: allInflow - allOutflow };
 }
 
-module.exports = { computeAssetHoldingPortrait, computeAllTimeAssetFlow, assembleAnnualReport: () => ({}) };
+/**
+ * 组装年度复盘报告数据契约
+ * @param {Object} opts - 组装入参
+ * @param {number} opts.year - 年份
+ * @param {number} opts.yearInflow - 本年流入
+ * @param {number} opts.yearOutflow - 本年流出
+ * @param {number} opts.endingAsset - 年末资产
+ * @param {Object} opts.holdingPortrait - 持有画像（computeAssetHoldingPortrait 输出）
+ * @param {Function} [opts.fmt] - 金额格式化函数 (n) => string，默认原样转字符串
+ * @returns {{ year:number, netChange:number, netChangeSign:string, netChangeText:string,
+ *             conclusion:string, inflowText:string, outflowText:string,
+ *             endingAssetText:string, holdingPortrait:Object }}
+ *          netChange = 流入 - 流出；netChangeSign 视正负取 +/-；conclusion 对应净增/净减。
+ */
+function assembleAnnualReport(opts) {
+	const { year, yearInflow, yearOutflow, endingAsset, holdingPortrait, fmt } = opts;
+	const f = fmt || ((n) => `${n}`);
+	const netChange = yearInflow - yearOutflow;
+	return {
+		year,
+		netChange,
+		netChangeSign: netChange >= 0 ? "+" : "-",
+		netChangeText: f(Math.abs(netChange)),
+		conclusion: netChange >= 0 ? "本年资产净增加" : "本年资产净减少",
+		inflowText: f(yearInflow),
+		outflowText: f(yearOutflow),
+		endingAssetText: f(endingAsset),
+		holdingPortrait,
+	};
+}
+
+module.exports = { computeAssetHoldingPortrait, computeAllTimeAssetFlow, assembleAnnualReport };

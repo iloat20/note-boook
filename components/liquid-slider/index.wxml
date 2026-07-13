@@ -3,7 +3,9 @@
         class="xhs-slider-item {{currentKey === item.key ? 'active' : ''}}"
         bindtap="onTap"
         data-key="{{item.key}}">
-    {{item.label}}
-    <text wx:if="{{showCount && item.count !== undefined}}"> ({{item.count}})</text>
+    <view class="xhs-slider-label">
+      {{item.label}}
+      <text wx:if="{{showCount && item.count !== undefined}}"> ({{item.count}})</text>
+    </view>
   </view>
 </view>

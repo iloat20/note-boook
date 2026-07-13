@@ -191,23 +191,15 @@
 
 
 .batch-icon {
-  width: 14rpx;
-  height: 14rpx;
+  width: 30rpx;
+  height: 30rpx;
   border: 2rpx solid currentColor;
-  border-radius: 2rpx;
-  margin-right: 6rpx;
+  border-radius: 50%;
+  margin-right: 0;
   position: relative;
-}
-
-.batch-icon::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 6rpx;
-  height: 2rpx;
-  background: currentColor;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  transition: var(--xhs-transition);
 }
 
 
@@ -624,8 +616,25 @@
   background: var(--xhs-primary-bg);
   color: var(--xhs-primary);
 }
-.select-toggle-active .batch-icon { background: currentColor; }
-.select-toggle-active .batch-icon::before { background: #fff; }
+.select-toggle-active .batch-icon {
+  background: currentColor;
+  border-color: currentColor;
+}
+.select-toggle-active .batch-icon::before {
+  content: '✓';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 18rpx;
+  font-weight: bold;
+  line-height: 1;
+}
 
 /* 策略次级 chip（更淡更小，与分段拉开层级） */
 .strategy-chips {

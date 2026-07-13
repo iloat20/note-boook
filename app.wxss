@@ -399,17 +399,21 @@ page {
   z-index: 2;
   transition: var(--xhs-transition);
 }
+.xhs-slider-label {
+  display: inline-block;
+  position: relative;
+  transition: var(--xhs-transition);
+}
 .xhs-slider-item.active {
   color: #333;
   font-weight: var(--xhs-weight-semibold);
 }
-.xhs-slider-item.active::after {
+.xhs-slider-item.active .xhs-slider-label::after {
   content: "";
   position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 35%;
+  left: 0;
+  right: 0;
+  bottom: -8rpx;
   height: 2px;
   background: #FF4D4F;
   border-radius: 1px;

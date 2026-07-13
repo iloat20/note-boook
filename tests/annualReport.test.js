@@ -72,6 +72,7 @@ describe("assembleAnnualReport", () => {
 			fmt: (n) => `${Math.round(n)}`,
 		});
 		expect(r.netChange).toBe(13000);
+		expect(r.netChangeText).toBe("13000");
 		expect(r.netChangeSign).toBe("+");
 		expect(r.conclusion).toBe("本年资产净增加");
 		expect(r.inflowText).toBe("82000");
@@ -86,5 +87,22 @@ describe("assembleAnnualReport", () => {
 		});
 		expect(r.netChangeSign).toBe("-");
 		expect(r.conclusion).toBe("本年资产净减少");
+	});
+	test("不传 fmt 时用默认转字符串", () => {
+		const r = assembleAnnualReport({
+			year: 2025, yearInflow: 82000, yearOutflow: 69000, endingAsset: 235000,
+			holdingPortrait: { longest: null, shortest: null, mostActive: null },
+		});
+		expect(r.endingAssetText).toBe("235000");
+		expect(r.netChangeText).toBe("13000");
+	});
+	test("netChange 为 0 时记 + 与 净增加", () => {
+		const r = assembleAnnualReport({
+			year: 2025, yearInflow: 100, yearOutflow: 100, endingAsset: 0,
+			holdingPortrait: { longest: null, shortest: null, mostActive: null },
+		});
+		expect(r.netChange).toBe(0);
+		expect(r.netChangeSign).toBe("+");
+		expect(r.conclusion).toBe("本年资产净增加");
 	});
 });

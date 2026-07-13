@@ -1,6 +1,6 @@
 /**
  * annualReport.js — 年度资产复盘纯函数
- * 持有画像 / 全历史流水 / 组装契约（后两者为后续任务占位）。
+ * 持有画像 / 全历史流水 / 组装契约（均已实现，供年度报告重组使用）。
  */
 
 const MS_PER_DAY = 86400000;
@@ -78,7 +78,7 @@ function computeAllTimeAssetFlow(txList, dividendList, rateResolver) {
  *          netChange = 流入 - 流出；netChangeSign 视正负取 +/-；conclusion 对应净增/净减。
  */
 function assembleAnnualReport(opts) {
-	const { year, yearInflow, yearOutflow, endingAsset, holdingPortrait, fmt } = opts;
+	const { year, yearInflow, yearOutflow, endingAsset, holdingPortrait, fmt } = opts || {};
 	const f = fmt || ((n) => `${n}`);
 	const netChange = yearInflow - yearOutflow;
 	return {

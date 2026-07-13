@@ -12,7 +12,7 @@
   <view class="search-bar-wrap animate-stagger" style="animation-delay:160ms">
     <view class="search-bar">
       <image src="/images/search.svg" mode="aspectFit" class="search-icon" />
-      <input class="search-input" placeholder="搜索代码或名称..." value="{{searchKeyword}}" bindinput="onSearchInput" bindfocus="onSearchFocus" bindblur="onSearchBlur" />
+      <input class="search-input" placeholder="搜索资产" value="{{searchKeyword}}" bindinput="onSearchInput" bindfocus="onSearchFocus" bindblur="onSearchBlur" />
       <view wx:if="{{searchKeyword}}" class="search-clear" bindtap="clearSearch">
         <text class="search-clear-icon">✕</text>
       </view>

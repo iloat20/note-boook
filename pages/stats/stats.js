@@ -165,9 +165,9 @@ Page({
 		const yearEnd = new Date(year, 11, 31, 23, 59, 59, 999);
 		const yearTx = Transaction.getByDateRange(yearStart, yearEnd);
 		const rates = await getRates();
-		const stockMap = buildStockMap(); // {stockId:{name,market}}
+		const stockMap = buildStockMap(Stock.getAll()); // {stockId:{name,market}}
 		const rateOf = (id) => {
-			const m = stockMap[id] && stockMap[id].market;
+			const m = stockMap[id]?.market;
 			return getRate(m, rates) || getCachedRate(m) || 1;
 		};
 
@@ -182,8 +182,7 @@ Page({
 		Dividend.getAll().forEach((d) => {
 			const dd = new Date(d.date);
 			if (dd >= yearStart && dd <= yearEnd) {
-				const m = stockMap[d.stockId] && stockMap[d.stockId].market;
-				const r = getRate(m, rates) || getCachedRate(m) || 1;
+				const r = rateOf(d.stockId);
 				yearInflow += d.totalAmount * r;
 			}
 		});

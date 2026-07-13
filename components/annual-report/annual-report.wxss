@@ -205,6 +205,14 @@
   color: var(--xhs-caption);
 }
 
+.ar-canvas {
+  position: fixed;
+  left: -9999px;
+  top: 0;
+  width: 750px;
+  height: 1600px;
+}
+
 .ar-hero-conclusion {
   margin-top: 12rpx;
   font-size: 26rpx;

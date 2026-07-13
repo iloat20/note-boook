@@ -74,4 +74,6 @@
 
     <view style="height: 40px;"></view>
   </scroll-view>
+
+  <canvas type="2d" id="arCanvas" class="ar-canvas"></canvas>
 </view>

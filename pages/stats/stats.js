@@ -207,6 +207,14 @@ Page({
 		this.setData({ showAnnualReport: false, annualReportData: null });
 	},
 
+	onShareAppMessage() {
+		const d = this.data.annualReportData;
+		return {
+			title: d ? `我的 ${d.year} 年度资产复盘` : "我的年度资产复盘",
+			path: "/pages/stats/stats",
+		};
+	},
+
 	onClearAllData() {
 		wx.showModal({
 			title: "⚠️ 确认清除",

@@ -38,4 +38,21 @@ function computeAssetHoldingPortrait(txList, stockMap, now) {
 	};
 }
 
-module.exports = { computeAssetHoldingPortrait, computeAllTimeAssetFlow: () => ({}), assembleAnnualReport: () => ({}) };
+function computeAllTimeAssetFlow(txList, dividendList, rateResolver) {
+	const rateOf = rateResolver || (() => 1);
+	let allInflow = 0;
+	let allOutflow = 0;
+	(txList || []).forEach((t) => {
+		const r = rateOf(t.stockId) || 1;
+		const amt = t.price * t.quantity * r;
+		if (t.type === "BUY") allInflow += amt + t.fee * r;
+		else if (t.type === "SELL") allOutflow += amt - t.fee * r;
+	});
+	(dividendList || []).forEach((d) => {
+		const r = rateOf(d.stockId) || 1;
+		allInflow += (d.totalAmount || 0) * r;
+	});
+	return { allInflow, allOutflow, endingAsset: allInflow - allOutflow };
+}
+
+module.exports = { computeAssetHoldingPortrait, computeAllTimeAssetFlow, assembleAnnualReport: () => ({}) };

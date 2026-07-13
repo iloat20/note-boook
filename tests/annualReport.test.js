@@ -36,3 +36,24 @@ describe("computeAssetHoldingPortrait", () => {
 		});
 	});
 });
+
+const { computeAllTimeAssetFlow } = require("../utils/helpers/annualReport");
+
+describe("computeAllTimeAssetFlow", () => {
+	test("买入入流入、卖出入流出、分红入流入", () => {
+		const tx = [
+			{ stockId: "A", type: "BUY", price: 10, quantity: 100, fee: 5 },
+			{ stockId: "A", type: "SELL", price: 12, quantity: 100, fee: 5 },
+		];
+		const div = [{ stockId: "A", totalAmount: 50 }];
+		const r = computeAllTimeAssetFlow(tx, div, () => 1);
+		expect(r.allInflow).toBeCloseTo(1055, 5);   // 1000+5+50
+		expect(r.allOutflow).toBeCloseTo(1195, 5);  // 1200-5
+		expect(r.endingAsset).toBeCloseTo(-140, 5);
+	});
+	test("rateResolver 按 stock 生效", () => {
+		const tx = [{ stockId: "H", type: "BUY", price: 10, quantity: 1, fee: 0 }];
+		const r = computeAllTimeAssetFlow(tx, [], (id) => (id === "H" ? 2 : 1));
+		expect(r.allInflow).toBeCloseTo(20, 5);
+	});
+});

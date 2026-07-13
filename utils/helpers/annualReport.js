@@ -38,6 +38,14 @@ function computeAssetHoldingPortrait(txList, stockMap, now) {
 	};
 }
 
+/**
+ * 计算全历史资产流水（资产持有口径）
+ * @param {Array} txList - 交易记录 [{ stockId, type:'BUY'|'SELL', price, quantity, fee }]
+ * @param {Array} dividendList - 分红记录 [{ stockId, totalAmount }]
+ * @param {Function} [rateResolver] - (stockId) => 汇率，默认 1
+ * @returns {{ allInflow:number, allOutflow:number, endingAsset:number }}
+ *          allInflow = Σ(BUY 本金+费) + Σ(分红)；allOutflow = Σ(SELL 本金-费)；endingAsset = 差。
+ */
 function computeAllTimeAssetFlow(txList, dividendList, rateResolver) {
 	const rateOf = rateResolver || (() => 1);
 	let allInflow = 0;
@@ -45,8 +53,8 @@ function computeAllTimeAssetFlow(txList, dividendList, rateResolver) {
 	(txList || []).forEach((t) => {
 		const r = rateOf(t.stockId) || 1;
 		const amt = t.price * t.quantity * r;
-		if (t.type === "BUY") allInflow += amt + t.fee * r;
-		else if (t.type === "SELL") allOutflow += amt - t.fee * r;
+		if (t.type === "BUY") allInflow += amt + (t.fee || 0) * r;
+		else if (t.type === "SELL") allOutflow += amt - (t.fee || 0) * r;
 	});
 	(dividendList || []).forEach((d) => {
 		const r = rateOf(d.stockId) || 1;

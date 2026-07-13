@@ -1,4 +1,4 @@
-const { computeAssetHoldingPortrait } = require("../utils/helpers/annualReport");
+const { computeAssetHoldingPortrait, computeAllTimeAssetFlow, assembleAnnualReport } = require("../utils/helpers/annualReport");
 
 const NOW = new Date("2026-07-13").getTime();
 
@@ -37,8 +37,6 @@ describe("computeAssetHoldingPortrait", () => {
 	});
 });
 
-const { computeAllTimeAssetFlow } = require("../utils/helpers/annualReport");
-
 describe("computeAllTimeAssetFlow", () => {
 	test("买入入流入、卖出入流出、分红入流入", () => {
 		const tx = [
@@ -55,5 +53,13 @@ describe("computeAllTimeAssetFlow", () => {
 		const tx = [{ stockId: "H", type: "BUY", price: 10, quantity: 1, fee: 0 }];
 		const r = computeAllTimeAssetFlow(tx, [], (id) => (id === "H" ? 2 : 1));
 		expect(r.allInflow).toBeCloseTo(20, 5);
+	});
+	test("null/undefined 输入不抛错，返回全 0", () => {
+		expect(computeAllTimeAssetFlow(null, null, () => 1)).toEqual({
+			allInflow: 0, allOutflow: 0, endingAsset: 0,
+		});
+		expect(computeAllTimeAssetFlow(undefined, undefined)).toEqual({
+			allInflow: 0, allOutflow: 0, endingAsset: 0,
+		});
 	});
 });

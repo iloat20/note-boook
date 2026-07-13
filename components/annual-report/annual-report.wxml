@@ -8,133 +8,68 @@
     <view class="ar-export-btn ar-exporting" wx:if="{{exporting}}">
       <text class="ar-export-text">生成中...</text>
     </view>
+    <button class="ar-export-btn" open-type="share" wx:if="{{!exporting}}">
+      <text class="ar-export-text">分享</text>
+    </button>
   </view>
 
   <scroll-view scroll-y class="ar-scroll">
     <view class="ar-scroll-spacer" style="height: {{statusBarHeight + navBarHeight}}px;"></view>
     <view class="ar-hero">
       <text class="ar-year">{{data.year}}</text>
-      <text class="ar-title">年度投资报告</text>
+      <text class="ar-title">年度资产复盘</text>
       <view class="ar-hero-pnl">
-        <text class="ar-hero-sign">{{data.totalPnL >= 0 ? '+' : ''}}</text>
-        <text class="ar-hero-value">{{data.totalPnLText}}</text>
+        <text class="ar-hero-sign">{{data.netChangeSign}}</text>
+        <text class="ar-hero-value">{{data.netChangeText}}</text>
       </view>
-      <text class="ar-hero-pct">{{data.totalPnL >= 0 ? '+' : ''}}{{data.totalPnLPercent}}%</text>
+      <text class="ar-hero-conclusion">{{data.conclusion}}</text>
     </view>
 
     <view class="ar-section">
-      <text class="ar-section-title">交易概览</text>
+      <text class="ar-section-title">年度资产总览</text>
       <view class="ar-grid">
         <view class="ar-grid-item">
-          <text class="ar-grid-value">{{data.tradeCount}}</text>
-          <text class="ar-grid-label">交易笔数</text>
+          <text class="ar-grid-value">¥{{data.inflowText}}</text>
+          <text class="ar-grid-label">年度流入</text>
         </view>
         <view class="ar-grid-item">
-          <text class="ar-grid-value" style="color: {{data.winRate >= 50 ? '#34C759' : '#FF6B6B'}};">{{data.winRate}}%</text>
-          <text class="ar-grid-label">胜率</text>
+          <text class="ar-grid-value">¥{{data.outflowText}}</text>
+          <text class="ar-grid-label">年度流出</text>
         </view>
         <view class="ar-grid-item">
-          <text class="ar-grid-value">{{data.buyCount}}</text>
-          <text class="ar-grid-label">买入次数</text>
+          <text class="ar-grid-value {{data.netChange >= 0 ? 'ar-profit' : 'ar-loss'}}">¥{{data.netChangeText}}</text>
+          <text class="ar-grid-label">年度净变化</text>
         </view>
         <view class="ar-grid-item">
-          <text class="ar-grid-value">{{data.sellCount}}</text>
-          <text class="ar-grid-label">卖出次数</text>
-        </view>
-        <view class="ar-grid-item">
-          <text class="ar-grid-value {{data.yearXIRR >= 0 ? 'ar-profit' : data.yearXIRR < 0 ? 'ar-loss' : ''}}">{{data.yearXIRRText || '--'}}</text>
-          <text class="ar-grid-label">XIRR</text>
-        </view>
-        <view class="ar-grid-item">
-          <text class="ar-grid-value {{data.totalXIRR >= 0 ? 'ar-profit' : data.totalXIRR < 0 ? 'ar-loss' : ''}}">{{data.totalXIRRText || '--'}}</text>
-          <text class="ar-grid-label">累计XIRR</text>
+          <text class="ar-grid-value">¥{{data.endingAssetText}}</text>
+          <text class="ar-grid-label">期末资产</text>
         </view>
       </view>
     </view>
 
-    <view class="ar-section">
-      <text class="ar-section-title">资金流向</text>
-      <view class="ar-flow">
-        <view class="ar-flow-item">
-          <text class="ar-flow-label">总投入</text>
-          <text class="ar-flow-value">¥{{data.totalInvestmentText}}</text>
+    <view class="ar-section" wx:if="{{data.holdingPortrait && data.holdingPortrait.longest}}">
+      <text class="ar-section-title">资产持有画像</text>
+      <view class="ar-portrait">
+        <view class="ar-portrait-item">
+          <text class="ar-portrait-name">{{data.holdingPortrait.longest.name}}</text>
+          <text class="ar-portrait-value">{{data.holdingPortrait.longest.days}}天</text>
+          <text class="ar-portrait-label">在册最久</text>
         </view>
-        <view class="ar-flow-divider"></view>
-        <view class="ar-flow-item">
-          <text class="ar-flow-label">总回收</text>
-          <text class="ar-flow-value">¥{{data.totalRecoveryText}}</text>
+        <view class="ar-portrait-item">
+          <text class="ar-portrait-name">{{data.holdingPortrait.shortest.name}}</text>
+          <text class="ar-portrait-value">{{data.holdingPortrait.shortest.days}}天</text>
+          <text class="ar-portrait-label">在册最短</text>
         </view>
-        <view class="ar-flow-divider"></view>
-        <view class="ar-flow-item">
-          <text class="ar-flow-label">分红收入</text>
-          <text class="ar-flow-value" style="color: #34C759;">¥{{data.dividendIncomeText}}</text>
-        </view>
-      </view>
-    </view>
-
-    <view class="ar-section">
-      <text class="ar-section-title">月度盈亏</text>
-      <view class="ar-chart-box">
-        <view class="ar-chart-css" wx:if="{{processedMonthlyData && processedMonthlyData.length > 0}}">
-          <view class="ar-chart-css-row" wx:for="{{processedMonthlyData}}" wx:key="month">
-            <view class="ar-chart-css-label">{{item.monthText}}</view>
-            <view class="ar-chart-css-bar-wrap">
-              <view class="ar-chart-css-bar {{item.isProfit ? 'ar-chart-css-profit' : 'ar-chart-css-loss'}}"
-                style="width: {{item.heightPercent}}%;"
-              ></view>
-            </view>
-            <view class="ar-chart-css-value {{item.isProfit ? 'ar-profit' : 'ar-loss'}}">{{item.pnLText}}</view>
-          </view>
-        </view>
-        <view wx:else class="ar-chart-empty">
-          <text class="ar-chart-empty-text">暂无数据</text>
-        </view>
-      </view>
-    </view>
-
-    <view class="ar-section" wx:if="{{data.topStocks && data.topStocks.length > 0}}">
-      <text class="ar-section-title">收益最高</text>
-      <view wx:for="{{data.topStocks}}" wx:key="code" class="ar-rank-item">
-        <view class="ar-rank-badge ar-rank-{{index < 3 ? index : 'other'}}">{{index + 1}}</view>
-        <view class="ar-rank-info">
-          <text class="ar-rank-name">{{item.name}}</text>
-          <text class="ar-rank-code">{{item.code}}</text>
-        </view>
-        <text class="ar-rank-pnl {{item.totalPnL >= 0 ? 'ar-profit' : 'ar-loss'}}">
-          {{item.totalPnL >= 0 ? '+' : ''}}{{item.totalPnLText}}
-        </text>
-      </view>
-    </view>
-
-    <view class="ar-section" wx:if="{{data.bottomStocks && data.bottomStocks.length > 0}}">
-      <text class="ar-section-title">需要关注</text>
-      <view wx:for="{{data.bottomStocks}}" wx:key="code" class="ar-rank-item">
-        <view class="ar-rank-badge ar-rank-other">{{index + 1}}</view>
-        <view class="ar-rank-info">
-          <text class="ar-rank-name">{{item.name}}</text>
-          <text class="ar-rank-code">{{item.code}}</text>
-        </view>
-        <text class="ar-rank-pnl {{item.totalPnL >= 0 ? 'ar-profit' : 'ar-loss'}}">
-          {{item.totalPnL >= 0 ? '+' : ''}}{{item.totalPnLText}}
-        </text>
-      </view>
-    </view>
-
-    <view class="ar-section" wx:if="{{data.strategyStats && data.strategyStats.length > 0}}">
-      <text class="ar-section-title">策略分布</text>
-      <view wx:for="{{data.strategyStats}}" wx:key="tag" class="ar-strategy-item">
-        <view class="ar-strategy-header">
-          <text class="ar-strategy-tag">{{item.tag}}</text>
-          <text class="ar-strategy-count">{{item.count}}次</text>
-        </view>
-        <view class="ar-strategy-bar-bg">
-          <view class="ar-strategy-bar" style="width: {{item.percent}}%;"></view>
+        <view class="ar-portrait-item">
+          <text class="ar-portrait-name">{{data.holdingPortrait.mostActive.name}}</text>
+          <text class="ar-portrait-value">{{data.holdingPortrait.mostActive.count}}笔</text>
+          <text class="ar-portrait-label">变动最多</text>
         </view>
       </view>
     </view>
 
     <view class="ar-footer">
-      <text class="ar-footer-text">茄子笔记本 · {{data.year}}年度报告</text>
+      <text class="ar-footer-text">茄子笔记本 · {{data.year}} 年度资产复盘</text>
     </view>
 
     <view style="height: 40px;"></view>

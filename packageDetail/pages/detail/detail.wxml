@@ -1,6 +1,6 @@
 <view class="page-container {{entranceDone ? '' : 'page-entrance'}}" style="padding-top: {{statusBarHeight + navBarHeight}}px;">
   <scroll-view wx:if="{{stock}}" class="scroll-container" scroll-y>
-    <!-- ===== Hero 区：标题 + 价格 + 总盈亏 ===== -->
+    <!-- ===== Hero 区：标题 + 价格 + 总收益 ===== -->
     <view class="hero-card {{heroBgClass}} animate-stagger" style="animation-delay:80ms">
       <view class="hero-top-row">
         <view bindtap="goBack" class="hero-back-btn">
@@ -8,7 +8,6 @@
         </view>
         <view class="hero-stock-info">
           <view class="hero-name-row">
-            <market-tag market="{{stock.market}}" label="{{marketLabel}}" />
             <text class="hero-stock-name">{{stock.name}}</text>
             <text class="hero-stock-code">{{stock.code}}</text>
           </view>
@@ -25,61 +24,57 @@
       </view>
     </view>
 
-    <!-- ===== 数据面板：持仓摘要 + 盈亏明细 ===== -->
+    <!-- ===== 数据面板：持有摘要 + 收益明细 ===== -->
     <view class="data-panel animate-stagger" style="animation-delay:160ms">
-      <!-- 持仓摘要 -->
+      <!-- 持有摘要 -->
       <view class="data-panel-section">
-        <text class="data-panel-title">持仓摘要</text>
+        <text class="data-panel-title">持有摘要</text>
         <view class="data-grid-2col">
           <view class="data-cell">
-            <text class="data-cell-label">持股数量</text>
-            <text class="data-cell-value">{{position.quantity}}<text class="data-cell-unit"> 股</text></text>
+            <text class="data-cell-label">持有数量</text>
+            <text class="data-cell-value">{{position.quantity}}<text class="data-cell-unit"> 份</text></text>
           </view>
           <view class="data-cell">
             <text class="data-cell-label">平均成本</text>
             <text class="data-cell-value">{{formatAvgCost}}</text>
           </view>
           <view class="data-cell">
-            <text class="data-cell-label">当前价格</text>
+            <text class="data-cell-label">当前价值</text>
             <text class="data-cell-value">{{formatCurrentPrice}}</text>
           </view>
           <view class="data-cell">
-            <text class="data-cell-label">持仓市值</text>
+            <text class="data-cell-label">持有价值</text>
             <text class="data-cell-value">{{formatMarketValue}}</text>
           </view>
         </view>
       </view>
 
-       <!-- 盈亏明细 -->
+       <!-- 收益明细 -->
       <view class="data-panel-divider"></view>
       <view class="data-panel-section">
-        <text class="data-panel-title">盈亏明细</text>
+        <text class="data-panel-title">变动明细</text>
         <view class="data-grid-4col">
           <view class="data-cell">
-            <text class="data-cell-label">浮动盈亏</text>
+            <text class="data-cell-label">浮动变动</text>
             <text class="data-cell-value data-cell-value-sm {{floatingPnLClass}}">{{floatingPnLText}}</text>
             <text class="data-cell-sub {{floatingPnLClass}}">{{floatingPnLPercent}}%</text>
           </view>
           <view class="data-cell">
-            <text class="data-cell-label">已实现</text>
+            <text class="data-cell-label">已结算</text>
             <text class="data-cell-value data-cell-value-sm {{realizedPnLClass}}">{{realizedPnLText}}</text>
           </view>
           <view class="data-cell">
-            <text class="data-cell-label">分红收入</text>
-            <text class="data-cell-value data-cell-value-sm dividend">{{formatDividendIncome}}</text>
-          </view>
-          <view class="data-cell">
-            <text class="data-cell-label">总盈亏</text>
+            <text class="data-cell-label">资产变动</text>
             <text class="data-cell-value data-cell-value-lg {{totalPnLClass}}">{{totalPnLText}}</text>
           </view>
         </view>
       </view>
     </view>
 
-    <!-- ===== 交易记录 ===== -->
+    <!-- ===== 资产记录 ===== -->
     <view class="detail-card detail-card-no-pad animate-stagger" style="animation-delay:240ms">
       <view class="detail-card-header detail-card-header-with-action">
-        <text class="detail-card-title">交易记录</text>
+        <text class="detail-card-title">资产记录</text>
         <view class="detail-card-action" bindtap="goToRecord">添加</view>
       </view>
       <view wx:if="{{transactions.length > 0}}">
@@ -99,15 +94,12 @@
                      <view class="tag {{t.type === 'BUY' ? 'tag-buy' : 'tag-sell'}}">{{t.typeText}}</view>
                      <text class="record-date">{{t.dateText}}</text>
                    </view>
-                   <text class="record-qty">{{t.quantity}}股</text>
+                   <text class="record-qty">{{t.quantity}}份</text>
                  </view>
                  <view class="record-right">
                    <text class="record-price {{t.type === 'BUY' ? 'record-price--buy' : 'record-price--sell'}}">{{t.priceText}}</text>
                    <text class="record-amount">{{t.amountText}}</text>
                  </view>
-               </view>
-               <view wx:if="{{t.fee > 0}}" class="record-fee-row">
-                 <text class="record-fee-text">手续费 {{t.feeText}}</text>
                </view>
                <view wx:if="{{t.hasJournal}}" class="record-journal-wrap">
                  <strategy-tags wx:if="{{t.strategies.length > 0}}" tags="{{t.strategies}}" />
@@ -118,40 +110,14 @@
          </view>
       </view>
       <view wx:else class="detail-card-empty">
-        <text class="detail-card-empty-text">暂无交易记录</text>
-      </view>
-    </view>
-
-    <!-- ===== 分红记录 ===== -->
-    <view class="detail-card detail-card-no-pad animate-stagger" style="animation-delay:320ms">
-      <view class="detail-card-header detail-card-header-with-action">
-        <text class="detail-card-title">分红记录</text>
-        <view class="detail-card-action" bindtap="goToDividend">添加</view>
-      </view>
-      <view wx:if="{{dividends.length > 0}}">
-        <view wx:for="{{dividends}}" wx:key="id"
-          class="dividend-item {{disDivId === item.id ? 'dissolving' : ''}}"
-          bindtap="showDividendActions" data-id="{{item.id}}" data-type="dividend">
-          <view class="dividend-main-row">
-            <view class="tag tag-dividend">分红</view>
-            <text class="dividend-date">{{item.dateText}}</text>
-          </view>
-          <view class="dividend-detail-row">
-            <text class="dividend-detail">每股 {{item.perShareText}}</text>
-            <text class="dividend-detail">{{item.quantity}}股</text>
-          </view>
-          <text class="dividend-amount dividend">+{{item.totalText}}</text>
-        </view>
-      </view>
-      <view wx:else class="detail-card-empty">
-        <text class="detail-card-empty-text">暂无分红记录</text>
+        <text class="detail-card-empty-text">暂无资产记录</text>
       </view>
     </view>
 
     <!-- ===== 策略复盘 ===== -->
     <view wx:if="{{strategySummary.length > 0}}" class="detail-card animate-stagger" style="animation-delay:400ms">
       <view class="detail-card-header">
-        <text class="detail-card-title">策略复盘</text>
+        <text class="detail-card-title">笔记复盘</text>
       </view>
       <view class="detail-card-body">
         <view wx:for="{{strategySummary}}" wx:key="tag" class="strategy-row {{index > 0 ? 'strategy-row-bordered' : ''}}">
@@ -171,7 +137,7 @@
    <view wx:if="{{showEditSheet}}" class="sheet-mask" bindtap="cancelEdit"></view>
    <view wx:if="{{showEditSheet}}" class="edit-sheet">
      <view class="sheet-header">
-       <text class="sheet-title">编辑持仓</text>
+       <text class="sheet-title">编辑持有</text>
        <view class="sheet-close" bindtap="cancelEdit">
          <text class="sheet-close-icon">✕</text>
        </view>
@@ -186,7 +152,7 @@
          <input class="edit-input" type="digit" placeholder="0.00" value="{{editAvgCost}}" bindinput="onEditAvgCostInput"/>
        </view>
        <view class="edit-field-row">
-         <text class="edit-field-label">现价</text>
+         <text class="edit-field-label">当前价值</text>
          <input class="edit-input" type="digit" placeholder="0.00" value="{{editCurrentPrice}}" bindinput="onEditCurrentPriceInput"/>
        </view>
      </view>
@@ -197,8 +163,8 @@
     </view>
  
     <empty-state
-    wx:else
-    icon="📈"
-    title="股票不存在"
+    wx:if="{{!stock}}"
+    icon="📒"
+    title="{{emptyTitle}}"
   />
 </view>

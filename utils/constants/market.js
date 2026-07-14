@@ -5,9 +5,9 @@ const { MARKETS } = require("./index");
 
 function getMarketLabel(market) {
 	const labels = {
-		[MARKETS.A_SHARE]: "A股",
-		[MARKETS.HK_SHARE]: "港股",
-		[MARKETS.US_SHARE]: "美股",
+		[MARKETS.A_SHARE]: "境内",
+		[MARKETS.HK_SHARE]: "香港",
+		[MARKETS.US_SHARE]: "海外",
 	};
 	return labels[market] || "";
 }

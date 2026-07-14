@@ -1,5 +1,5 @@
 <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- 流水图标 - 交易记录/列表 -->
+  <!-- 流水图标 - 资产记录/列表 -->
   <circle cx="12" cy="14" r="4" stroke="#C7C7CC" stroke-width="2" fill="none"/>
   <line x1="20" y1="14" x2="38" y2="14" stroke="#C7C7CC" stroke-width="2" stroke-linecap="round"/>
   

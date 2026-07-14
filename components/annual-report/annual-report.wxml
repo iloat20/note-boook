@@ -1,30 +1,19 @@
-<view wx:if="{{data}}" class="ar-overlay">
-  <view class="ar-top-bar" style="top: {{statusBarHeight + navBarHeight}}px;">
+<view wx:if="{{data}}" class="ar-overlay" style="padding-top: {{statusBarHeight + navBarHeight}}px;">
+  <view class="ar-top-bar">
     <view class="ar-close" bindtap="onClose">✕</view>
-    <view class="ar-export-btn" bindtap="onExportImage" wx:if="{{!exporting}}">
-      <text class="ar-export-icon">📷</text>
-      <text class="ar-export-text">保存图片</text>
+    <view class="ar-share-btn" bindtap="onShare" wx:if="{{!exporting}}">
+      <text class="ar-share-text">分享</text>
     </view>
-    <view class="ar-export-btn ar-exporting" wx:if="{{exporting}}">
-      <text class="ar-export-text">生成中...</text>
+    <view class="ar-share-btn ar-exporting" wx:if="{{exporting}}">
+      <text class="ar-share-text">生成中...</text>
     </view>
-    <button class="ar-export-btn" open-type="share" wx:if="{{!exporting}}">
-      <text class="ar-export-text">分享</text>
-    </button>
   </view>
 
   <scroll-view scroll-y class="ar-scroll">
-    <view class="ar-scroll-spacer" style="height: {{statusBarHeight + navBarHeight}}px;"></view>
-
-    <!-- Hero：白底巨号年份 + 净变化红绿大数字 -->
-    <view class="ar-hero ar-card">
-      <text class="ar-year">{{data.year}}</text>
-      <text class="ar-title">年度资产复盘</text>
-      <view class="ar-hero-pnl">
-        <text class="ar-hero-sign {{data.netChange >= 0 ? 'ar-profit' : 'ar-loss'}}">¥{{data.netChangeSign}}</text>
-        <text class="ar-hero-value {{data.netChange >= 0 ? 'ar-profit' : 'ar-loss'}}">{{data.netChangeText}}</text>
-      </view>
-      <text class="ar-hero-conclusion">{{data.conclusion}}</text>
+    <!-- Hero：品牌渐变头（年份标题） -->
+    <view class="ar-hero">
+      <text class="ar-hero-label">{{data.year}} 年度资产复盘</text>
+      <text class="ar-hero-year">{{data.year}}</text>
     </view>
 
     <!-- 年度资产总览：流入/流出对比条 + 2×2 四宫格 -->
@@ -57,7 +46,7 @@
           <text class="ar-grid-value">¥{{data.outflowText}}</text>
           <text class="ar-grid-label">年度流出</text>
         </view>
-        <view class="ar-grid-item">
+        <view class="ar-grid-item ar-grid-accent {{data.netChange >= 0 ? 'ar-grid-accent-profit' : 'ar-grid-accent-loss'}}">
           <text class="ar-grid-value {{data.netChange >= 0 ? 'ar-profit' : 'ar-loss'}}">¥{{data.netChangeSign}}{{data.netChangeText}}</text>
           <text class="ar-grid-label">年度净变化</text>
         </view>

@@ -404,7 +404,7 @@ page {
 }
 
 /* =============================
-   交易记录
+   资产记录
    ============================= */
 .record-item {
   padding: var(--page-margin);
@@ -526,73 +526,6 @@ page {
 }
 
 /* =============================
-   分红记录
-   ============================= */
-.dividend-item {
-  padding: var(--page-margin);
-  margin: 0 var(--page-margin);
-  border-top: 1px solid var(--xhs-divider);
-  transition: var(--xhs-transition-slow);
-}
-
-.dividend-item:first-child {
-  border-top: none;
-}
-
-.dividend-item:active {
-  background: rgba(0, 0, 0, 0.02);
-}
-
-.dividend-item.dissolving {
-  opacity: 0;
-  transform: translateX(100%) scale(0.9);
-  max-height: 0 !important;
-  margin-bottom: 0 !important;
-  padding-top: 0 !important;
-  padding-bottom: 0 !important;
-  overflow: hidden !important;
-  transition: opacity 400ms cubic-bezier(0.4, 0, 0.2, 1),
-    transform 400ms cubic-bezier(0.4, 0, 0.2, 1),
-    max-height 400ms cubic-bezier(0.4, 0, 0.2, 1),
-    padding 400ms cubic-bezier(0.4, 0, 0.2, 1) !important;
-}
-
-.dividend-main-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8rpx;
-}
-
-.dividend-date {
-  font-size: var(--xhs-font-xs);
-  color: var(--xhs-caption-light);
-  font-weight: var(--xhs-weight-regular);
-}
-
-.dividend-detail-row {
-  display: flex;
-  gap: var(--xhs-space-md);
-  margin-bottom: 8rpx;
-}
-
-.dividend-detail {
-  font-size: var(--xhs-font-sm);
-  color: var(--xhs-caption);
-  font-weight: var(--xhs-weight-medium);
-}
-
-.dividend-amount {
-  font-size: var(--xhs-font-xl);
-  font-weight: var(--xhs-weight-bold);
-}
-
-.dividend-amount.dividend,
-.data-cell-value.dividend {
-  color: var(--xhs-dividend);
-}
-
-/* =============================
    策略复盘
    ============================= */
 .strategy-row {
@@ -635,8 +568,8 @@ page {
 }
 
  /* =============================
-    交易记录按月分组
-    ============================= */
+   资产记录按月分组
+   ============================= */
  .trans-group:first-child .trans-group-header {
    border-top: none;
  }

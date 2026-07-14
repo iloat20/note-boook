@@ -1,3 +1,0 @@
-<view wx:if="{{market}}" class="tag market-{{market === 'A_SHARE' ? 'a' : market === 'HK_SHARE' ? 'hk' : 'us'}}">
-  {{label || (market === 'A_SHARE' ? 'A股' : market === 'HK_SHARE' ? '港股' : '美股')}}
-</view>

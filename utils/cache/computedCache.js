@@ -57,7 +57,7 @@ function setCached(key, value) {
  * Clear all known computed cache entries.
  */
 function clearAll() {
-	const knownKeys = ["total_stats", "total_xirr"];
+	const knownKeys = ["total_stats"];
 	knownKeys.forEach((k) => {
 		saveData(`${CACHE_KEY_PREFIX}${k}${CACHE_KEY_SUFFIX}`, null);
 	});

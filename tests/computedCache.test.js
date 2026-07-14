@@ -64,13 +64,14 @@ describe("computedCache", () => {
 		expect(computedCache.getVersion()).toBe(2);
 	});
 
-	test("clearAll removes known keys", () => {
-		computedCache.setCached("total_stats", { a: 1 });
-		computedCache.setCached("total_xirr", { b: 2 });
-		computedCache.clearAll();
-		expect(_mockStorage["computed_total_stats_v2"]).toBeNull();
-		expect(_mockStorage["computed_total_xirr_v2"]).toBeNull();
-	});
+test("clearAll removes only known keys", () => {
+	computedCache.setCached("total_stats", { a: 1 });
+	computedCache.setCached("other_key", { b: 2 });
+	computedCache.clearAll();
+	expect(_mockStorage["computed_total_stats_v2"]).toBeNull();
+	// 非已知键应保留，验证白名单行为
+	expect(_mockStorage.computed_other_key_v2).not.toBeNull();
+});
 
 	test("version is module-scoped (shared after bump)", () => {
 		computedCache.setCached("k1", { v: 1 });

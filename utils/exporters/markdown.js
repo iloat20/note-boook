@@ -5,7 +5,6 @@
 const { Stock, Transaction, Dividend } = require("../models/index");
 const { fmtDate, fmtTime, fmt } = require("../helpers/format");
 const { buildStockMap } = require("../helpers/stockHelpers");
-const { getMarketLabel } = require("../constants/market");
 
 /**
  * 转义 Markdown 表格单元格中的特殊字符
@@ -39,19 +38,18 @@ function buildMarkdown() {
 	const transactions = Transaction.getAll();
 	[...transactions].sort((a, b) => (b.date || "").localeCompare(a.date || "") || b.id - a.id);
 
-	lines.push(`## 交易记录（${transactions.length} 笔）`);
+	lines.push(`## 资产记录（${transactions.length} 笔）`);
 	lines.push("");
 	if (transactions.length > 0) {
 		lines.push(
-			"| 日期 | 类型 | 代码 | 名称 | 市场 | 价格 | 数量 | 手续费 | 金额 | 策略 | 理由 | 备注 |",
+			"| 日期 | 类型 | 代码 | 名称 | 价格 | 数量 | 金额 | 策略 | 理由 | 备注 |",
 		);
-		lines.push("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |");
+		lines.push("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |");
 		transactions.forEach((t) => {
 			const stock = stockMap[t.stockId];
 			const code = stock ? stock.code : "-";
 			const name = stock ? stock.name : "-";
-			const market = stock ? getMarketLabel(stock.market) : "-";
-			const typeStr = t.type === "BUY" ? "买入" : "卖出";
+			const typeStr = t.type === "BUY" ? "转入" : "转出";
 			const amount = (t.price || 0) * (t.quantity || 0);
 			const dateStr = t.date ? fmtDate(new Date(t.date)) : "-";
 			const strategies = escapeTableCell(t.strategies?.length ? t.strategies.join(", ") : "");
@@ -65,15 +63,11 @@ function buildMarkdown() {
 					" | " +
 					code +
 					" | " +
-					name +
-					" | " +
-					market +
-					" | " +
-					fmt(t.price || 0) +
+				name +
+				" | " +
+				fmt(t.price || 0) +
 					" | " +
 					(t.quantity || 0) +
-					" | " +
-					fmt(t.fee || 0) +
 					" | " +
 					fmt(amount) +
 					" | " +
@@ -86,7 +80,7 @@ function buildMarkdown() {
 			);
 		});
 	} else {
-		lines.push("暂无交易记录");
+		lines.push("暂无资产记录");
 	}
 
 	// —— 分红记录 ——
@@ -94,16 +88,15 @@ function buildMarkdown() {
 	[...dividends].sort((a, b) => (b.date || "").localeCompare(a.date || "") || b.id - a.id);
 
 	lines.push("");
-	lines.push(`## 分红记录（${dividends.length} 笔）`);
+	lines.push(`## 其他收益记录（${dividends.length} 笔）`);
 	lines.push("");
 	if (dividends.length > 0) {
-		lines.push("| 日期 | 代码 | 名称 | 市场 | 每股金额 | 数量 | 总金额 | 备注 |");
+		lines.push("| 日期 | 代码 | 名称 | 单份金额 | 数量 | 总金额 | 备注 |");
 		lines.push("| --- | --- | --- | --- | --- | --- | --- | --- |");
 		dividends.forEach((d) => {
 			const stock = stockMap[d.stockId];
 			const code = stock ? stock.code : "-";
 			const name = stock ? stock.name : "-";
-			const market = stock ? getMarketLabel(stock.market) : "-";
 			const dateStr = d.date ? fmtDate(new Date(d.date)) : "-";
 			const note = escapeTableCell(d.note);
 			lines.push(
@@ -112,11 +105,9 @@ function buildMarkdown() {
 					" | " +
 					code +
 					" | " +
-					name +
-					" | " +
-					market +
-					" | " +
-					fmt(d.perShareAmount || 0) +
+				name +
+				" | " +
+				fmt(d.perShareAmount || 0) +
 					" | " +
 					(d.quantity || 0) +
 					" | " +
@@ -127,7 +118,7 @@ function buildMarkdown() {
 			);
 		});
 	} else {
-		lines.push("暂无分红记录");
+		lines.push("暂无其他收益记录");
 	}
 
 	lines.push("");
@@ -166,7 +157,7 @@ function exportMD() {
 			String(now.getHours()).padStart(2, "0") +
 			String(now.getMinutes()).padStart(2, "0") +
 			String(now.getSeconds()).padStart(2, "0");
-		const filePath = `${wx.env.USER_DATA_PATH}/交易记录_${timestamp}.md`;
+		const filePath = `${wx.env.USER_DATA_PATH}/资产记录_${timestamp}.md`;
 
 		fsm.writeFileSync(filePath, mdContent, "utf8");
 
@@ -174,7 +165,7 @@ function exportMD() {
 
 		wx.shareFileMessage({
 			filePath: filePath,
-			fileName: `交易记录_${timestamp}.md`,
+			fileName: `资产记录_${timestamp}.md`,
 			success: () => {
 				wx.showToast({ title: "导出成功", icon: "success" });
 			},

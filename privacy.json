@@ -4,7 +4,7 @@
 	"privacyItems": [
 		{
 			"key": "scope.album",
-			"text": "用于保存持仓截图到相册"
+			"text": "用于保存资产截图到相册"
 		}
 	]
 }

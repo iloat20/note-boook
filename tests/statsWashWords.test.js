@@ -82,7 +82,7 @@ describe("stats 页面洗词", () => {
 		expect(pageInstance).not.toBeNull();
 		pageInstance.setData = function (obj) { Object.assign(this.data, obj); };
 		await pageInstance.loadStats.call(pageInstance);
-		const { stats, detailItems } = pageInstance.data;
+		const { stats } = pageInstance.data;
 		expect(stats).toBeTruthy();
 
 		// 旧投资字段不应存在
@@ -94,10 +94,8 @@ describe("stats 页面洗词", () => {
 		// 新增 期末资产 卡片
 		expect(typeof stats.endingAssetText).toBe("string");
 
-		// 综合明细标签无禁用词
-		expect(Array.isArray(detailItems)).toBe(true);
-		detailItems.forEach((it) => {
-			expect(it.label).not.toMatch(FORBIDDEN);
-		});
+		// 新增 记录天数 卡片（从最早一条记录到今天，含今天）
+		expect(typeof stats.recordDays).toBe("number");
+		expect(stats.recordDays).toBeGreaterThan(0);
 	});
 });

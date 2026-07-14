@@ -48,7 +48,9 @@ const Stock = {
 	 */
 	getById(id) {
 		const stocks = this.getAll();
-		return stocks.find((s) => s.id === id);
+		// 类型宽容匹配：历史数据/旧备份里 id 可能是字符串，
+		// 而调用方常传 parseInt 后的数字，严格 === 会漏匹配导致"资产不存在"
+		return stocks.find((s) => s.id === id || String(s.id) === String(id));
 	},
 
 	/**

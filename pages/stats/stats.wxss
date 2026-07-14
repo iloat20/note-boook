@@ -11,18 +11,8 @@
 .title-row {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
-  padding: 0 var(--page-margin);
-}
-
-.title-icon-wrap {
-  display: flex;
   align-items: center;
-}
-
-.title-icon {
-  width: 36rpx;
-  height: 36rpx;
+  padding: 0 var(--page-margin);
 }
 
 /* === 骨架屏间距 === */
@@ -135,6 +125,7 @@
 .cover-pnl { background: linear-gradient(135deg, #FFF0F0 0%, #FFE0E0 100%); }
 .cover-rate { background: linear-gradient(135deg, #F0FFF0 0%, #E0FFE0 100%); }
 .cover-dividend { background: linear-gradient(135deg, #FFF8E6 0%, #FFEDCC 100%); }
+.cover-days { background: linear-gradient(135deg, #F0F0FF 0%, #E0E0FF 100%); }
 
 /* 盈亏色 */
 .xhs-profit { color: var(--xhs-profit); }
@@ -168,7 +159,7 @@
   align-items: center;
   padding: var(--xhs-space-xs) var(--xhs-space-sm);
   border-radius: var(--xhs-radius-pill);
-  background: var(--xhs-bg-secondary);
+  background: #FCF6E8;
 }
 
 .xhs-feed-card-full-action-text {
@@ -193,6 +184,12 @@
   background: var(--xhs-bg-secondary);
   border-radius: var(--xhs-radius-md);
   position: relative;
+}
+
+/* 完整明细列表：去掉单项底色，仅用分隔线区隔 */
+.detail-list--plain .detail-item {
+  background: transparent;
+  border-radius: 0;
 }
 
 .detail-top {
@@ -415,8 +412,8 @@
 
 /* === Scroll === */
 .xhs-scroll {
-  height: auto;
   flex: 1;
+  height: 0;
   min-height: 0;
 }
 

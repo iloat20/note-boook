@@ -220,7 +220,7 @@ function _today() {
  */
 function getCachedRate(market) {
 	const cached = getData(CACHE_KEY);
-	if (!cached || !cached.timestamp) return null;
+	if (!cached?.timestamp) return null;
 	const now = Date.now();
 	if (now - cached.timestamp >= RATE_CACHE_TTL) return null;
 	switch (market) {

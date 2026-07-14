@@ -15,10 +15,10 @@
  */
 function calcPosition(stockId, transactions, dividends, currentPrice) {
 	let totalBuyQuantity = 0;
-	let totalBuyAmount = 0;
+	let _totalBuyAmount = 0;
 	let totalSellQuantity = 0;
 	let totalSellAmount = 0;
-	let totalBuyFee = 0;
+	let _totalBuyFee = 0;
 	let totalSellFee = 0;
 
 	// 统一精度：浮盈公式与展示共用同一份 2 位小数价格，避免"心算对不上"
@@ -27,8 +27,8 @@ function calcPosition(stockId, transactions, dividends, currentPrice) {
 	transactions.forEach((t) => {
 		if (t.type === "BUY") {
 			totalBuyQuantity += t.quantity;
-			totalBuyAmount += t.price * t.quantity;
-			totalBuyFee += t.fee;
+			_totalBuyAmount += t.price * t.quantity;
+			_totalBuyFee += t.fee;
 		} else {
 			totalSellQuantity += t.quantity;
 			totalSellAmount += t.price * t.quantity;
@@ -108,8 +108,11 @@ function calcPosition(stockId, transactions, dividends, currentPrice) {
 			liveSellMatched += matched;
 		}
 	}
-	const liveHoldings = Math.max(0, liveBuyQty - liveSellMatched + (liveBuyQty > 0 ? shareDividendQty : 0));
-	const avgCost = liveHoldings > 0 ? liveBuyCost / liveHoldings : 0;
+	// 平均成本 = 当前活批次买入总成本 / (买入批次数量 + 0 成本送股数量)
+	// 分母必须是买入批次数量（而非部分卖出后的剩余数量），
+	// 否则部分卖出会把剩余股的成本基准错误抬高（如买100@10卖30剩70 → 14.29 而非 10）。
+	const liveBatchQty = liveBuyQty + shareDividendQty;
+	const avgCost = liveBatchQty > 0 ? liveBuyCost / liveBatchQty : 0;
 
 	const positionQuantity = Math.max(0, totalBuyQuantity + shareDividendQty - totalSellQuantity);
 

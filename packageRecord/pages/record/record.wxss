@@ -1,5 +1,5 @@
 /* ═════════════════════════════════════════╗
-   交易编辑页 — 小红书风格 v3
+   资产编辑页 — 小红书风格 v3
    ╚════════════════════════════════════════╝ */
 
 @import '../../../styles/common.wxss';
@@ -331,7 +331,7 @@ page {
   color: var(--xhs-body);
 }
 
-/* === 手续费折叠 === */
+/* === 价格输入区 === */
 .fee-header {
   display: flex;
   justify-content: space-between;
@@ -389,7 +389,7 @@ page {
   font-weight: var(--xhs-weight-medium);
 }
 
-/* === 交易笔记 === */
+/* === 资产笔记 === */
 .journal-toggle {
   display: flex;
   align-items: center;

@@ -16,18 +16,8 @@ page {
 .title-row {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
-  padding: 0 var(--page-margin);
-}
-
-.title-icon-wrap {
-  display: flex;
   align-items: center;
-}
-
-.title-icon {
-  width: 36rpx;
-  height: 36rpx;
+  padding: 0 var(--page-margin);
 }
 
 .page-subtitle {
@@ -59,7 +49,7 @@ page {
   pointer-events: none;
 }
 
-/* 头部：总市值 */
+/* 头部：总值 */
 .summary-header {
   margin-bottom: 28rpx;
   position: relative;
@@ -153,7 +143,7 @@ page {
   transform: scale(0.92);
 }
 
-/* === 持仓卡片 === */
+/* === 资产卡片 === */
 .position-card {
   background: linear-gradient(135deg, #FFFEFB 0%, #FFFCF5 100%);
   border-radius: var(--xhs-radius-md);
@@ -174,6 +164,11 @@ page {
   box-shadow:
     0 4px 12px rgba(0, 0, 0, 0.06),
     0 8px 24px rgba(0, 0, 0, 0.04);
+}
+
+/* 拖动过程中关闭过渡，保证卡片实时跟手（与 .swipe-card.is-swiping 对齐） */
+.position-card.is-swiping {
+  transition: none;
 }
 
 .position-card .stock-code {
@@ -283,12 +278,17 @@ page {
 .swipe-card {
   position: relative;
   z-index: var(--xhs-z-card);
-  transition: transform 0.2s ease;
+  transition: transform 0.28s cubic-bezier(0.22, 0.61, 0.36, 1);
   background: var(--xhs-surface);
   border-radius: var(--xhs-radius-md);
   box-shadow: var(--xhs-elevation-2);
   overflow: hidden;
   will-change: transform;
+}
+
+/* 拖动过程中关闭过渡，保证卡片实时跟手 */
+.swipe-card.is-swiping {
+  transition: none;
 }
 
 .swipe-actions {
@@ -301,55 +301,76 @@ page {
   z-index: 1;
   padding: 0 var(--page-margin) 0 var(--xhs-space-xs);
   gap: var(--xhs-space-xs);
+  /* 拖动过程中隐藏：仅卡片完全滑开(swipeOpen)后才淡入显示 */
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s ease;
 }
 
 .swipe-actions-open {
   z-index: 3;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* 拖动过程中强制隐藏：覆盖 open 态，保证滑动全程按钮不可见；停稳后才淡入 */
+.swipe-actions-hiding {
+  opacity: 0 !important;
+  pointer-events: none;
+  transition: none;
 }
 
 .swipe-action-btn {
-  width: 128rpx;
-  height: calc(100% - 48rpx);
-  border-radius: var(--xhs-radius-pill);
+  width: 132rpx;
+  height: calc(100% - 28rpx);
+  margin: 0 4rpx;
+  border-radius: var(--xhs-radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
   font-size: var(--xhs-font-sm);
   font-weight: var(--xhs-weight-semibold);
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.12);
 }
 
 .swipe-action-content {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 6rpx;
+}
+
+.swipe-action-icon {
+  width: 46rpx;
+  height: 46rpx;
+  margin-bottom: 6rpx;
+}
+
+.swipe-action-label {
+  font-size: var(--xhs-font-sm);
+  font-weight: var(--xhs-weight-semibold);
+  letter-spacing: 0.04em;
 }
 
 .swipe-action-sub {
   font-size: 18rpx;
-  opacity: 0.7;
-  letter-spacing: 0.04em;
+  opacity: 0.85;
+  letter-spacing: 0.02em;
 }
 
-/* 霓虹科技色 */
+/* 操作色：编辑(蓝) / 转出(橙) / 删除(红) —— 对比鲜明，一眼区分 */
 .swipe-action-edit {
-  color: #fff;
-  background: #00D4AA;
-  border-color: #00D4AA;
+  background: #4A90E2;
 }
 
 .swipe-action-sell {
-  color: #fff;
-  background: #5B8DEF;
-  border-color: #5B8DEF;
+  background: #FF9F43;
 }
 
 .swipe-action-delete {
-  color: #fff;
-  background: #FF6B6B;
-  border-color: #FF6B6B;
+  background: #FF3B30;
 }
 
 /* === 刷新按钮 === */
@@ -433,22 +454,24 @@ page {
   width: 104rpx;
   height: 104rpx;
   border-radius: var(--xhs-radius-round);
-  background: var(--xhs-primary);
+  background: linear-gradient(135deg, #FBEFC8 0%, #E0B36A 100%); /* 淡金色渐变 */
   color: #FFFFFF;
   font-size: 52rpx;
   font-weight: var(--xhs-weight-bold);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: var(--xhs-btn-shadow);
+  box-shadow: 0 4px 12px rgba(232, 199, 122, 0.45); /* 金色光晕 */
   z-index: var(--xhs-z-fab);
   transition: var(--xhs-transition);
+  /* 强制 WebView 立即建立命中检测层，根治「首次点击被吞」 */
+  cursor: pointer;
   border: none;
 }
 
 .fab:active {
   transform: scale(0.9);
-  box-shadow: var(--xhs-btn-shadow-hover);
+  box-shadow: 0 6px 20px rgba(232, 199, 122, 0.55);
 }
 
 .fab-hidden {

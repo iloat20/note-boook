@@ -1,5 +1,5 @@
 /* ═════════════════════════════════════════╗
-   快速交易弹窗 — 小红书风格 v2
+   快速资产弹窗 — 小红书风格 v2
    ╚════════════════════════════════════════╝ */
 
 /* === Overlay === */
@@ -462,4 +462,16 @@
 @keyframes slideUp {
   from { transform: translateY(100%); }
   to { transform: translateY(0); }
+}
+
+/* 强制 WebView 立即建立命中检测层，根治弹窗内「首次点击被吞」
+   （弹窗用 wx:if 每次打开都重建子树，新节点首次触摸常被命中层丢弃） */
+.qr-submit,
+.qr-type-btn,
+.qr-qty-btn,
+.qr-preset-btn,
+.qr-close,
+.qr-suggestion-item,
+.qr-more-toggle {
+  cursor: pointer;
 }

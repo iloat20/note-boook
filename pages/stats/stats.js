@@ -18,7 +18,6 @@ Page({
 		entranceDone: false,
 		loading: true,
 		stats: null,
-		detailItems: [],
 		heatmapData: [],
 		heatmapYear: new Date().getFullYear(),
 		heatmapMonth: new Date().getMonth() + 1,
@@ -105,36 +104,44 @@ Page({
 			// 期末资产（全历史资产持有口径，复用 computeAllTimeAssetFlow）
 			const stockMap = buildStockMap(Stock.getAll());
 			const rateOf = (id) => {
-				const m = stockMap[id] && stockMap[id].market;
+				const m = stockMap[id]?.market;
 				return getCachedRate(m) || 1;
 			};
 			const { endingAsset } = computeAllTimeAssetFlow(
 				Transaction.getAll(), Dividend.getAll(), rateOf,
 			);
 
-			const stats = {
-				totalPnL: totalStats.totalPnL,
-				totalPnLText: (totalStats.totalPnL >= 0 ? "+" : "") + fmt(totalStats.totalPnL),
-				recordCount: completeTrades.length,
-				endingAssetText: fmt(endingAsset),
-			};
+		const MS_PER_DAY = 86400000;
+		const allDates = [
+			...Transaction.getAll().map((t) => t.date),
+			...Dividend.getAll().map((d) => d.date),
+		].filter(Boolean);
 
-			const detailItems = [
-				{
-					label: "累计净变动",
-					value: fmt(totalStats.realizedPnL),
-					prefix: "",
-					colorClass: totalStats.realizedPnL >= 0 ? "profit" : "loss",
-				},
-			];
+		let recordDays = 0;
+		if (allDates.length > 0) {
+			// date 可能是 "YYYY-MM-DD" 或 ISO datetime（表单传 Date 时），直接解析最稳
+			const earliest = allDates.reduce((min, d) => (d < min ? d : min), allDates[0]);
+			const startMs = new Date(earliest).getTime();
+			const todayUtc = new Date(new Date().toISOString().slice(0, 10)).getTime();
+			if (Number.isFinite(startMs)) {
+				recordDays = Math.ceil((todayUtc - startMs) / MS_PER_DAY) + 1;
+			}
+		}
 
-			this.setData({
-				stats,
-				detailItems,
-				completeTrades,
-				clearedPositions,
-				loading: false,
-			});
+		const stats = {
+			totalPnL: totalStats.totalPnL,
+			totalPnLText: (totalStats.totalPnL >= 0 ? "+" : "") + fmt(totalStats.totalPnL),
+			recordCount: completeTrades.length,
+			endingAssetText: fmt(endingAsset),
+			recordDays,
+		};
+
+		this.setData({
+			stats,
+			completeTrades,
+			clearedPositions,
+			loading: false,
+		});
 		} catch (err) {
 			console.error("[stats] loadStats error:", err);
 			this.setData({ loading: false });
@@ -220,13 +227,12 @@ Page({
 			success: (res) => {
 				if (res.confirm) {
 					wipeAll();
-					this.setData({
-						stats: null,
-						detailItems: [],
-						completeTrades: [],
-						clearedPositions: [],
-						loading: false,
-					});
+				this.setData({
+					stats: null,
+					completeTrades: [],
+					clearedPositions: [],
+					loading: false,
+				});
 					wx.showToast({ title: "已清除所有数据", icon: "success" });
 				}
 			},

@@ -2,14 +2,10 @@
  * StatsService - 统计数据服务
  */
 
-const Stock = require("../models/stock");
 const Transaction = require("../models/transaction");
 const Dividend = require("../models/dividend");
-const { getAllPositions, getClearedPositions } = require("./positionService");
+const { getAllPositions } = require("./positionService");
 const { caches } = require("../cache/cacheManager");
-const { calcXIRRForRange, getTotalXIRR } = require("./xirrService");
-const { getRate, getRates } = require("./exchangeRate");
-const { fmt } = require("../helpers/format");
 const { getByPeriod } = require("../helpers/dateRange");
 
 // 统计服务缓存键
@@ -344,144 +340,11 @@ function getStrategyStats(transactions) {
 	return result;
 }
 
-/**
- * 按周期计算统计数据（含收益率/XIRR）
- * 从 stats.js _calcPeriodStats 提取，保持 Page 层轻量
- * @param {string} period - 周期类型
- * @param {Function} getDateRange - (period) => { startDate, endDate }
- * @returns {Promise<{stats: Object, detailItems: Array}>}
- */
-async function getPeriodStatsWithReturn(period, getDateRange) {
-	const { startDate, endDate } = getDateRange(period);
-	const rates = await getRates();
-	const stocks = Stock.getAll();
-
-	const stockMarket = {};
-	stocks.forEach((s) => {
-		stockMarket[s.id] = s.market;
-	});
-
-	const periodTx = Transaction.getByDateRange(startDate, endDate);
-	const periodDiv = Dividend.getAll().filter((d) => {
-		const dd = new Date(d.date);
-		return dd >= startDate && dd <= endDate;
-	});
-
-	let cnyBuyAmount = 0,
-		cnySellAmount = 0,
-		cnyBuyFee = 0,
-		cnySellFee = 0;
-	periodTx.forEach((t) => {
-		const r = getRate(stockMarket[t.stockId], rates);
-		const a = parseFloat((t.price * t.quantity).toFixed(2));
-		if (t.type === "BUY") {
-			cnyBuyAmount += a * r;
-			cnyBuyFee += t.fee * r;
-		} else {
-			cnySellAmount += a * r;
-			cnySellFee += t.fee * r;
-		}
-	});
-
-	let cnyDividendIncome = 0;
-	periodDiv.forEach((d) => {
-		const r = getRate(stockMarket[d.stockId], rates);
-		cnyDividendIncome += d.totalAmount * r;
-	});
-
-	const totalInvestment = cnyBuyAmount + cnyBuyFee;
-	const totalRecovery = cnySellAmount - cnySellFee;
-	const totalPnL = totalRecovery - totalInvestment + cnyDividendIncome;
-	const totalReturnRate = totalInvestment > 0 ? (totalPnL / totalInvestment) * 100 : 0;
-
-	// 短周期用周期收益率，长周期用 XIRR（年化）
-	let returnValue = null;
-	let returnText = "--";
-	let returnLabel = "XIRR";
-
-	const daysInRange = (endDate - startDate) / (24 * 60 * 60 * 1000);
-	const usePeriodRate = daysInRange < 90 || periodTx.length + periodDiv.length < 4;
-
-	if (usePeriodRate) {
-		returnLabel = period === "WEEK" ? "周收益率" : period === "MONTH" ? "月收益率" : "收益率";
-		if (totalInvestment > 0) {
-			returnValue = parseFloat(totalReturnRate.toFixed(2));
-			returnText = `${(returnValue >= 0 ? "+" : "") + returnValue.toFixed(2)}%`;
-		}
-	} else {
-		try {
-			returnValue = await calcXIRRForRange(startDate, endDate);
-			if (returnValue !== null) {
-				returnText = `${returnValue.toFixed(2)}%`;
-			}
-		} catch (e) {
-			console.error("XIRR 计算失败:", e);
-		}
-		if (returnValue === null && totalInvestment > 0) {
-			returnLabel = "收益率";
-			returnValue = parseFloat(totalReturnRate.toFixed(2));
-			returnText = `${(returnValue >= 0 ? "+" : "") + returnValue.toFixed(2)}%`;
-		}
-	}
-
-	const stats = {
-		totalInvestment,
-		totalRecovery,
-		totalPnL,
-		returnValue,
-		returnText,
-		returnLabel,
-		totalInvestmentText: fmt(totalInvestment),
-		totalRecoveryText: fmt(totalRecovery),
-		totalPnLText: fmt(totalPnL),
-		totalReturnRateText: `${(totalReturnRate >= 0 ? "+" : "") + totalReturnRate.toFixed(2)}%`,
-		dividendIncomeText: fmt(cnyDividendIncome),
-		totalBuyFeeText: fmt(cnyBuyFee),
-		totalSellFeeText: fmt(cnySellFee),
-	};
-
-	// 计算胜率（基于已清仓股票）
-	const cleared = getClearedPositions();
-	const winCount = cleared.filter((p) => p.realizedPnL + p.dividendIncome > 0).length;
-	const winRate = cleared.length > 0 ? Math.round((winCount / cleared.length) * 100) : null;
-	stats.winRate = winRate;
-	stats.winRateText = winRate !== null ? `${winRate}%` : "--";
-
-	const detailItems = [
-		{
-			label: "已实现盈亏",
-			value: fmt(totalPnL),
-			prefix: "",
-			colorClass: totalPnL >= 0 ? "profit" : "loss",
-		},
-		{
-			label: returnLabel,
-			value: returnText !== "--" ? returnText.replace("%", "") : "--",
-			prefix: "",
-			colorClass: returnValue !== null ? (returnValue >= 0 ? "profit" : "loss") : "",
-		},
-		{
-			label: "分红收益",
-			value: fmt(cnyDividendIncome),
-			prefix: "",
-			colorClass: "profit",
-		},
-		{ label: "买入手续费", value: fmt(cnyBuyFee), prefix: "", colorClass: "" },
-		{ label: "卖出手续费", value: fmt(cnySellFee), prefix: "", colorClass: "" },
-	];
-
-	return { stats, detailItems };
-}
-
 module.exports = {
-	calcStatsForRange,
 	getTotalStats,
 	getStatsByPeriod,
 	getPeriodStatsList,
 	getStrategyStats,
-	calcXIRRForRange,
-	getTotalXIRR,
-	getPeriodStatsWithReturn,
 	invalidateStatsCache,
 };
 

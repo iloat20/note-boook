@@ -60,3 +60,26 @@ test("Stock.getById returns undefined for non-existent id", () => {
     const result = Stock.getById(999999999999);
     expect(result).toBeUndefined();
 });
+
+test("Stock.getById matches when stored id is string but queried as number (URL round-trip)", () => {
+    const { Stock } = require("../utils/models/index");
+    // 模拟历史数据/旧备份：存储里 id 是字符串
+    _mockStorage["stock_trade_stocks"] = [
+        { id: "1783000239192000", code: "600519", name: "A", market: "A_SHARE" },
+    ];
+    // 详情页从 URL 拿到的是 parseInt 后的数字
+    const queried = parseInt("1783000239192000", 10);
+    const found = Stock.getById(queried);
+    expect(found).toBeTruthy();
+    expect(found.code).toBe("600519");
+});
+
+test("Stock.getById matches when stored id is number but queried as string", () => {
+    const { Stock } = require("../utils/models/index");
+    _mockStorage["stock_trade_stocks"] = [
+        { id: 42, code: "000001", name: "B", market: "A_SHARE" },
+    ];
+    const found = Stock.getById("42");
+    expect(found).toBeTruthy();
+    expect(found.code).toBe("000001");
+});

@@ -222,7 +222,13 @@ describe("StockPrice Retry", () => {
 	});
 
 	afterEach(() => {
-		jest.runOnlyPendingTimers();
+		try {
+			// 防御：fake timers 未激活（worker 时序 / 其它文件已切回 real）时跳过，
+			// 否则 _checkFakeTimers 抛错导致整套件变红。
+			jest.runOnlyPendingTimers();
+		} catch (e) {
+			// 真实定时器状态下无需 flush
+		}
 	});
 
 	test("fetchStockPrice retries and succeeds after failures", async () => {

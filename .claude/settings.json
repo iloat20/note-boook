@@ -1,5 +1,8 @@
 {
-	"permissions": {
-		"allow": ["Bash(git push *)"]
-	}
+  "enabledPlugins": {
+    "superpowers@claude-plugins-official": true,
+    "frontend-design@claude-plugins-official": true,
+    "code-review@claude-plugins-official": true,
+    "context7@claude-plugins-official": true
+  }
 }

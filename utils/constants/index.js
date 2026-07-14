@@ -1,5 +1,5 @@
 // utils/constants/index.js
-// Centralized constants for the stock trading app
+// Centralized constants for the asset tracking app
 
 const MARKETS = {
 	A_SHARE: "A_SHARE",
@@ -38,16 +38,12 @@ const FEE_CONFIG = {
 };
 
 const DEFAULT_STRATEGIES = [
-	"追涨",
-	"抄底",
-	"止损",
-	"止盈",
-	"定投",
-	"打新",
-	"调仓",
-	"消息面",
-	"技术面",
-	"基本面",
+	"长期",
+	"短期",
+	"观察",
+	"重点",
+	"备忘",
+	"待定",
 ];
 
 const TIMING_CONFIG = {

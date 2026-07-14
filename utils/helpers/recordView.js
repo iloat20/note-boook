@@ -45,15 +45,15 @@ function buildRecordView(entity, stock, options = {}) {
 	let typeBarClass;
 
 	if (isDividend) {
-		typeText = "分红";
+		typeText = "其他收益";
 		typeTagClass = "tag type-tag tag-dividend";
 		amountClass = `${amountClassPrefix} mono-num ${amountClassForDividend}`;
 	} else if (isBuy) {
-		typeText = "买入";
+		typeText = "转入";
 		typeTagClass = "tag type-tag tag-buy";
 		amountClass = `${amountClassPrefix} mono-num ${amountClassForBuy}`;
 	} else {
-		typeText = "卖出";
+		typeText = "转出";
 		typeTagClass = "tag type-tag tag-sell";
 		amountClass = `${amountClassPrefix} mono-num ${amountClassForSell}`;
 	}
@@ -144,7 +144,7 @@ function buildRecordView(entity, stock, options = {}) {
 
 		if (includeStatsFields) {
 			record.dateText = entity.date ? fmtDate(new Date(entity.date)) : "-";
-			record.totalPnLText = fmt(price * quantity);
+			record.totalPnLText = fmt(Math.abs(amount));
 		}
 
 		if (includeJournalFields) {

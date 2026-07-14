@@ -3,7 +3,7 @@
 	"subpackages": [
 		{
 			"root": "packageDetail",
-			"pages": ["pages/detail/detail", "pages/dividend/dividend"]
+			"pages": ["pages/detail/detail"]
 		},
 		{
 			"root": "packageRecord",
@@ -31,7 +31,7 @@
 		"list": [
 			{
 				"pagePath": "pages/index/index",
-				"text": "持仓"
+				"text": "资产"
 			},
 			{
 				"pagePath": "pages/history/history",

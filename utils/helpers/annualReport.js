@@ -25,7 +25,7 @@ function computeAssetHoldingPortrait(txList, stockMap, now) {
 	const entries = Object.keys(groups).map((id) => {
 		const g = groups[id];
 		const days = Math.max(0, Math.floor((now - g.firstDate) / MS_PER_DAY));
-		const name = (stockMap && stockMap[id] && stockMap[id].name) || id;
+		const name = (stockMap?.[id]?.name) || id;
 		return { id, name, days, count: g.count };
 	});
 	if (entries.length === 0) return { longest: null, shortest: null, mostActive: null };

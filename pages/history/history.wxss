@@ -11,18 +11,8 @@
 .title-row {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
-  padding: 0 var(--page-margin);
-}
-
-.title-icon-wrap {
-  display: flex;
   align-items: center;
-}
-
-.title-icon {
-  width: 36rpx;
-  height: 36rpx;
+  padding: 0 var(--page-margin);
 }
 
 /* === 骨架屏 === */

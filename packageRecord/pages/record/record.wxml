@@ -6,7 +6,7 @@
         <text class="nav-back-arrow">‹</text>
       </view>
     </view>
-    <text class="nav-title">{{isEdit ? '编辑交易' : '新增交易'}}</text>
+    <text class="nav-title">资产信息</text>
   </view>
 
   <scroll-view class="scroll-container" scroll-y="true">
@@ -14,25 +14,15 @@
     <view class="record-section">
       <text class="section-title">📋 基本信息</text>
       <view class="record-card">
-        <!-- 市场选择 -->
-        <view class="segmented-control">
-          <view wx:for="{{markets}}" wx:key="key"
-            class="segment-item {{market === item.key ? 'segment-active' : ''}}"
-            bindtap="selectMarket" data-market="{{item.key}}">
-            {{item.label}}
-          </view>
-        </view>
-
-        <!-- 股票代码 + 名称 -->
+        <!-- 资产代码 + 名称 -->
         <view class="field-group">
-          <text class="field-label">股票代码</text>
+          <text class="field-label">资产代码</text>
           <view class="code-input-wrap">
             <input class="record-input code-input"
               placeholder="输入代码自动识别"
               value="{{code}}"
               bindinput="onCodeInput"
               bindblur="hideSuggestions"/>
-            <view wx:if="{{marketLabel}}" class="code-market-badge">{{marketLabel}}</view>
           </view>
           <text wx:if="{{codeError}}" class="field-error">{{codeError}}</text>
           <!-- 搜索建议 / 搜索历史 -->
@@ -42,7 +32,6 @@
               bindtap="onSelectSuggestion" data-item="{{item}}">
               <text class="suggestion-code">{{item.code}}</text>
               <text class="suggestion-name">{{item.name}}</text>
-              <text class="suggestion-market-tag">{{item.market === 'A_SHARE' ? 'A股' : item.market === 'HK_SHARE' ? '港股' : '美股'}}</text>
             </view>
           </view>
           <view wx:elif="{{showSearchHistory && stockSearchHistory.length}}" class="suggestions-dropdown">
@@ -56,7 +45,7 @@
         </view>
 
         <view class="field-group field-last">
-          <text class="field-label">股票名称</text>
+          <text class="field-label">资产名称</text>
           <input class="record-input"
             placeholder="自动识别或手动输入"
             value="{{name}}"
@@ -67,58 +56,41 @@
 
     <!-- 买卖方向 -->
     <view class="record-section">
-      <text class="section-title">🔄 买卖方向</text>
+      <text class="section-title">🔄 转入 / 转出</text>
       <view class="record-card">
         <view class="type-selector">
           <view class="type-option {{type === 'BUY' ? 'type-active type-buy-active' : ''}}" bindtap="selectType" data-type="BUY">
             <text class="type-emoji">📈</text>
-            <text class="type-label">买入</text>
-            <text class="type-desc">开仓做多</text>
+            <text class="type-label">转入</text>
+            <text class="type-desc">转入方向</text>
           </view>
           <view class="type-divider"></view>
           <view class="type-option {{type === 'SELL' ? 'type-active type-sell-active' : ''}}" bindtap="selectType" data-type="SELL">
             <text class="type-emoji">📉</text>
-            <text class="type-label">卖出</text>
-            <text class="type-desc">平仓止盈</text>
+            <text class="type-label">转出</text>
+            <text class="type-desc">转出方向</text>
           </view>
         </view>
       </view>
     </view>
 
-    <!-- 交易详情 -->
+    <!-- 资产详情 -->
     <view class="record-section">
-      <text class="section-title">💰 交易详情</text>
+      <text class="section-title">💰 资产详情</text>
       <view class="record-card">
         <view class="field-group">
-          <text class="field-label">成交价格</text>
+          <text class="field-label">单价</text>
           <input class="record-input" type="digit" placeholder="0.00" value="{{price}}" bindinput="onPriceInput"/>
         </view>
 
         <view class="field-group">
-          <text class="field-label">成交数量（股）</text>
+          <text class="field-label">数量（份）</text>
           <input class="record-input" type="digit" placeholder="0" value="{{quantity}}" bindinput="onQuantityInput"/>
-        </view>
-
-        <view class="field-group">
-          <view class="fee-header">
-            <text class="field-label">手续费</text>
-            <view wx:if="{{feePreview.length}}" class="fee-toggle" bindtap="toggleFee">
-              <text class="fee-toggle-text">{{fee || '0.00'}}</text>
-              <text class="fee-toggle-arrow {{feeExpanded ? 'fee-toggle-arrow-open' : ''}}">›</text>
-            </view>
-          </view>
-          <input class="record-input" type="digit" placeholder="自动计算" value="{{fee}}" bindinput="onFeeInput"/>
-          <view wx:if="{{feeExpanded && feePreview.length}}" class="fee-breakdown">
-            <view wx:for="{{feePreview}}" wx:key="name" class="fee-item">
-              <text class="fee-name">{{item.name}}</text>
-              <text class="fee-value">{{item.vt}}</text>
-            </view>
-          </view>
         </view>
 
         <view class="field-row">
           <view class="field-group field-half">
-            <text class="field-label">交易日期</text>
+            <text class="field-label">资产日期</text>
             <picker mode="date" value="{{date}}" bindchange="onDateChange">
               <view class="record-input picker-input">
                 <text class="{{date ? '' : 'picker-placeholder'}}">{{date || '选择日期'}}</text>
@@ -127,7 +99,7 @@
             </picker>
           </view>
           <view class="field-group field-half">
-            <text class="field-label">交易时间</text>
+            <text class="field-label">资产时间</text>
             <picker mode="time" value="{{time}}" bindchange="onTimeChange">
               <view class="record-input picker-input">
                 <text class="{{time ? '' : 'picker-placeholder'}}">{{time || '选择时间'}}</text>
@@ -147,12 +119,12 @@
       </view>
     </view>
 
-    <!-- 交易笔记 -->
+    <!-- 资产笔记 -->
     <view class="record-section">
-      <text class="section-title">📝 交易笔记</text>
+      <text class="section-title">📝 资产笔记</text>
       <view class="record-card">
         <view class="journal-toggle" bindtap="toggleJournal">
-          <text class="journal-title">笔记与策略</text>
+          <text class="journal-title">笔记</text>
           <text class="journal-optional">选填</text>
           <view class="journal-spacer"></view>
           <view wx:if="{{strategies.length > 0 || reason}}" class="journal-badges">
@@ -164,7 +136,7 @@
 
         <view wx:if="{{showJournal}}" class="journal-body">
           <view class="field-group">
-            <text class="field-label">策略标签</text>
+            <text class="field-label">标签</text>
             <view class="tag-list">
               <view wx:for="{{strategies}}" wx:key="*this"
                 class="tag-item tag-selected" bindtap="removeStrategy" data-tag="{{item}}">
@@ -175,9 +147,9 @@
             </view>
           </view>
           <view class="field-group field-last">
-            <text class="field-label">{{type === 'BUY' ? '买入' : '卖出'}}理由</text>
+            <text class="field-label">{{type === 'BUY' ? '转入' : '转出'}}备注</text>
             <textarea class="record-input record-textarea"
-              placeholder="{{type === 'BUY' ? '为什么买入这只股票？' : '为什么卖出？'}}"
+              placeholder="记录说明（选填）"
               value="{{reason}}"
               bindinput="onReasonInput"/>
           </view>
@@ -189,7 +161,7 @@
     <view wx:if="{{showStrategyPicker}}" class="picker-overlay" bindtap="closeStrategyPicker">
       <view class="picker-sheet" catchtap="">
         <view class="picker-header">
-          <text class="picker-title">选择策略标签</text>
+          <text class="picker-title">选择分类标签</text>
           <view class="picker-done" bindtap="confirmStrategyPicker">
             <text>完成</text>
           </view>
@@ -217,10 +189,10 @@
   <!-- 底部确认按钮 -->
   <view class="submit-bar">
     <view class="preview-sticky {{type === 'BUY' ? 'preview-sticky-buy' : 'preview-sticky-sell'}}">
-      <text class="preview-sticky-text">{{type === 'BUY' ? '买入' : '卖出'}} {{quantity || '0'}}股 × {{price || '0.00'}} = {{actualText}}</text>
+      <text class="preview-sticky-text">{{type === 'BUY' ? '转入' : '转出'}} {{quantity || '0'}}份 × {{price || '0.00'}} = {{actualText}}</text>
     </view>
     <view class="submit-btn {{type === 'BUY' ? 'submit-btn-buy' : 'submit-btn-sell'}}" bindtap="submit">
-      {{isEdit ? '保存修改' : (type === 'BUY' ? '确认买入' : '确认卖出')}} · {{actualText}}
+      {{isEdit ? '保存修改' : '确认添加'}} · {{actualText}}
     </view>
   </view>
 </view>

@@ -15,7 +15,12 @@ describe("Stock price batching", () => {
 	beforeEach(() => {
 		jest.resetModules();
 		jest.useRealTimers();
-		jest.runOnlyPendingTimers();
+		try {
+			// 防御：fake timers 未激活（worker 时序）时跳过，避免 _checkFakeTimers 抛错
+			jest.runOnlyPendingTimers();
+		} catch (e) {
+			// 真实定时器状态下无需 flush
+		}
 		request.get.mockClear();
 	});
 

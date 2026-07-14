@@ -6,7 +6,6 @@ const {
 	calculatePosition,
 } = require("../../../utils/services/positionService");
 const { fetchStockPrice } = require("../../../utils/services/stockPrice");
-const { calculateFee, getFeeBreakdown } = require("../../../utils/helpers/feeCalculator");
 const { fmt } = require("../../../utils/helpers/format");
 const { loadSearchHistory, saveSearchHistory } = require("../../../utils/helpers/searchHistory");
 const {
@@ -27,20 +26,18 @@ Page({
 		type: "BUY",
 		price: "",
 		quantity: "",
-		fee: "",
 		date: "",
 		time: "",
 		note: "",
 		codeError: "",
-		feePreview: [],
 		amountText: "0.00",
 		actualText: "0.00",
 		isEdit: false,
-		marketLabel: "A股",
+		marketLabel: "境内",
 		markets: [
-			{ key: MARKETS.A_SHARE, label: "A股" },
-			{ key: MARKETS.HK_SHARE, label: "港股" },
-			{ key: MARKETS.US_SHARE, label: "美股" },
+			{ key: MARKETS.A_SHARE, label: "境内" },
+			{ key: MARKETS.HK_SHARE, label: "香港" },
+			{ key: MARKETS.US_SHARE, label: "海外" },
 		],
 		showSuggestions: false,
 		suggestions: [],
@@ -83,7 +80,7 @@ Page({
 			if (options?.type) {
 				this.setData({ type: options.type });
 			}
-			// 处理从持仓页跳转的新增交易
+			// 处理从持仓页跳转的新增资产
 			if (options?.stockId) {
 				const stock = Stock.getById(parseInt(options.stockId, 10));
 				if (stock) {
@@ -93,7 +90,7 @@ Page({
 						name: stock.name,
 						marketLabel: getMarketLabel(stock.market),
 					});
-					// 卖出交易自动填入现价和持仓数量
+					// 卖出资产自动填入现价和持仓数量
 					if (this.data.type === "SELL") {
 						this._fillSellDefaults(stock.id, stock.market, stock.code);
 					}
@@ -106,13 +103,13 @@ Page({
 		const transactions = Transaction.getAll();
 		const transaction = transactions.find((t) => t.id === id);
 		if (!transaction) {
-			toast("交易记录不存在");
+			toast("资产记录不存在");
 			wx.navigateBack();
 			return;
 		}
 		const stock = Stock.getById(transaction.stockId);
 		if (!stock) {
-			toast("交易记录不存在");
+			toast("资产记录不存在");
 			wx.navigateBack();
 			return;
 		}
@@ -126,7 +123,6 @@ Page({
 			type: transaction.type,
 			price: String(transaction.price),
 			quantity: String(transaction.quantity),
-			fee: String(transaction.fee),
 			date:
 				date.getFullYear() +
 				"-" +
@@ -191,6 +187,10 @@ Page({
 	onCodeInput(e) {
 		const value = (e.detail.value || "").trim();
 		this.setData({ code: value, codeError: "", name: "", keyword: value });
+		const detected = this._detectMarket(value);
+		if (detected && detected !== this.data.market) {
+			this.setData({ market: detected, marketLabel: getMarketLabel(detected) });
+		}
 		this._checkCode();
 		// 触发联想搜索（本地数据库）
 		if (value.length >= 1) {
@@ -228,18 +228,6 @@ Page({
 		if (sanitized !== raw) this.setData({ quantity: sanitized });
 		else this.setData({ quantity: raw });
 		this._calcFee();
-	},
-	onFeeInput(e) {
-		this._feeManuallySet = true;
-		this.setData({ fee: e.detail.value });
-		const data = this.data;
-		const tradeAmount = (parseFloat(data.price) || 0) * (parseInt(data.quantity, 10) || 0);
-		const fee = parseFloat(e.detail.value) || 0;
-		const actualAmount = data.type === "BUY" ? tradeAmount + fee : tradeAmount - fee;
-		this.setData({
-			amountText: fmt(tradeAmount),
-			actualText: fmt(actualAmount),
-		});
 	},
 	onDateChange(e) {
 		this.setData({ date: e.detail.value });
@@ -295,10 +283,20 @@ Page({
 			return;
 		}
 		if (!validateStockCode(data.code, data.market)) {
-			this.setData({ codeError: `${getMarketLabel(data.market)}代码格式错误` });
+			this.setData({ codeError: "代码格式错误" });
 		} else {
 			this.setData({ codeError: "" });
 		}
+	},
+
+	// 根据代码格式推断市场（A股/港股/美股），无需手动选择
+	_detectMarket(code) {
+		const upper = (code || "").toUpperCase();
+		if (/^\d{6}$/.test(code)) return MARKETS.A_SHARE;
+		if (/^(?:hk|HK)\d{1,5}$/.test(upper)) return MARKETS.HK_SHARE;
+		if (/^\d{5}$/.test(code)) return MARKETS.A_SHARE;
+		if (/^[A-Z]{1,5}$/.test(upper)) return MARKETS.US_SHARE;
+		return null;
 	},
 
 	// 延迟自动获取（输入时防抖）
@@ -352,24 +350,11 @@ Page({
 	},
 
 	_calcFee() {
-		if (this._feeManuallySet) return;
 		const data = this.data;
-		const fee = calculateFee(data.market, data.type, data.price, data.quantity);
-		const breakdown = getFeeBreakdown(data.market, data.type, data.price, data.quantity);
 		const tradeAmount = (parseFloat(data.price) || 0) * (parseInt(data.quantity, 10) || 0);
-		const actualAmount = data.type === "BUY" ? tradeAmount + fee : tradeAmount - fee;
 		this.setData({
-			fee: String(fee),
-			feePreview: breakdown.items.map((item) => ({
-				name: item.name,
-				value: item.value,
-				vt: fmt(item.value),
-				rate: item.rate,
-				min: item.min,
-				note: item.note,
-			})),
 			amountText: fmt(tradeAmount),
-			actualText: fmt(actualAmount),
+			actualText: fmt(tradeAmount),
 		});
 	},
 
@@ -428,10 +413,6 @@ Page({
 		this.setData({ showStrategyPicker: false });
 	},
 
-	toggleFee() {
-		this.setData({ feeExpanded: !this.data.feeExpanded });
-	},
-
 	goBack() {
 		wx.navigateBack();
 	},
@@ -446,7 +427,7 @@ Page({
 		const type = data.type;
 		const price = data.price;
 		const quantity = data.quantity;
-		const fee = data.fee;
+		const fee = 0;
 		const date = data.date;
 		const time = data.time;
 		const note = data.note;
@@ -486,13 +467,13 @@ Page({
 		const stock = Stock.getByCode(code, market);
 		if (!stock) {
 			if (type === "SELL") {
-				toast("暂无可卖持仓");
+				toast("暂无可转持有");
 				this._resetSubmit();
 				return;
 			}
 			const cacheKey = `${market}_${code}`;
 			if (this._stockValidCache?.[cacheKey] === false) {
-				toast("股票代码无效或不在该市场，请检查");
+				toast("代码无效或无法识别，请检查");
 				this._resetSubmit();
 				return;
 			}
@@ -575,7 +556,7 @@ Page({
 				if (!this._stockValidCache) this._stockValidCache = {};
 				this._stockValidCache[`${market}_${code}`] = valid;
 				if (!valid) {
-					this.bail("股票代码无效或不在该市场，请检查");
+					this.bail("代码无效或无法识别，请检查");
 					return;
 				}
 				this._doSubmit(
@@ -618,7 +599,7 @@ Page({
 			const ignoredTransactionId = this._isEdit ? this._editId : null;
 			const sellableQuantity = getSellableQuantity(stock.id, ignoredTransactionId);
 			if (parseInt(quantity, 10) > sellableQuantity) {
-				toast("卖出数量超过持仓");
+				toast("转出数量超过持有");
 				this._resetSubmit();
 				return;
 			}

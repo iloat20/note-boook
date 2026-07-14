@@ -1,6 +1,0 @@
-<view class="section-header">
-  <text class="title">{{title}}</text>
-  <view class="header-actions">
-    <slot name="actions"></slot>
-  </view>
-</view>

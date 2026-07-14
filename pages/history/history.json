@@ -1,7 +1,6 @@
 {
 	"navigationBarTitleText": "历史",
 	"usingComponents": {
-		"market-tag": "../../components/market-tag/index",
 		"liquid-slider": "../../components/liquid-slider/index",
 		"empty-state": "../../components/empty-state/index",
 		"strategy-tags": "../../components/strategy-tags/index"

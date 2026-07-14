@@ -1,5 +1,5 @@
 // pages/detail/detail.js
-const { Stock, Transaction, Dividend, PriceCache } = require("../../../utils/models/index");
+const { Stock, Transaction, PriceCache } = require("../../../utils/models/index");
 const { calculatePosition } = require("../../../utils/services/positionService");
 const { getStrategyStats } = require("../../../utils/services/statsService");
 const { fmt, fmtShortDate, fmtTime } = require("../../../utils/helpers/format");
@@ -15,25 +15,23 @@ Page({
 		entranceDone: false,
 		stock: null,
 		stockId: null,
-		stockName: "股票详情",
+		stockName: "资产详情",
+		emptyTitle: "加载中...",
 		marketLabel: "",
 		marketColor: "#64748B",
 		position: {
 			quantity: 0,
 			avgCost: 0,
 			realizedPnL: 0,
-			dividendIncome: 0,
 			currentPrice: null,
 			floatingPnL: 0,
 			totalPnL: 0,
 		},
 		transactions: [],
-		dividends: [],
 		strategySummary: [],
 		formatAvgCost: "0.00",
 		formatCurrentPrice: "--",
 		formatMarketValue: "0.00",
-		formatDividendIncome: "0.00",
 		showEditSheet: false,
 		floatingPnLClass: "loss",
 		floatingPnLText: "0.00",
@@ -43,7 +41,6 @@ Page({
 		totalPnLClass: "loss",
 		totalPnLText: "0.00",
 		disTransId: null,
-		disDivId: null,
 		editQuantity: "",
 		editAvgCost: "",
 		editCurrentPrice: "",
@@ -55,8 +52,12 @@ Page({
 	onLoad(options) {
 		pageMixin.onLoadMixin(this);
 
-		if (options?.stockId) {
-			this._stockId = parseInt(options.stockId, 10);
+		const raw = options?.stockId;
+		if (raw !== undefined && raw !== null && raw !== "") {
+			// 保留原始值（字符串或数字均可），getById 已做类型宽容匹配；
+			// 仅在 parseInt 得到 NaN 时才回退到原始字符串，避免数字 id 被转成 NaN 后查不到
+			const parsed = parseInt(raw, 10);
+			this._stockId = Number.isNaN(parsed) ? raw : parsed;
 			this.loadData();
 		}
 	},
@@ -75,7 +76,9 @@ Page({
 	onUnload() {
 		// C2 契约：per-id 删除定时器 Map，unload 时全部清理（bug #16）
 		if (this._deleteTimers) {
-			this._deleteTimers.forEach((timer) => clearTimeout(timer));
+			this._deleteTimers.forEach((timer) => {
+				clearTimeout(timer);
+			});
 			this._deleteTimers.clear();
 		}
 	},
@@ -90,68 +93,81 @@ Page({
 		const stock = Stock.getById(stockId);
 
 		if (!stock) {
-			this.setData({ stockId: stockId });
+			// 区分「入口未带 stockId」与「资产确实被删除/不存在」，避免误导
+			const missingParam = stockId === undefined || stockId === null || stockId === "";
+			this.setData({
+				stockId: stockId || null,
+				emptyTitle: missingParam ? "缺少资产参数" : "资产不存在或已删除",
+			});
 			this._dataLoaded = true;
-			wx.showToast({ title: "股票不存在或已删除", icon: "none" });
+			const allIds = Stock.getAll().map((s) => ({ id: s.id, t: typeof s.id, name: s.name }));
+			console.warn(
+				"[detail] 未找到资产 | 收到的 stockId =",
+				stockId,
+				"类型:",
+				typeof stockId,
+				"| 存储中现有 stocks:",
+				allIds,
+			);
+			if (missingParam) {
+				// 入口异常（如未带参数的深链/扫码），自动返回，避免卡在空屏
+				wx.showToast({ title: "缺少资产参数", icon: "none" });
+				setTimeout(() => {
+					try {
+						wx.navigateBack();
+					} catch (_e) {}
+				}, 800);
+			} else {
+				wx.showToast({ title: "资产不存在或已删除", icon: "none" });
+			}
 			return;
 		}
 		this._dataLoaded = true;
 
-		let position;
 		try {
-			position = calculatePosition(stock.id);
-		} catch (err) {
-			console.error("[detail] calculatePosition error:", err?.message);
-			wx.showToast({ title: "持仓计算失败", icon: "none" });
-			return;
-		}
-		const rawTransactions = Transaction.getByStockId(stock.id);
-		const transactions = rawTransactions.map(this._formatTransaction.bind(this));
-		const dividends = Dividend.getByStockId(stock.id).map(this._formatDividend.bind(this));
-		const strategySummary = getStrategyStats(rawTransactions);
-		strategySummary.forEach((item) => {
-			item.netPnLFormatted = fmt(Math.abs(item.netPnL));
-		});
+			const position = calculatePosition(stock.id);
+			const rawTransactions = Transaction.getByStockId(stock.id);
+			const transactions = rawTransactions.map(this._formatTransaction.bind(this));
+			const strategySummary = getStrategyStats(rawTransactions);
+			strategySummary.forEach((item) => {
+				item.netPnLFormatted = fmt(Math.abs(item.netPnL));
+			});
 
-		// Cache for reuse
-		this._rawTransactions = rawTransactions;
+			// Cache for reuse
+			this._rawTransactions = rawTransactions;
 
-		const marketValue =
-			position.currentPrice && position.quantity > 0
-				? position.currentPrice * position.quantity
-				: 0;
-		const totalPnL = position.realizedPnL + position.floatingPnL + position.dividendIncome;
+			const marketValue =
+				position.currentPrice && position.quantity > 0
+					? position.currentPrice * position.quantity
+					: 0;
+			const totalPnL = position.realizedPnL + position.floatingPnL;
 
-		const costBasis = position.avgCost * (position.quantity || 0);
-		const totalPnLPercent = costBasis > 0 ? (totalPnL / costBasis) * 100 : 0;
-		const transactionGroups = this._groupTransactionsByMonth(transactions);
-		transactionGroups.forEach((g, idx) => {
-			g.expanded = idx < 2;
-		});
+			const costBasis = position.avgCost * (position.quantity || 0);
+			const totalPnLPercent = costBasis > 0 ? (totalPnL / costBasis) * 100 : 0;
+			const transactionGroups = this._groupTransactionsByMonth(transactions);
+			transactionGroups.forEach((g, idx) => {
+				g.expanded = idx < 2;
+			});
 
-		try {
-			wx.setNavigationBarTitle({ title: stock.name || "股票详情" });
-		} catch (_e) {}
+			try {
+				wx.setNavigationBarTitle({ title: stock.name || "资产详情" });
+			} catch (_e) {}
 
-		try {
 			this.setData({
 				stock: stock,
 				stockId: stock.id,
-				stockName: stock.name || "股票详情",
+				stockName: stock.name || "资产详情",
+				emptyTitle: "资产不存在",
 				marketLabel: getMarketLabel(stock.market),
 				marketColor: getMarketColor(stock.market),
 				position: position,
 				transactions: transactions,
 				transactionGroups: transactionGroups,
-				dividends: dividends,
 				disTransId: null,
-				disDivId: null,
 				strategySummary: strategySummary,
 				formatAvgCost: fmt(position.avgCost),
 				formatCurrentPrice: position.currentPrice != null ? fmt(position.currentPrice) : "--",
 				formatMarketValue: fmt(marketValue),
-				formatDividendIncome:
-					(position.dividendIncome >= 0 ? "+" : "") + fmt(position.dividendIncome),
 				floatingPnLClass: position.floatingPnL >= 0 ? "profit" : "loss",
 				floatingPnLText:
 					(position.floatingPnL >= 0 ? "+" : "") + fmt(Math.abs(position.floatingPnL)),
@@ -165,8 +181,10 @@ Page({
 				heroBgClass: totalPnL > 0 ? "hero-profit" : totalPnL < 0 ? "hero-loss" : "hero-flat",
 			});
 		} catch (err) {
-			console.error("[detail] setData error:", err?.message);
-			wx.showToast({ title: "渲染失败", icon: "none" });
+			// 资产存在但数据处理/渲染失败：给出准确提示，而非误导性的「资产不存在」
+			console.error("[detail] loadData 处理失败:", err?.message, err?.stack);
+			this.setData({ emptyTitle: "加载失败，请重试" });
+			wx.showToast({ title: "加载失败，请重试", icon: "none" });
 		}
 	},
 
@@ -179,10 +197,9 @@ Page({
 			stockId: transaction.stockId,
 			type: transaction.type,
 			typeClass: typeClass,
-			typeText: transaction.type === "BUY" ? "买入" : "卖出",
+			typeText: transaction.type === "BUY" ? "转入" : "转出",
 			price: transaction.price,
 			quantity: transaction.quantity,
-			fee: transaction.fee,
 			date: transaction.date,
 			note: transaction.note,
 			reason: reason,
@@ -191,24 +208,8 @@ Page({
 			dateText: fmtShortDate(transaction.date),
 			timeText: fmtTime(transaction.date),
 			priceText: fmt(transaction.price),
-			feeText: fmt(transaction.fee),
 			amountText:
 				(transaction.type === "BUY" ? "-" : "+") + fmt(transaction.price * transaction.quantity),
-		};
-	},
-
-	_formatDividend(dividend) {
-		return {
-			id: dividend.id,
-			stockId: dividend.stockId,
-			perShareAmount: dividend.perShareAmount,
-			quantity: dividend.quantity,
-			totalAmount: dividend.totalAmount,
-			date: dividend.date,
-			note: dividend.note,
-			dateText: fmtShortDate(dividend.date),
-			perShareText: fmt(dividend.perShareAmount),
-			totalText: fmt(dividend.totalAmount),
 		};
 	},
 
@@ -262,13 +263,6 @@ Page({
 		});
 	},
 
-	goToDividend() {
-		const stockId = this.data.stockId || this._stockId;
-		wx.navigateTo({
-			url: `/packageDetail/pages/dividend/dividend?stockId=${stockId}`,
-		});
-	},
-
 	toggleTransactionGroup(e) {
 		const key = e.currentTarget.dataset.key;
 		const groups = this.data.transactionGroups.map((g) => {
@@ -290,7 +284,7 @@ Page({
 					wx.navigateTo({ url: `/packageRecord/pages/record/record?id=${id}` });
 				} else if (res.tapIndex === 1) {
 					confirmDelete({
-						content: "确定要删除这笔交易记录吗？",
+						content: "确定要删除这笔资产记录吗？",
 						onConfirm: () => {
 							this.setData({ disTransId: Number(id) });
 							if (!this._deleteTimers) this._deleteTimers = new Map();
@@ -301,39 +295,6 @@ Page({
 								setTimeout(() => {
 									this._deleteTimers.delete(key);
 									Transaction.delete(id);
-									this.loadData();
-								}, 400),
-							);
-						},
-					});
-				}
-			},
-		});
-	},
-
-	showDividendActions(e) {
-		const id = Number(e.currentTarget.dataset.id);
-
-		wx.showActionSheet({
-			itemList: ["编辑", "删除"],
-			success: (res) => {
-				if (res.tapIndex === 0) {
-					wx.navigateTo({
-						url: `/packageDetail/pages/dividend/dividend?id=${id}`,
-					});
-				} else if (res.tapIndex === 1) {
-					confirmDelete({
-						content: "确定要删除这笔分红记录吗？",
-						onConfirm: () => {
-							this.setData({ disDivId: Number(id) });
-							if (!this._deleteTimers) this._deleteTimers = new Map();
-							const key = `d:${id}`;
-							if (this._deleteTimers.has(key)) clearTimeout(this._deleteTimers.get(key));
-							this._deleteTimers.set(
-								key,
-								setTimeout(() => {
-									this._deleteTimers.delete(key);
-									Dividend.delete(id);
 									this.loadData();
 								}, 400),
 							);
@@ -379,7 +340,7 @@ Page({
 
 		const quantityStr = this.data.editQuantity.trim();
 		if (!/^\d+$/.test(quantityStr) || parseInt(quantityStr, 10) <= 0) {
-			toast("请输入有效持仓数量");
+			toast("请输入有效持有数量");
 			return;
 		}
 		const quantity = parseInt(quantityStr, 10);
@@ -402,7 +363,7 @@ Page({
 			if (currentPrice > 0) {
 				PriceCache.set(stockId, currentPrice);
 			}
-			toast("持仓已是最新的");
+			toast("持有已是最新的");
 			this.setData({ showEditSheet: false });
 			if (currentPrice > 0) {
 				this.loadData();
@@ -420,8 +381,8 @@ Page({
 						quantityDiff,
 						0,
 						new Date().toISOString(),
-						"持仓调整",
-						"手动调整持仓",
+						"持有调整",
+						"手动调整持有",
 						[],
 					);
 					Transaction.save(syntheticBuy);
@@ -433,8 +394,8 @@ Page({
 						Math.abs(quantityDiff),
 						0,
 						new Date().toISOString(),
-						"持仓调整",
-						"手动调整持仓",
+						"持有调整",
+						"手动调整持有",
 						[],
 					);
 					Transaction.save(syntheticSell);
@@ -476,7 +437,7 @@ Page({
 			PriceCache.set(stockId, currentPrice);
 		}
 
-		fbSuccess("持仓已更新");
+		fbSuccess("持有已更新");
 		this.setData({ showEditSheet: false });
 		this.loadData();
 	},

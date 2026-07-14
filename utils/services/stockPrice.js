@@ -1,6 +1,6 @@
 /**
- * 股票行情获取工具
- * 使用腾讯财经 API（支持 HTTPS）
+ * 价格行情获取工具
+ * 使用公开价格数据接口（支持 HTTPS）
  */
 
 const { request } = require("../../api/request");
@@ -43,7 +43,7 @@ function decodeGBK(arrayBuffer) {
 	return chars.join("");
 }
 
-// A股代码前缀映射
+// 境内代码前缀映射
 function getAsharePrefix(code) {
 	const codeNum = parseInt(code, 10);
 	if (codeNum >= 600000 && codeNum < 700000) return "sh"; // 上海主板 + 科创板（600xxx-688xxx）
@@ -122,7 +122,7 @@ function parseTencentData(data) {
 }
 
 // 解析批量查询响应（多条 v_xxYY="..." 数据）
-// 腾讯美股 API 会在代码后附加交易所后缀（如 AAPL.OQ, BRK.B.N），需要剥离
+// 海外市场价格接口会在代码后附加交易所后缀（如 AAPL.OQ, BRK.B.N），需要剥离
 function parseBatchData(responseText) {
 	log("[parseBatchData] 原始响应:", responseText.substring(0, 300));
 	const results = {};
@@ -134,7 +134,7 @@ function parseBatchData(responseText) {
 		const fields = match[2].split("~");
 		if (fields.length >= 35) {
 			let code = fields[2];
-			// 剥离美股交易所后缀（.OQ / .N / .A / .P 等）
+			// 剥离海外交易所后缀（.OQ / .N / .A / .P 等）
 			code = code.replace(/\.[A-Z]+$/i, "");
 			let batchPrice = parseFloat(fields[3]) || 0;
 			// 现价为 0 时兜底用昨收价（非交易日/停牌场景）
@@ -199,7 +199,7 @@ function _withRetry(fn, maxRetries = MAX_RETRIES) {
 	};
 }
 
-// 获取单个股票行情
+// 获取单个资产价格
 function fetchStockPrice(market, code) {
 	return _executeWithThrottle(
 		_withRetry(
@@ -278,7 +278,7 @@ function fetchPriceBatch(stocks) {
 	});
 }
 
-// 批量获取股票行情，按固定数量分片，避免 URL 过长导致整批失败
+// 批量获取资产价格，按固定数量分片，避免 URL 过长导致整批失败
 function fetchAllPrices(stocks) {
 	if (!stocks || stocks.length === 0) return Promise.resolve([]);
 

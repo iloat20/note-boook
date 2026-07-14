@@ -13,6 +13,17 @@ No CLI build tooling. Open the project root in **WeChat DevTools** to build, pre
 - `project.config.json` — appid, base library version, compiler settings
 - `project.private.config.json` — local dev overrides (ES6 transpile, PostCSS, minification)
 
+### Commands
+
+```bash
+npm test                 # run Jest unit tests (jest.config.js)
+npm run test:watch       # watch mode
+npx biome check pages/ utils/ components/ packageDetail/ packageRecord/   # lint + format check
+npx biome check --write --unsafe pages/ utils/ ...                        # auto-fix
+```
+
+The project uses **Biome** (not ESLint/Prettier) — `biome.json` configures tab indent, 100-col width, double quotes, and `recommended` rules. Biome's editor assist auto-organizes imports on save.
+
 ## Architecture
 
 ### Pages
@@ -96,7 +107,12 @@ Lightweight custom store pattern:
 #### Cache (`utils/cache/`)
 
 - `lruCache.js` — LRU cache implementation
-- `cacheManager.js` — manages 4 cache instances: `position` (100), `heatmap` (50), `periodStats` (50), `mem` (50). Supports `markDataDirty(types, stockId?)` with per-stock granularity for position cache.
+- `cacheManager.js` — manages 4 LRU caches: `position` (100), `heatmap` (50), `periodStats` (50), `mem` (50). Supports `markDataDirty(types, stockId?)` with per-stock granularity for position cache.
+- `computedCache.js` — disk-backed, version-bumped cache for expensive computations. Entries auto-invalidate via `bumpVersion()` whenever `markDataDirty()` fires on a data write, so callers never manage TTLs by hand. Persists across page reloads.
+
+#### Indices & Time-Series
+
+- `utils/models/dateIndex.js` + `transactionIndex.js` — pre-index transactions/dividends into time buckets. Range queries locate the start/end buckets in O(1) instead of scanning all records. Time-range filtering (month/year/period) goes through these, not a linear scan.
 
 #### Constants (`utils/constants/`)
 
@@ -184,54 +200,37 @@ The `ec-canvas` component uses Canvas 2D (`type="2d"`) by default. The echarts.j
 | `empty-state/` | Empty state placeholder |
 | `liquid-slider/` | Liquid animation slider |
 | `market-tag/` | Market type label (A/HK/US) |
-| `quick-record/` | Quick transaction entry |
-| `section-header/` | Section header with title |
+| `quick-record/` | Quick transaction entry (floating quick-entry layer) |
 | `strategy-tags/` | Trading strategy tag selector |
+
+Note: do not reference a `components/section-header/` — it has been removed.
 
 ### API Layer (`api/`)
 
-- `request.js` — unified request wrapper with Token management, retry, error handling
-- `interceptors/` — `authInterceptor`, `cacheInterceptor`, `errorInterceptor`, with `initInterceptors()` entry point
-- **Note**: Currently a placeholder pointing at `api.example.com` — not connected to any real backend
+- `request.js` — unified request wrapper with retry, error handling, response parsing
+- **Note**: No `interceptors/` directory exists (a previous design-doc mentioned `authInterceptor`/`cacheInterceptor`/`errorInterceptor`, but they were never implemented). Currently a placeholder pointing at `api.example.com` — not connected to any real backend. Live prices come directly from the Tencent Finance API (`qt.gtimg.cn`) via `utils/services/stockPrice.js`, not this layer.
 
 ### Tests (`tests/`)
 
-Jest-based unit tests (run via `npm test`):
+Jest-based unit tests (run via `npm test`, watch via `npm run test:watch`):
 - `memory.test.js` — storage/memory tests
 - `portfolio.test.js` — portfolio calculation tests
 - `stockPrice.test.js` — price parsing tests
+- `feeCalculator.test.js`, `xirr.test.js`, `format.test.js` — core financial functions
+- `dateRange.test.js`, `dateIndex.test.js`, `transactionIndex.test.js` — date indexing
+- `computedCache.test.js`, `statsCache.test.js` — computation caching
+- `detailFlow.test.js`, `searchHistory.test.js`, `storageFreeze.test.js` — flows & edge cases
 
-Coverage is limited. New features should include corresponding tests.
+Coverage is limited but growing. New features should include corresponding tests.
 
 ## Important Caveats
 
-- Import models from `utils/models/` (e.g., `require('../../utils/models/index')`)
-- Import services from `utils/services/` for higher-level operations
-- Import helpers from `utils/helpers/` for pure functions
-- Import config from `utils/constants/config.js` — never use `process.env` directly
-- Import error types from `utils/errors.js` for semantic error handling
-- `request.js` is a placeholder pointing at `api.example.com` — not connected to any real backend
-- Tests exist in `tests/` but coverage is limited
-- Annual report component uses CSS-based charts for better cross-platform compatibility
-- XIRR calculation uses Newton-Raphson with bisection fallback — handles extreme rates and oscillation
+- Import models from `utils/models/` (e.g., `require('../../utils/models/index')`); services from `utils/services/`; helpers from `utils/helpers/`.
+- Import config from `utils/constants/config.js` — never use `process.env` directly.
+- Import error types from `utils/errors.js` for semantic error handling (not raw strings).
+- Annual report uses CSS-based charts (not Canvas) for cross-platform compatibility.
+- XIRR uses Newton-Raphson with bisection fallback — handles extreme rates and oscillation. Don't "simplify" it.
 
-## Available Skills
+## GitHub Automation
 
-The following skills are available for use via `/skill-name`:
-
-| Skill | Purpose |
-|-------|---------|
-| `frontend-design` | Create distinctive, production-grade frontend interfaces |
-| `superpowers:brainstorming` | Explore requirements before creative/feature work |
-| `superpowers:dispatching-parallel-agents` | Run independent tasks in parallel |
-| `superpowers:executing-plans` | Execute multi-step implementation plans |
-| `superpowers:receiving-code-review` | Process code review feedback with rigor |
-| `superpowers:requesting-code-review` | Verify work before merging |
-| `superpowers:finishing-a-development-branch` | Guide completion and integration of dev work |
-| `superpowers:subagent-driven-development` | Execute independent tasks in current session |
-| `superpowers:systematic-debugging` | Debug bugs/test failures before proposing fixes |
-| `superpowers:verification-before-completion` | Verify work before claiming completion |
-| `superpowers:writing-skills` | Create/edit/verify skills |
-| `superpowers:writing-plans` | Plan multi-step tasks before coding |
-| `superpowers:using-git-worktrees` | Create isolated worktrees for feature work |
-| `superpowers:test-driven-development` | TDD before implementation |
+`.github/workflows/claude.yml` triggers on PRs (auto-review), issue/PR comments that `@claude`, using the `anthropics/claude-code-action`. The `allowed_tools` gate only permits `npm test` and `npx jest` — never extend it to arbitrary bash. A separate `pr-automation.yml` handles PR housekeeping.

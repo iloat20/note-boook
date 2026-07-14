@@ -1,3 +1,5 @@
+const { showShareActions } = require("../../utils/render/shareHelper");
+
 Component({
 	properties: {
 		data: {
@@ -23,72 +25,47 @@ Component({
 			this.triggerEvent("close");
 		},
 
-		onExportImage: function () {
+		// 生成报告图片 → 弹出「保存到相册 / 转发给朋友」
+		onShare: function () {
 			if (this.data.exporting) return;
 			this.setData({ exporting: true });
-			const that = this;
 			const query = wx.createSelectorQuery().in(this);
 			query.select("#arCanvas")
 				.fields({ node: true, size: true })
-				.exec(function (res) {
-					if (!res || !res[0] || !res[0].node) {
-						that.setData({ exporting: false });
-						wx.showToast({ title: "导出失败", icon: "none" });
+				.exec((res) => {
+					if (!res?.[0]?.node) {
+						this.setData({ exporting: false });
+						wx.showToast({ title: "生成失败", icon: "none" });
 						return;
 					}
 					const canvas = res[0].node;
 					const ctx = canvas.getContext("2d");
 					let dpr = 2;
 					try {
-						if (wx.getWindowInfo && wx.getWindowInfo().pixelRatio) {
+						if (wx.getWindowInfo?.().pixelRatio) {
 							dpr = wx.getWindowInfo().pixelRatio;
-						} else if (wx.getSystemInfoSync && wx.getSystemInfoSync().pixelRatio) {
+						} else if (wx.getSystemInfoSync?.().pixelRatio) {
 							dpr = wx.getSystemInfoSync().pixelRatio;
 						}
-					} catch (e) { /* keep dpr=2 */ }
+					} catch { /* keep dpr=2 */ }
 					const W = 750;
 					const H = 1600;
 					canvas.width = W * dpr;
 					canvas.height = H * dpr;
 					ctx.scale(dpr, dpr);
-					that._drawReport(ctx, W, H);
+					this._drawReport(ctx, W, H);
 					wx.canvasToTempFilePath({
 						canvas: canvas,
-						success: function (tmp) {
-							that._saveToAlbum(tmp.tempFilePath);
+						success: (tmp) => {
+							this.setData({ exporting: false });
+							showShareActions(tmp.tempFilePath);
 						},
-						fail: function () {
-							that.setData({ exporting: false });
+						fail: () => {
+							this.setData({ exporting: false });
 							wx.showToast({ title: "生成失败", icon: "none" });
 						},
 					});
 				});
-		},
-
-		_saveToAlbum: function (filePath) {
-			const that = this;
-			wx.saveImageToPhotosAlbum({
-				filePath: filePath,
-				success: function () {
-					that.setData({ exporting: false });
-					wx.showToast({ title: "已保存到相册", icon: "success" });
-				},
-				fail: function (err) {
-					that.setData({ exporting: false });
-					if (err && err.errMsg && err.errMsg.indexOf("auth deny") >= 0) {
-						wx.showModal({
-							title: "需要相册权限",
-							content: "请在设置中允许保存到相册",
-							confirmText: "去设置",
-							success: function (m) {
-								if (m.confirm) wx.openSetting();
-							},
-						});
-					} else {
-						wx.showToast({ title: "保存失败", icon: "none" });
-					}
-				},
-			});
 		},
 
 	_drawReport: function (ctx, W, H) {
@@ -103,7 +80,10 @@ Component({
 			profit: "#FF0000",   // --xhs-profit
 			loss: "#00AA00",     // --xhs-loss
 			in: "#007AFF",       // --xhs-secondary
+			barIn: "#FF3B30",    // 品牌红（流入条/价值强调，与屏幕一致）
 			out: "#E5E5EA",      // --xhs-bg-tertiary
+			profitBg: "rgba(255,0,0,0.08)",
+			lossBg: "rgba(0,170,0,0.08)",
 		};
 
 		ctx.fillStyle = C.bg;
@@ -113,7 +93,7 @@ Component({
 		const cardW = W - 80;
 		const cardR = 16;
 		let y = 48;
-		const newCard = function (h) {
+		const newCard = (h) => {
 			ctx.fillStyle = C.surface;
 			roundRect(ctx, cardX, y, cardW, h, cardR);
 			ctx.fill();
@@ -121,29 +101,24 @@ Component({
 		};
 		const sign = d.netChange >= 0 ? C.profit : C.loss;
 
-		// ── Hero：白底巨号年份 + 净变化红绿大数字 ──
-		let cy = newCard(320);
-		let iy = cy + 72;
+		// ── Hero：品牌红橙渐变横幅（年份标题） ──
+		const HERO_H = 280;
+		const grad = ctx.createLinearGradient(0, 0, W, HERO_H);
+		grad.addColorStop(0, "#FF3B30");
+		grad.addColorStop(1, "#FF6B61");
+		ctx.fillStyle = grad;
+		ctx.fillRect(0, 0, W, HERO_H);
 		ctx.textAlign = "center";
-		ctx.fillStyle = C.title;
-		ctx.font = "bold 72px sans-serif";
-		ctx.fillText(String(d.year), W / 2, iy);
-		iy += 56;
-		ctx.fillStyle = C.caption;
+		ctx.fillStyle = "rgba(255,255,255,0.85)";
 		ctx.font = "28px sans-serif";
-		ctx.fillText("年度资产复盘", W / 2, iy);
-		iy += 92;
-		ctx.fillStyle = sign;
-		ctx.font = "bold 72px sans-serif";
-		ctx.fillText("¥" + (d.netChangeSign || "") + (d.netChangeText || ""), W / 2, iy);
-		iy += 56;
-		ctx.fillStyle = C.caption;
-		ctx.font = "26px sans-serif";
-		ctx.fillText(d.conclusion || "", W / 2, iy);
+		ctx.fillText(`${d.year} 年度资产复盘`, W / 2, 80);
+		ctx.fillStyle = "#FFFFFF";
+		ctx.font = "bold 84px sans-serif";
+		ctx.fillText(String(d.year), W / 2, 180);
 
 		// ── 年度资产总览：对比条 + 四宫格 ──
-		y += 320 + 24;
-		cy = newCard(470);
+		y = HERO_H + 24;
+		let cy = newCard(470);
 		const tx = cardX + 32;
 		let iy2 = cy + 56;
 		ctx.textAlign = "left";
@@ -152,7 +127,7 @@ Component({
 		ctx.fillText("年度资产总览", tx, iy2);
 
 		// 流入/流出对比条
-		const drawBar = function (label, pct, amount, isIn) {
+		const drawBar = (label, pct, amount, isIn) => {
 			iy2 += 44;
 			ctx.fillStyle = C.caption;
 			ctx.font = "24px sans-serif";
@@ -165,34 +140,34 @@ Component({
 			ctx.fill();
 			const fw = Math.max(0, Math.round((Math.min(100, Math.max(0, pct)) / 100) * trackW));
 			if (fw > 0) {
-				ctx.fillStyle = isIn ? C.in : C.out;
+				ctx.fillStyle = isIn ? C.barIn : C.out;
 				roundRect(ctx, trackX, trackY, fw, 16, 8);
 				ctx.fill();
 			}
 			ctx.textAlign = "right";
-			ctx.fillStyle = isIn ? C.in : C.title;
+			ctx.fillStyle = isIn ? C.barIn : C.title;
 			ctx.font = "bold 24px sans-serif";
-			ctx.fillText("¥" + amount, cardX + cardW - 32, iy2);
+			ctx.fillText(`¥${amount}`, cardX + cardW - 32, iy2);
 			ctx.textAlign = "left";
 		};
 		drawBar("流入", d.inflowPct || 0, d.inflowText || "", true);
 		drawBar("流出", d.outflowPct || 0, d.outflowText || "", false);
 		iy2 += 56;
 
-		// 2×2 四宫格（浅灰内卡）
+		// 2×2 四宫格（浅灰内卡，净变化项按语义色高亮）
 		const gap = 16;
 		const gw = (cardW - 64 - gap) / 2;
 		const gh = 110;
 		const items = [
-			{ label: "年度流入", value: "¥" + (d.inflowText || ""), color: C.title },
-			{ label: "年度流出", value: "¥" + (d.outflowText || ""), color: C.title },
-			{ label: "年度净变化", value: "¥" + (d.netChangeSign || "") + (d.netChangeText || ""), color: sign },
-			{ label: "期末资产", value: "¥" + (d.endingAssetText || ""), color: C.title },
+			{ label: "年度流入", value: `¥${d.inflowText || ""}`, color: C.title, bg: C.sub },
+			{ label: "年度流出", value: `¥${d.outflowText || ""}`, color: C.title, bg: C.sub },
+			{ label: "年度净变化", value: `¥${d.netChangeSign || ""}${d.netChangeText || ""}`, color: sign, bg: sign === C.profit ? C.profitBg : C.lossBg },
+			{ label: "期末资产", value: `¥${d.endingAssetText || ""}`, color: C.title, bg: C.sub },
 		];
-		items.forEach(function (it, i) {
+		items.forEach((it, i) => {
 			const cx = tx + (i % 2) * (gw + gap);
 			const ccy = iy2 + Math.floor(i / 2) * (gh + gap);
-			ctx.fillStyle = C.sub;
+			ctx.fillStyle = it.bg;
 			roundRect(ctx, cx, ccy, gw, gh, 12);
 			ctx.fill();
 			ctx.textAlign = "left";
@@ -206,7 +181,7 @@ Component({
 
 		// ── 资产持有画像 ──
 		const p = d.holdingPortrait || {};
-		if (p && p.longest) {
+		if (p?.longest) {
 			y += 470 + 24;
 			cy = newCard(230);
 			let py = cy + 56;
@@ -216,12 +191,12 @@ Component({
 			ctx.fillText("资产持有画像", tx, py);
 			py += 36;
 			const pitems = [
-				{ label: "在册最久", name: (p.longest && p.longest.name) || "-", val: (p.longest && (p.longest.days + "天")) || "-" },
-				{ label: "在册最短", name: (p.shortest && p.shortest.name) || "-", val: (p.shortest && (p.shortest.days + "天")) || "-" },
-				{ label: "变动最多", name: (p.mostActive && p.mostActive.name) || "-", val: (p.mostActive && (p.mostActive.count + "笔")) || "-" },
+				{ label: "在册最久", name: (p.longest?.name) || "-", val: (p.longest && (`${p.longest.days}天`)) || "-" },
+				{ label: "在册最短", name: (p.shortest?.name) || "-", val: (p.shortest && (`${p.shortest.days}天`)) || "-" },
+				{ label: "变动最多", name: (p.mostActive?.name) || "-", val: (p.mostActive && (`${p.mostActive.count}笔`)) || "-" },
 			];
 			const pw = (cardW - 64 - 24) / 3;
-			pitems.forEach(function (it, i) {
+			pitems.forEach((it, i) => {
 				const cx = tx + i * (pw + 12);
 				ctx.fillStyle = C.sub;
 				roundRect(ctx, cx, py, pw, 130, 12);
@@ -230,7 +205,7 @@ Component({
 				ctx.fillStyle = C.title;
 				ctx.font = "24px sans-serif";
 				ctx.fillText(it.name, cx + pw / 2, py + 54);
-				ctx.fillStyle = C.in;
+				ctx.fillStyle = C.barIn;
 				ctx.font = "bold 28px sans-serif";
 				ctx.fillText(it.val, cx + pw / 2, py + 90);
 				ctx.fillStyle = C.caption;
@@ -243,7 +218,7 @@ Component({
 		ctx.fillStyle = C.caption;
 		ctx.font = "22px sans-serif";
 		ctx.textAlign = "center";
-		ctx.fillText("茄子笔记本 · " + d.year + " 年度资产复盘", W / 2, H - 48);
+		ctx.fillText(`茄子笔记本 · ${d.year} 年度资产复盘`, W / 2, H - 48);
 	},
 	},
 });

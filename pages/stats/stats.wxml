@@ -70,6 +70,21 @@
         </view>
       </view>
 
+      <!-- 记录天数 -->
+      <view class="xhs-feed-card">
+        <view class="xhs-feed-card-inner">
+          <view class="xhs-feed-card-cover cover-days">
+            <text class="xhs-feed-card-emoji">🗓️</text>
+          </view>
+          <view class="xhs-feed-card-body">
+            <text class="xhs-feed-card-value">
+              {{stats.recordDays}}
+            </text>
+            <text class="xhs-feed-card-label">记录天数</text>
+          </view>
+        </view>
+      </view>
+
     </view>
 
     <!-- 完整资产明细 (小红书长笔记风格) -->
@@ -81,7 +96,7 @@
         </view>
       </view>
       <view class="xhs-feed-card-full-body">
-        <view wx:if="{{completeTrades.length > 0}}" class="detail-list">
+        <view wx:if="{{completeTrades.length > 0}}" class="detail-list detail-list--plain">
           <view wx:for="{{completeTrades}}" wx:key="id" class="detail-item">
             <view class="detail-row-single">
               <view class="detail-info">
@@ -131,19 +146,6 @@
           </view>
         </view>
         <view wx:else class="detail-empty">暂无已结束资产</view>
-      </view>
-    </view>
-
-    <!-- 综合明细 -->
-    <view class="xhs-feed-card-full">
-      <view class="xhs-feed-card-full-header">
-        <text class="xhs-feed-card-full-title">📋 综合明细</text>
-      </view>
-      <view class="xhs-feed-card-full-body">
-        <view wx:for="{{detailItems}}" wx:key="label" class="detail-row">
-          <text class="detail-row-label">{{item.label}}</text>
-          <text class="detail-row-value {{item.colorClass}}">{{item.prefix}}{{item.value}}</text>
-        </view>
       </view>
     </view>
 

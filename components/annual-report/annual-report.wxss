@@ -4,34 +4,23 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(20, 20, 22, 0.38);
+  display: flex;
+  flex-direction: column;
+  background-color: var(--xhs-bg);
   z-index: 9999;
 }
 
-.ar-scroll {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: var(--xhs-bg);
-  padding-bottom: 40px;
-}
-
-.ar-scroll-spacer {
-  width: 100%;
-  background: transparent;
-}
-
+/* === 固定毛玻璃顶栏（滚动内容被遮住，不穿帮） === */
 .ar-top-bar {
-  position: fixed;
-  left: 0;
-  right: 0;
-  padding: 12px 16px 0;
+  flex-shrink: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  z-index: 100;
+  padding: 12px 16px;
+  background: rgba(250, 250, 252, 0.82);
+  -webkit-backdrop-filter: blur(20rpx) saturate(160%);
+  backdrop-filter: blur(20rpx) saturate(160%);
+  border-bottom: 1rpx solid var(--xhs-divider);
 }
 
 .ar-close {
@@ -48,81 +37,68 @@
   font-size: 20px;
 }
 
+/* === 滚动区：flex 稳定布局（stats 页同款） === */
+.ar-scroll {
+  flex: 1;
+  height: 0;
+  min-height: 0;
+  background-color: var(--xhs-bg);
+}
+
 /* === 统一白卡 === */
 .ar-card {
   background-color: var(--xhs-surface);
   border: 1px solid var(--xhs-divider);
-  border-radius: var(--xhs-radius-md);
+  border-radius: var(--xhs-radius-lg);
   box-shadow: var(--xhs-elevation-2);
-  margin: 16rpx 20rpx;
-  padding: 32rpx 24rpx;
+  margin: 24rpx 20rpx;
+  padding: 32rpx 28rpx;
 }
 
-/* === Hero 白底巨号年份 === */
+/* === Hero 品牌渐变头（仅年份标题） === */
 .ar-hero {
+  background: linear-gradient(135deg, #FF3B30 0%, #FF6B61 100%);
+  color: #ffffff;
+  padding: 48rpx 32rpx 52rpx;
   text-align: center;
 }
 
-.ar-year {
-  font-size: 44rpx;
-  font-weight: var(--xhs-weight-bold);
-  color: var(--xhs-title);
+.ar-hero-label {
+  display: block;
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.85);
   letter-spacing: 0.04em;
+  margin-bottom: 12rpx;
+}
+
+.ar-hero-year {
   display: block;
-  margin-bottom: 8rpx;
-}
-
-.ar-title {
-  font-size: 26rpx;
-  color: var(--xhs-caption);
-  display: block;
-}
-
-.ar-hero-pnl {
-  margin: 28rpx 0 12rpx;
-  display: flex;
-  align-items: baseline;
-  justify-content: center;
-}
-
-.ar-hero-sign {
-  font-size: 40rpx;
-  font-weight: var(--xhs-weight-bold);
-}
-
-.ar-hero-value {
   font-size: 72rpx;
   font-weight: var(--xhs-weight-bold);
-  line-height: 1;
-  letter-spacing: -0.01em;
-}
-
-.ar-hero-conclusion {
-  margin-top: 12rpx;
-  font-size: 26rpx;
-  color: var(--xhs-caption);
-  display: block;
+  color: #ffffff;
+  letter-spacing: 0.02em;
+  line-height: 1.1;
 }
 
 /* === 区块标题 === */
 .ar-section-title {
-  font-size: 28rpx;
+  font-size: 30rpx;
   font-weight: var(--xhs-weight-semibold);
   color: var(--xhs-title);
-  margin-bottom: 20rpx;
+  margin-bottom: 24rpx;
   display: block;
 }
 
 /* === 流入/流出对比条 === */
 .ar-bar-wrap {
-  margin-bottom: 28rpx;
+  margin-bottom: 32rpx;
 }
 
 .ar-bar-row {
   display: flex;
   align-items: center;
   gap: 16rpx;
-  margin-bottom: 16rpx;
+  margin-bottom: 18rpx;
 }
 
 .ar-bar-row:last-child {
@@ -138,7 +114,7 @@
 
 .ar-bar-track {
   flex: 1;
-  height: 16rpx;
+  height: 18rpx;
   background-color: var(--xhs-bg-secondary);
   border-radius: var(--xhs-radius-pill);
   overflow: hidden;
@@ -151,7 +127,7 @@
 }
 
 .ar-bar-in {
-  background-color: var(--xhs-secondary);
+  background: linear-gradient(90deg, #FF6B61, #FF3B30);
 }
 
 .ar-bar-out {
@@ -160,13 +136,13 @@
 
 .ar-bar-amount {
   flex-shrink: 0;
-  font-size: 24rpx;
+  font-size: 26rpx;
   font-weight: var(--xhs-weight-semibold);
   color: var(--xhs-title);
 }
 
 .ar-bar-amount-in {
-  color: var(--xhs-secondary);
+  color: var(--xhs-primary);
 }
 
 /* === 2×2 四宫格 === */
@@ -179,15 +155,27 @@
 .ar-grid-item {
   flex: 0 0 calc(50% - 8rpx);
   background: var(--xhs-bg-secondary);
-  border-radius: var(--xhs-radius-sm);
-  padding: 24rpx;
+  border-radius: var(--xhs-radius-md);
+  padding: 28rpx 24rpx;
   display: flex;
   flex-direction: column;
-  gap: 8rpx;
+  gap: 10rpx;
+}
+
+.ar-grid-accent {
+  background: var(--xhs-primary-bg);
+}
+
+.ar-grid-accent-profit {
+  background: var(--xhs-profit-bg);
+}
+
+.ar-grid-accent-loss {
+  background: var(--xhs-loss-bg);
 }
 
 .ar-grid-value {
-  font-size: 34rpx;
+  font-size: 36rpx;
   font-weight: var(--xhs-weight-semibold);
   color: var(--xhs-title);
 }
@@ -209,18 +197,18 @@
 /* === 资产持有画像 === */
 .ar-portrait {
   display: flex;
-  gap: 12rpx;
+  gap: 14rpx;
 }
 
 .ar-portrait-item {
   flex: 1;
   background: var(--xhs-bg-secondary);
-  border-radius: var(--xhs-radius-sm);
-  padding: 20rpx 12rpx;
+  border-radius: var(--xhs-radius-md);
+  padding: 24rpx 12rpx;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6rpx;
+  gap: 8rpx;
 }
 
 .ar-portrait-name {
@@ -236,9 +224,9 @@
 }
 
 .ar-portrait-value {
-  font-size: 30rpx;
+  font-size: 32rpx;
   font-weight: var(--xhs-weight-semibold);
-  color: var(--xhs-secondary);
+  color: var(--xhs-primary);
 }
 
 .ar-portrait-label {
@@ -249,32 +237,27 @@
 /* === 页脚 === */
 .ar-footer {
   text-align: center;
-  padding: 20px;
+  padding: 24rpx 20rpx 8rpx;
 }
 
 .ar-footer-text {
   color: var(--xhs-caption-light);
-  font-size: 12px;
+  font-size: 22rpx;
 }
 
-/* === 顶部导出按钮（浅色 pill） === */
-.ar-export-btn {
+/* === 顶部分享按钮（浅色 pill） === */
+.ar-share-btn {
   background: var(--xhs-glass-bg);
   border: 1px solid var(--xhs-glass-border);
   box-shadow: var(--xhs-elevation-2);
   color: var(--xhs-title);
-  padding: 6px 14px;
+  padding: 6px 18px;
   border-radius: var(--xhs-radius-pill);
   display: flex;
   align-items: center;
 }
 
-.ar-export-icon {
-  margin-right: 6px;
-  font-size: 16px;
-}
-
-.ar-export-text {
+.ar-share-text {
   font-size: 14px;
   font-weight: 500;
 }

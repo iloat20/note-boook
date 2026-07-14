@@ -5,7 +5,7 @@ Component({
 		list: [
 			{
 				pagePath: "/pages/index/index",
-				text: "持仓",
+				text: "资产",
 				iconPath: "/images/tab-portfolio.svg",
 				selectedIconPath: "/images/tab-portfolio-active.svg",
 			},

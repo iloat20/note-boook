@@ -1,16 +1,15 @@
 <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- 持仓图标 - 上升趋势折线 + 圆点 -->
+  <!-- 资产页标题图标 - 淡金色 iOS 线性图标 · 圆环饼图 -->
   <defs>
-    <linearGradient id="pg" x1="0" y1="1" x2="0" y2="0">
-      <stop offset="0%" stop-color="#FF3B30" stop-opacity="0"/>
-      <stop offset="100%" stop-color="#FF3B30" stop-opacity="0.15"/>
+    <linearGradient id="goldStroke" x1="6" y1="6" x2="42" y2="42" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#E8CE8A"/>
+      <stop offset="100%" stop-color="#C2A04E"/>
     </linearGradient>
   </defs>
-  <rect x="8" y="8" width="32" height="32" rx="8" fill="#F8F8FA"/>
-  <path d="M14 34L14 28L20 22L26 26L32 16L36 14" fill="none" stroke="url(#pg)" stroke-width="0"/>
-  <path d="M14 34L14 28L20 22L26 26L32 16L36 14V34Z" fill="url(#pg)"/>
-  <path d="M14 28L20 22L26 26L32 16L36 14" stroke="#FF3B30" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="36" cy="14" r="3" fill="#FF3B30"/>
-  <circle cx="36" cy="14" r="1.2" fill="white"/>
-  <line x1="14" y1="34" x2="36" y2="34" stroke="#E5E5EA" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- 底层浅金圆环 -->
+  <circle cx="24" cy="24" r="14" stroke="#EDE2C4" stroke-width="4" stroke-linecap="round"/>
+  <!-- 占比高亮弧 -->
+  <circle cx="24" cy="24" r="14" stroke="url(#goldStroke)" stroke-width="4" stroke-linecap="round" stroke-dasharray="58 30" transform="rotate(-90 24 24)"/>
+  <!-- 中心金点 -->
+  <circle cx="24" cy="24" r="3.4" fill="url(#goldStroke)"/>
 </svg>

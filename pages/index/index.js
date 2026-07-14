@@ -54,9 +54,9 @@ Page({
 		sliderWidth: 0,
 		marketTabs: [
 			{ key: null, label: "全部", count: 0 },
-			{ key: MARKETS.A_SHARE, label: "A股", count: 0 },
-			{ key: MARKETS.HK_SHARE, label: "港股", count: 0 },
-			{ key: MARKETS.US_SHARE, label: "美股", count: 0 },
+			{ key: MARKETS.A_SHARE, label: "境内", count: 0 },
+			{ key: MARKETS.HK_SHARE, label: "香港", count: 0 },
+			{ key: MARKETS.US_SHARE, label: "海外", count: 0 },
 		],
 
 		// 分享截图生成状态
@@ -98,7 +98,7 @@ Page({
 	// ========== 生命周期 ==========
 	async onLoad() {
 		pageMixin.onLoadMixin(this);
-		// C2 契约（bug #10/#15）：标记未分离 + 行情请求版本计数器
+		// C2 契约（bug #10/#15）：标记未分离 + 价格请求版本计数器
 		this._detached = false;
 		this._priceReqId = 0;
 		// bug #15：stockId-keyed 动画清理 timers（替换闭包捕获数组索引）
@@ -120,19 +120,24 @@ Page({
 		const dirty = pageMixin.onShowMixin(this, 0);
 		if (dirty) {
 			await this.refresh();
+			this._scheduleSwipeMeasure?.();
 			return;
 		}
 		// 首次冷启动：onLoad 里的 await refresh() 尚未完成，
 		// 或上一轮 refresh 已成功但缓存为空(=无持仓)，此时需主动触发一次。
 		if (!this._dataLoaded) {
 			await this.refresh({ fetchPrices: false });
+			this._scheduleSwipeMeasure?.();
 		}
 	},
 
 	onUnload() {
-		// C2 契约（bug #10）：标记分离 + 递增行情请求版本，使 in-flight 回调 bail out
+		// C2 契约（bug #10）：标记分离 + 递增价格请求版本，使 in-flight 回调 bail out
 		this._detached = true;
 		this._priceReqId++;
+		// 清理滑动手势挂起的异步任务（raf 节流 tick / 延迟测量计时器），
+		// 避免页面销毁后回调对死亡实例 setData 触发框架崩溃。
+		if (this._swipeDestroy) this._swipeDestroy();
 		// 清理定时器
 		if (this._animTimer) clearTimeout(this._animTimer);
 		if (this._tabTimer) clearTimeout(this._tabTimer);
@@ -140,7 +145,9 @@ Page({
 		if (this._shareTimer) clearTimeout(this._shareTimer);
 		// bug #15：清理所有 stockId-keyed 动画 timers
 		if (this._flashTimers) {
-			this._flashTimers.forEach((t) => clearTimeout(t));
+			this._flashTimers.forEach((t) => {
+				clearTimeout(t);
+			});
 			this._flashTimers.clear();
 		}
 	},
@@ -152,7 +159,7 @@ Page({
 		try {
 			await this._loadData(force);
 			if (fetchPrices && this._positionsCache?.length > 0) {
-				// 行情刷新最小间隔 30s
+				// 价格刷新最小间隔 30s
 				const now = Date.now();
 				const canFetch = force || !this._lastFetchAt || now - this._lastFetchAt > 30000;
 				if (canFetch) {
@@ -291,10 +298,9 @@ Page({
 							: "price-flash-loss"
 						: "";
 
-				// Pre-compute card class
-				let cardClass = "position-card";
-				if (newIds.has(p.id)) cardClass += " position-card-entering";
-				if (priceFlashClass) cardClass += ` ${priceFlashClass}`;
+				// 卡片基础类固定为 position-card；entering / priceFlashClass / swiping / deleting
+				// 等状态类改为在 WXML 中按数据字段动态拼接（修复 card-enter 动画 forwards 锁死
+				// inline translateX 导致卡片无法滑动的问题）。
 
 				// 预计算 market tag 类名，避免 WXML 中写三元表达式
 				const marketClass = `tag market-${p.market === "A_SHARE" ? "a" : p.market === "HK_SHARE" ? "hk" : "us"}`;
@@ -317,7 +323,6 @@ Page({
 					marketColor: getMarketColor(p.market),
 					priceFlashClass: priceFlashClass,
 					entering: newIds.has(p.id),
-					cardClass: cardClass,
 					marketClass: marketClass,
 					displayPriceText: displayPriceText,
 				};
@@ -483,7 +488,26 @@ Page({
 
 	// 跳转到详情
 	goToDetail(e) {
+		// 水平滑动结束后的尾随 tap 不触发跳转（由 mixin 在滑动时置位）
+		if (this._swipeInterceptTap) {
+			this._swipeInterceptTap = false;
+			return;
+		}
+		const index = e.currentTarget.dataset.index;
 		const stockId = e.currentTarget.dataset.stockId;
+		// 菜单已展开时，点击卡片主体先收起菜单，不进入详情
+		const pos = this._positionsCache?.[index];
+		if (pos?.swipeOpen) {
+			this.setData({
+				[`displayPositions[${index}].swipeOpen`]: false,
+				[`displayPositions[${index}].swipeOffset`]: 0,
+				[`displayPositions[${index}].swiping`]: false,
+			});
+			return;
+		}
+		if (stockId === undefined || stockId === null || stockId === "" || Number.isNaN(stockId)) {
+			return;
+		}
 		wx.navigateTo({
 			url: `/packageDetail/pages/detail/detail?stockId=${stockId}`,
 		});
@@ -502,14 +526,14 @@ Page({
 		}
 	},
 
-	// 长按持仓卡片 — 快捷操作菜单
+	// 长按资产卡片 — 快捷操作菜单
 	onPositionLongPress(e) {
 		const stockId = parseInt(e.currentTarget.dataset.stockId, 10);
 		if (Number.isNaN(stockId)) return;
 		const stock = (this._allPositionsCache || []).find((p) => p.id === stockId);
 		if (!stock) return;
 		wx.showActionSheet({
-			itemList: ["查看详情", "快速卖出", "添加交易"],
+			itemList: ["查看详情", "快速转出", "添加资产"],
 			success: (res) => {
 				if (res.tapIndex === 0) {
 					wx.navigateTo({
@@ -528,7 +552,7 @@ Page({
 		});
 	},
 
-	// 跳转到添加交易
+	// 跳转到添加资产
 	goToAddTransaction() {
 		wx.navigateTo({
 			url: "/packageRecord/pages/record/record",
@@ -552,11 +576,11 @@ Page({
 		await this.refresh();
 	},
 
-	// ========== 获取行情 ==========
+	// ========== 获取价格 ==========
 	async _fetchPrices(opts) {
 		const silent = opts?.silent;
 		const force = opts?.force;
-		// [优化] 行情源用 _allPositionsCache（全市场全量，含已清仓），确保跨 tab 都能抓行情
+		// [优化] 价格源用 _allPositionsCache（全市场全量，含已清仓），确保跨 tab 都能抓价格
 		const positions = this._allPositionsCache || [];
 		if (!positions || positions.length === 0) return;
 
@@ -564,11 +588,11 @@ Page({
 		const needFetch = force ? positions : positions.filter((p) => !PriceCache.has(p.id));
 
 		if (needFetch.length === 0) {
-			if (!silent) wx.showToast({ title: "行情已是最新", icon: "none" });
+			if (!silent) wx.showToast({ title: "价格已是最新", icon: "none" });
 			return;
 		}
 
-		if (!silent) wx.showLoading({ title: "获取行情中..." });
+		if (!silent) wx.showLoading({ title: "获取价格中..." });
 
 		try {
 			_ensureNetworkModules();
@@ -710,7 +734,7 @@ Page({
 
 			if (!silent) {
 				if (validResults.length > 0) {
-					wx.showToast({ title: "行情已更新", icon: "success" });
+					wx.showToast({ title: "价格已更新", icon: "success" });
 				} else {
 					wx.showToast({ title: "获取失败", icon: "none" });
 				}
@@ -729,12 +753,12 @@ Page({
 		const position = idx != null && this._positionsCache ? this._positionsCache[idx] : null;
 		if (!position) {
 			console.error("[onRefreshPrice] 未找到持仓", stockId, this._positionsCache);
-			toast("未找到该股票");
+			toast("未找到该资产");
 			return;
 		}
 
 		console.log("[onRefreshPrice] 开始获取", position.market, position.code, position.name);
-		loading("获取行情中...");
+		loading("获取价格中...");
 
 		try {
 			_ensureNetworkModules();
@@ -744,7 +768,7 @@ Page({
 				PriceCache.set(stockId, priceData.currentPrice);
 				this._loadData();
 				hideLoading();
-				success("行情已更新");
+				success("价格已更新");
 			} else {
 				hideLoading();
 				toast("获取失败：价格无效");
@@ -759,6 +783,7 @@ Page({
 
 	onSwipeEdit(e) {
 		const stockId = e.currentTarget.dataset.stockId;
+		this._closeAllSwipes?.();
 		wx.navigateTo({
 			url: `/packageDetail/pages/detail/detail?stockId=${stockId}`,
 		});
@@ -771,9 +796,10 @@ Page({
 		const idx = this._indexById ? this._indexById.get(stockIdNum) : undefined;
 		const position = idx != null && this._positionsCache ? this._positionsCache[idx] : null;
 		if (!position) {
-			wx.showToast({ title: "未找到持仓", icon: "none" });
+			wx.showToast({ title: "未找到持有", icon: "none" });
 			return;
 		}
+		this._closeAllSwipes?.();
 		wx.navigateTo({
 			url: `/packageRecord/pages/record/record?stockId=${stockId}&type=SELL`,
 		});
@@ -784,8 +810,9 @@ Page({
 		const stockId = parseInt(rawId, 10);
 		if (Number.isNaN(stockId)) return;
 		confirmDelete({
-			content: "将删除该股票的所有交易记录和分红记录，是否确认？",
+			content: "将删除该资产的所有资产记录，是否确认？",
 			onConfirm: () => {
+				this._closeAllSwipes?.();
 				this.setData({ deletingId: rawId });
 				if (this._deleteTimer) clearTimeout(this._deleteTimer);
 				this._deleteTimer = setTimeout(() => {
@@ -816,7 +843,7 @@ Page({
 	// ========== 分享 ==========
 	onShareAppMessage() {
 		return {
-			title: "茄子笔记本 - 我的股票持仓",
+			title: "茄子笔记本 - 我的资产",
 			path: "/pages/index/index",
 		};
 	},

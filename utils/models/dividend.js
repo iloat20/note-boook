@@ -46,7 +46,7 @@ const Dividend = {
 	 */
 	save(dividend) {
 		const result = upsertAndSave(DIVIDEND_KEY, dividend);
-		markDataDirty(["position", "heatmap", "periodStats"], dividend.stockId);
+		markDataDirty(["position", "heatmap", "periodStats", "stats"], dividend.stockId);
 		return result;
 	},
 
@@ -85,7 +85,7 @@ const Dividend = {
 	deleteByStockId(stockId) {
 		const dividends = this.getAll().filter((d) => d.stockId !== stockId);
 		saveData(DIVIDEND_KEY, dividends);
-		markDataDirty(["position", "heatmap", "periodStats"], stockId);
+		markDataDirty(["position", "heatmap", "periodStats", "stats"], stockId);
 	},
 
 	/**

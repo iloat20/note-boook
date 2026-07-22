@@ -82,9 +82,41 @@ describe("Stock price batching", () => {
 			return Promise.resolve(toArrayBuffer(responseData));
 		});
 
-		const stocks = [{ id: 1, market: "A_SHARE", code: "600000" }];
-		const result = await fetchAllPrices(stocks);
-		expect(result).toHaveLength(1);
-		expect(result[0].price).toBe(10);
+	const stocks = [{ id: 1, market: "A_SHARE", code: "600000" }];
+	const result = await fetchAllPrices(stocks);
+	expect(result).toHaveLength(1);
+	expect(result[0].price).toBe(10);
+	});
+
+	test("deduplicates concurrent requests for the same stock list (瓶颈 B)", async () => {
+		const stocks = [
+			{ id: 1, market: "A_SHARE", code: "600000" },
+			{ id: 2, market: "A_SHARE", code: "600001" },
+		];
+		request.get.mockImplementation((url, data, options) => {
+			const symbols = url.split("q=")[1].split(",");
+			const lines = symbols.map((symbol) => {
+				const code = symbol.replace(/^sh|^sz|^bj|^r_hk|^us\./, "").toUpperCase();
+				const fields = Array(39).fill("0");
+				fields[0] = "x";
+				fields[1] = "name_" + code;
+				fields[2] = code;
+				fields[3] = "10";
+				fields[4] = "9";
+				return "v_" + symbol + '="' + fields.join("~") + '"';
+			});
+			return Promise.resolve(toArrayBuffer(lines.join("\n")));
+		});
+
+		// 两次并发调用（await 前发起），相同股票列表应只产生一次网络请求
+		const [r1, r2] = await Promise.all([fetchAllPrices(stocks), fetchAllPrices(stocks)]);
+
+		expect(request.get).toHaveBeenCalledTimes(1);
+		expect(r1).toHaveLength(2);
+		expect(r2).toHaveLength(2);
+		// 复用同一在途 Promise，结果一致
+		expect(r1).toEqual(r2);
+		// 网络成功：__ok 为 true
+		expect(r1.__ok).toBe(true);
 	});
 });

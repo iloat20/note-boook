@@ -10,6 +10,8 @@
 const { request } = require("../../api/request");
 const { TIMING_CONFIG } = require("../constants/index");
 const { getData, saveData } = require("../storageCore/core");
+const { fmtDate } = require("../helpers/format");
+const { decodeGBK } = require("../helpers/gbk");
 
 // 腾讯财经 API 获取汇率（批量查询 USD/CNY + HKD/CNY）
 const API_URL = "https://qt.gtimg.cn/q=fx_usr,fx_hkd";
@@ -67,30 +69,7 @@ function fetchAndCacheRates() {
 				}
 
 				// 解码 GBK 响应（优先 TextDecoder，降级逐字节）
-				let decoded = "";
-				if (data?.byteLength) {
-					if (typeof TextDecoder !== "undefined") {
-						try {
-							decoded = new TextDecoder("gb18030").decode(data);
-						} catch (_e) {
-							const bytes = new Uint8Array(data);
-							const chars = new Array(bytes.length);
-							for (let i = 0; i < bytes.length; i++) {
-								chars[i] = String.fromCharCode(bytes[i]);
-							}
-							decoded = chars.join("");
-						}
-					} else {
-						const bytes = new Uint8Array(data);
-						const chars = new Array(bytes.length);
-						for (let i = 0; i < bytes.length; i++) {
-							chars[i] = String.fromCharCode(bytes[i]);
-						}
-						decoded = chars.join("");
-					}
-				} else if (typeof data === "string") {
-					decoded = data;
-				}
+				const decoded = decodeGBK(data);
 
 				const parsed = parseRateResponse(decoded);
 				let usdToCny = parsed.usr || DEFAULTS.usdToCny;
@@ -99,12 +78,12 @@ function fetchAndCacheRates() {
 				if (usdToCny < 3 || usdToCny > 15) usdToCny = DEFAULTS.usdToCny;
 				if (hkdToCny < 0.05 || hkdToCny > 2) hkdToCny = DEFAULTS.hkdToCny;
 
-				const cache = {
-					usdToCny: parseFloat(usdToCny.toFixed(4)),
-					hkdToCny: parseFloat(hkdToCny.toFixed(4)),
-					date: _today(),
-					timestamp: Date.now(),
-				};
+			const cache = {
+				usdToCny: parseFloat(usdToCny.toFixed(4)),
+				hkdToCny: parseFloat(hkdToCny.toFixed(4)),
+				date: fmtDate(new Date()),
+				timestamp: Date.now(),
+			};
 
 				try {
 					saveData(CACHE_KEY, cache);
@@ -201,16 +180,6 @@ function getRate(market, rates) {
 		default:
 			return 1; // A股不需要换算
 	}
-}
-
-/**
- * 获取今天的日期字符串 YYYY-MM-DD
- */
-function _today() {
-	const d = new Date();
-	const m = d.getMonth() + 1;
-	const day = d.getDate();
-	return `${d.getFullYear()}-${m < 10 ? `0${m}` : m}-${day < 10 ? `0${day}` : day}`;
 }
 
 /**

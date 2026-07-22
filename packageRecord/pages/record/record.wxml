@@ -14,6 +14,16 @@
     <view class="record-section">
       <text class="section-title">📋 基本信息</text>
       <view class="record-card">
+        <!-- 最近使用资产快捷选择 -->
+        <view wx:if="{{!code && recentStocks.length > 0 && !showSuggestions && !showSearchHistory}}" class="recent-row">
+          <text class="recent-hint">最近使用</text>
+          <scroll-view scroll-x="true" class="recent-scroll">
+            <view wx:for="{{recentStocks}}" wx:key="code" class="recent-chip" bindtap="onPickRecent" data-item="{{item}}">
+              <text class="recent-chip-name">{{item.name}}</text>
+              <text class="recent-chip-code">{{item.code}}</text>
+            </view>
+          </scroll-view>
+        </view>
         <!-- 资产代码 + 名称 -->
         <view class="field-group">
           <text class="field-label">资产代码</text>
@@ -90,7 +100,10 @@
 
         <view class="field-row">
           <view class="field-group field-half">
-            <text class="field-label">资产日期</text>
+            <view class="field-label-row">
+              <text class="field-label">资产日期</text>
+              <text class="field-quick" bindtap="onJustNow">刚才</text>
+            </view>
             <picker mode="date" value="{{date}}" bindchange="onDateChange">
               <view class="record-input picker-input">
                 <text class="{{date ? '' : 'picker-placeholder'}}">{{date || '选择日期'}}</text>

@@ -3,7 +3,13 @@ function collectFilterIds(grouped) {
 	const ids = [];
 	(grouped || []).forEach((g) => {
 		(g.items || []).forEach((it) => {
-			ids.push(it.id);
+			if (it.merged && Array.isArray(it.subRecords)) {
+				it.subRecords.forEach((sub) => {
+					ids.push(sub.id);
+				});
+			} else {
+				ids.push(it.id);
+			}
 		});
 	});
 	return ids;

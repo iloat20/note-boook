@@ -12,6 +12,7 @@ const { calcFloatingPercent } = require("../../utils/helpers/positionCalculator"
 const { getMarketLabel, getMarketColor } = require("../../utils/constants/market");
 const { MARKETS, TIMING_CONFIG } = require("../../utils/constants/index");
 const { Stock, Transaction, Dividend, PriceCache } = require("../../utils/models/index");
+const { getPref, updatePrefs } = require("../../utils/storageCore/prefs");
 const { toast, success, loading, hideLoading, catchError } = require("../../utils/ui/feedback");
 const { confirmDelete } = require("../../utils/ui/confirmDialog");
 
@@ -93,6 +94,16 @@ Page({
 		showQuickRecord: false,
 		deletingId: null,
 		tabAnimating: false,
+
+		// ===== 新增：置顶 / 拖拽排序 =====
+		sortMode: false,
+		draggingId: null,
+
+		// ===== 新增：单资产备注/标签面板 =====
+		assetMeta: { visible: false, stockId: null, note: "", tags: [], tagInput: "" },
+
+		// ===== 新增：自动刷新（默认关，规避个人主体审核观感）=====
+		autoRefresh: false,
 	},
 
 	// ========== 生命周期 ==========
@@ -129,12 +140,17 @@ Page({
 			await this.refresh({ fetchPrices: false });
 			this._scheduleSwipeMeasure?.();
 		}
+		// [新增] 同步自动刷新偏好并在前台启动轮询（默认关，规避审核观感）
+		this.setData({ autoRefresh: getPref("autoRefresh", false) });
+		this._maybeStartAutoRefresh();
 	},
 
 	onUnload() {
 		// C2 契约（bug #10）：标记分离 + 递增价格请求版本，使 in-flight 回调 bail out
 		this._detached = true;
 		this._priceReqId++;
+		// [新增] 清除自动刷新定时器
+		this._stopAutoRefresh();
 		// 清理滑动手势挂起的异步任务（raf 节流 tick / 延迟测量计时器），
 		// 避免页面销毁后回调对死亡实例 setData 触发框架崩溃。
 		if (this._swipeDestroy) this._swipeDestroy();
@@ -143,6 +159,8 @@ Page({
 		if (this._tabTimer) clearTimeout(this._tabTimer);
 		if (this._deleteTimer) clearTimeout(this._deleteTimer);
 		if (this._shareTimer) clearTimeout(this._shareTimer);
+		// [新增] 清理拖拽 rAF 节流计时器
+		if (this._dragRafTimer) clearTimeout(this._dragRafTimer);
 		// bug #15：清理所有 stockId-keyed 动画 timers
 		if (this._flashTimers) {
 			this._flashTimers.forEach((t) => {
@@ -249,9 +267,25 @@ Page({
 				pnl: parseFloat(aggTotalPnL.toFixed(2)),
 			};
 			this._marketAggCache = marketAgg;
-			this._positionMap = positionMap;
+		this._positionMap = positionMap;
 
-			// [优化] 单次遍历 Transaction：同时完成 totalInvestment + marketInvestment（复用 positionMap）
+		// [新增] 应用用户自定义排序（置顶 / 拖拽）：assetOrder 中的 id 排前面
+		const _assetOrderPref = getPref("assetOrder", []);
+		if (Array.isArray(_assetOrderPref) && _assetOrderPref.length) {
+			const _curIds = new Set(positions.map((p) => p.id));
+			const _kept = _assetOrderPref.filter((id) => _curIds.has(id));
+			const _keptSet = new Set(_kept);
+			const _missing = positions.map((p) => p.id).filter((id) => !_keptSet.has(id));
+			const _fullOrder = _kept.concat(_missing);
+			const _ordIdx = new Map(_fullOrder.map((id, i) => [id, i]));
+			positions.sort((a, b) => {
+				const ia = _ordIdx.has(a.id) ? _ordIdx.get(a.id) : Number.MAX_SAFE_INTEGER;
+				const ib = _ordIdx.has(b.id) ? _ordIdx.get(b.id) : Number.MAX_SAFE_INTEGER;
+				return ia - ib;
+			});
+		}
+
+		// [优化] 单次遍历 Transaction：同时完成 totalInvestment + marketInvestment（复用 positionMap）
 			const allTransactions = Transaction.getAll();
 			let totalInvestment = 0;
 			const marketInvestment = {};
@@ -290,6 +324,7 @@ Page({
 			const marketCounts = { null: 0 };
 			const formattedPositions = positions.map((p) => {
 				const pnlPercent = calcFloatingPercent(p);
+				const rate = _getRate(p.market, rates);
 				const oldPrice = oldPriceMap[p.id];
 				const priceFlashClass =
 					oldPrice && p.currentPrice && oldPrice !== p.currentPrice
@@ -325,7 +360,18 @@ Page({
 					entering: newIds.has(p.id),
 					marketClass: marketClass,
 					displayPriceText: displayPriceText,
+					mvBase: p.currentPrice ? p.currentPrice * p.quantity * rate : 0,
+					ratioPct: 0,
 				};
+			});
+
+			// [新增] 资产占比（汇率折算后市值 / 总额），用于迷你条
+			const _ratioBase = Number.isNaN(totalMarketValue) ? 0 : totalMarketValue;
+			formattedPositions.forEach((fp) => {
+				fp.ratioPct =
+					_ratioBase > 0 && fp.mvBase > 0
+						? parseFloat(((fp.mvBase / _ratioBase) * 100).toFixed(1))
+						: 0;
 			});
 
 			// Precompute per-market aggregates for fast tab switching
@@ -488,6 +534,8 @@ Page({
 
 	// 跳转到详情
 	goToDetail(e) {
+		// 排序模式下点击卡片不进入详情（改用拖拽手柄排序）
+		if (this.data.sortMode) return;
 		// 水平滑动结束后的尾随 tap 不触发跳转（由 mixin 在滑动时置位）
 		if (this._swipeInterceptTap) {
 			this._swipeInterceptTap = false;
@@ -528,25 +576,47 @@ Page({
 
 	// 长按资产卡片 — 快捷操作菜单
 	onPositionLongPress(e) {
+		// 排序模式下禁用长按菜单
+		if (this.data.sortMode) return;
 		const stockId = parseInt(e.currentTarget.dataset.stockId, 10);
 		if (Number.isNaN(stockId)) return;
 		const stock = (this._allPositionsCache || []).find((p) => p.id === stockId);
 		if (!stock) return;
+		const order = this._getAssetOrder();
+		const pinned = order[0] === stockId;
+		const autoOn = getPref("autoRefresh", false);
 		wx.showActionSheet({
-			itemList: ["查看详情", "快速转出", "添加资产"],
+			itemList: [
+				"查看详情",
+				"快速转出",
+				"添加资产",
+				pinned ? "取消置顶" : "置顶",
+				"备注 / 标签",
+				autoOn ? "自动刷新：关" : "自动刷新：开",
+				"排序",
+			],
 			success: (res) => {
-				if (res.tapIndex === 0) {
+				const i = res.tapIndex;
+				if (i === 0) {
 					wx.navigateTo({
 						url: `/packageDetail/pages/detail/detail?stockId=${stockId}`,
 					});
-				} else if (res.tapIndex === 1) {
+				} else if (i === 1) {
 					wx.navigateTo({
 						url: `/packageRecord/pages/record/record?stockId=${stockId}&type=SELL`,
 					});
-				} else if (res.tapIndex === 2) {
+				} else if (i === 2) {
 					wx.navigateTo({
 						url: `/packageRecord/pages/record/record?stockId=${stockId}`,
 					});
+				} else if (i === 3) {
+					this.togglePin({ currentTarget: { dataset: { stockId } } });
+				} else if (i === 4) {
+					this.openAssetMeta({ currentTarget: { dataset: { stockId } } });
+				} else if (i === 5) {
+					this.toggleAutoRefresh();
+				} else if (i === 6) {
+					this.enterSortMode();
 				}
 			},
 		});
@@ -603,131 +673,22 @@ Page({
 			const validResults = results.filter((r) => r.price !== null);
 
 			if (validResults.length > 0) {
-				// 批量写入缓存
+				// 批量写入缓存后，局部应用到缓存 / 渲染层 / 汇总（复用 _applyPriceResults，
+				// 避免整页 _loadData 全量重建）
 				PriceCache.setBatch(validResults);
-				// 更新全量缓存 + 当前 tab 缓存 + 渲染层
-				// 同时重算浮动盈亏（首次加载时 PriceCache 为空，floatingPnL 初始为 0）
-				const rates = this.data._rates || { usdToCny: 1, hkdToCny: 1 };
-				const allCache = this._allPositionsCache || [];
-				const allIndexById = this._allIndexById;
-				const tabCache = this._positionsCache || [];
-				const tabIndexById = this._indexById;
-				const displayCnt = this.data.displayCount;
-				const updates = {};
-
-				validResults.forEach((r) => {
-					if (r.price == null) return;
-					const priceText = fmt(r.price);
-
-					// 1) 全量缓存：更新价格 + 重算浮动盈亏
-					const allIdx = allIndexById ? allIndexById.get(r.stockId) : undefined;
-					if (allIdx != null && allCache[allIdx]) {
-						const pos = allCache[allIdx];
-						pos.currentPrice = r.price;
-						pos.currentPriceText = priceText;
-						pos.displayPriceText = priceText;
-						if (pos.quantity > 0) {
-							pos.floatingPnL = parseFloat(((r.price - pos.avgCost) * pos.quantity).toFixed(2));
-							pos.floatingPnLText = fmt(pos.floatingPnL);
-							pos.pnlPercentText = calcFloatingPercent(pos);
-						}
-					}
-
-					// 2) 当前 tab 缓存：更新价格 + 重算浮动盈亏
-					const idx = tabIndexById ? tabIndexById.get(r.stockId) : undefined;
-					if (idx != null && tabCache[idx]) {
-						const tpos = tabCache[idx];
-						tpos.currentPrice = r.price;
-						tpos.currentPriceText = priceText;
-						tpos.displayPriceText = priceText;
-						if (tpos.quantity > 0) {
-							tpos.floatingPnL = parseFloat(((r.price - tpos.avgCost) * tpos.quantity).toFixed(2));
-							tpos.floatingPnLText = fmt(tpos.floatingPnL);
-							tpos.pnlPercentText = calcFloatingPercent(tpos);
-						}
-						// 3) 渲染层：仅当前 tab 前 displayCount 条做 data path 更新
-						if (idx < displayCnt) {
-							updates[`displayPositions[${idx}].currentPrice`] = r.price;
-							updates[`displayPositions[${idx}].currentPriceText`] = priceText;
-							updates[`displayPositions[${idx}].displayPriceText`] = priceText;
-							if (tpos.quantity > 0) {
-								updates[`displayPositions[${idx}].floatingPnL`] = tpos.floatingPnL;
-								updates[`displayPositions[${idx}].floatingPnLText`] = tpos.floatingPnLText;
-								updates[`displayPositions[${idx}].pnlPercentText`] = tpos.pnlPercentText;
-							}
-						}
-					}
-				});
-
-				// 从更新后的全量缓存重建市场聚合（_marketAggCache 在首次加载时基于空价格计算，需要刷新）
-				const newMarketAgg = {};
-				let totalMV = 0,
-					totalFL = 0;
-				allCache.forEach((p) => {
-					if (p.quantity <= 0) return;
-					const rate = _getRate(p.market, rates);
-					if (!newMarketAgg[p.market]) newMarketAgg[p.market] = { marketValue: 0, pnl: 0 };
-					if (p.currentPrice) {
-						const mv = p.currentPrice * p.quantity * rate;
-						newMarketAgg[p.market].marketValue += mv;
-						totalMV += mv;
-					}
-					const fl = (p.floatingPnL || 0) * rate;
-					newMarketAgg[p.market].pnl += fl;
-					totalFL += fl;
-				});
-				// 补上已实现盈亏 + 分红（不受价格变动影响，含已清仓股票）
-				allCache.forEach((p) => {
-					const rate = _getRate(p.market, rates);
-					const realized = ((p.realizedPnL || 0) + (p.dividendIncome || 0)) * rate;
-					if (realized !== 0) {
-						if (p.quantity > 0 && newMarketAgg[p.market]) {
-							newMarketAgg[p.market].pnl += realized;
-						} else if (p.quantity <= 0) {
-							if (!newMarketAgg[p.market]) newMarketAgg[p.market] = { marketValue: 0, pnl: 0 };
-							newMarketAgg[p.market].pnl += realized;
-						}
-					}
-				});
-				let aggTotalPnL = 0;
-				for (const mkt in newMarketAgg) {
-					newMarketAgg[mkt].marketValue = parseFloat(newMarketAgg[mkt].marketValue.toFixed(2));
-					newMarketAgg[mkt].pnl = parseFloat(newMarketAgg[mkt].pnl.toFixed(2));
-					aggTotalPnL += newMarketAgg[mkt].pnl;
-				}
-				newMarketAgg[null] = {
-					marketValue: parseFloat(totalMV.toFixed(2)),
-					pnl: parseFloat(aggTotalPnL.toFixed(2)),
-				};
-				this._marketAggCache = newMarketAgg;
-
-				// 更新汇总（全量重算，避免增量方案在 cache mutate 后读到新价格导致 delta 错误）
-				const newTotalMarketValue = parseFloat(totalMV.toFixed(2));
-				const totalRealized = allCache.reduce(
-					(s, p) =>
-						s + ((p.realizedPnL || 0) + (p.dividendIncome || 0)) * _getRate(p.market, rates),
-					0,
-				);
-				const newTotalPnL = parseFloat((totalFL + totalRealized).toFixed(2));
-				const totalInvestment = this._cachedTotalInvestment || 0;
-
-				updates._rates = rates;
-				updates.totalMarketValue = newTotalMarketValue;
-				updates.totalMarketValueText = fmt(newTotalMarketValue);
-				updates.totalPnL = newTotalPnL;
-				updates.totalPnLText = fmt(newTotalPnL);
-				updates.totalPnLPercent =
-					totalInvestment > 0 ? parseFloat(((newTotalPnL / totalInvestment) * 100).toFixed(2)) : 0;
-				updates["displayValues.totalMarketValue"] = fmt(newTotalMarketValue);
-				updates["displayValues.totalPnL"] = fmt(newTotalPnL);
-				updates["displayValues.totalPnLPercent"] = fmt(
-					totalInvestment > 0 ? parseFloat(((newTotalPnL / totalInvestment) * 100).toFixed(2)) : 0,
-				);
-
-				this.setData(updates);
+				this._applyPriceResults(validResults);
 			} else {
 				// 无有效结果时仍刷新持仓（可能清理过期缓存等）
 				this.refresh({ fetchPrices: false });
+			}
+
+			// 负结果缓存（瓶颈 A）：网络成功但部分代码确实无有效行情（停牌/非交易日/无效代码），
+			// 写入短 TTL 负结果缓存；下次刷新经 PriceCache.has() 命中后跳过重复网络请求，
+			// 避免每轮刷新都重复打网络。网络失败（results.__ok === false）时不写负结果，
+			// 留待下次刷新重试。
+			if (results.__ok !== false) {
+				const negativeIds = results.filter((r) => r.price === null).map((r) => r.stockId);
+				if (negativeIds.length > 0) PriceCache.setBatchNegative(negativeIds);
 			}
 
 			if (!silent) wx.hideLoading();
@@ -744,6 +705,143 @@ Page({
 			this.refresh({ fetchPrices: false });
 			if (!silent) wx.showToast({ title: "获取失败", icon: "none" });
 		}
+	},
+
+	// 局部应用一批价格结果到「全量缓存 / 当前 tab 缓存 / 渲染层 / 市场聚合 / 汇总」。
+	// 供 _fetchPrices（批量）与 onRefreshPrice（单只）复用，避免单点改价走整页 _loadData。
+	// 注意：PriceCache 写入由调用方负责（批量用 setBatch，单只用 set）。
+	_applyPriceResults(validResults) {
+		if (!validResults || validResults.length === 0) return;
+		const rates = this.data._rates || { usdToCny: 1, hkdToCny: 1 };
+		const allCache = this._allPositionsCache || [];
+		const allIndexById = this._allIndexById;
+		const tabCache = this._positionsCache || [];
+		const tabIndexById = this._indexById;
+		const displayCnt = this.data.displayCount;
+		const updates = {};
+
+		validResults.forEach((r) => {
+			if (r.price == null) return;
+			const priceText = fmt(r.price);
+
+			// 1) 全量缓存：更新价格 + 重算浮动盈亏
+			const allIdx = allIndexById ? allIndexById.get(r.stockId) : undefined;
+			if (allIdx != null && allCache[allIdx]) {
+				const pos = allCache[allIdx];
+				const rate = _getRate(pos.market, rates);
+				pos.currentPrice = r.price;
+				pos.mvBase = r.price * pos.quantity * rate;
+				pos.currentPriceText = priceText;
+				pos.displayPriceText = priceText;
+				if (pos.quantity > 0) {
+					pos.floatingPnL = parseFloat(((r.price - pos.avgCost) * pos.quantity).toFixed(2));
+					pos.floatingPnLText = fmt(pos.floatingPnL);
+					pos.pnlPercentText = calcFloatingPercent(pos);
+				}
+			}
+
+			// 2) 当前 tab 缓存：更新价格 + 重算浮动盈亏
+			const idx = tabIndexById ? tabIndexById.get(r.stockId) : undefined;
+			if (idx != null && tabCache[idx]) {
+				const tpos = tabCache[idx];
+				const rate = _getRate(tpos.market, rates);
+				tpos.currentPrice = r.price;
+				tpos.mvBase = r.price * tpos.quantity * rate;
+				tpos.currentPriceText = priceText;
+				tpos.displayPriceText = priceText;
+				if (tpos.quantity > 0) {
+					tpos.floatingPnL = parseFloat(((r.price - tpos.avgCost) * tpos.quantity).toFixed(2));
+					tpos.floatingPnLText = fmt(tpos.floatingPnL);
+					tpos.pnlPercentText = calcFloatingPercent(tpos);
+				}
+				// 3) 渲染层：仅当前 tab 前 displayCount 条做 data path 更新
+				if (idx < displayCnt) {
+					updates[`displayPositions[${idx}].currentPrice`] = r.price;
+					updates[`displayPositions[${idx}].currentPriceText`] = priceText;
+					updates[`displayPositions[${idx}].displayPriceText`] = priceText;
+					if (tpos.quantity > 0) {
+						updates[`displayPositions[${idx}].floatingPnL`] = tpos.floatingPnL;
+						updates[`displayPositions[${idx}].floatingPnLText`] = tpos.floatingPnLText;
+						updates[`displayPositions[${idx}].pnlPercentText`] = tpos.pnlPercentText;
+					}
+				}
+			}
+		});
+
+		// 从更新后的全量缓存重建市场聚合
+		const newMarketAgg = {};
+		let totalMV = 0,
+			totalFL = 0;
+		allCache.forEach((p) => {
+			if (p.quantity <= 0) return;
+			const rate = _getRate(p.market, rates);
+			if (!newMarketAgg[p.market]) newMarketAgg[p.market] = { marketValue: 0, pnl: 0 };
+			if (p.currentPrice) {
+				const mv = p.currentPrice * p.quantity * rate;
+				newMarketAgg[p.market].marketValue += mv;
+				totalMV += mv;
+			}
+			const fl = (p.floatingPnL || 0) * rate;
+			newMarketAgg[p.market].pnl += fl;
+			totalFL += fl;
+		});
+		// 补上已实现盈亏 + 分红（不受价格变动影响，含已清仓股票）
+		allCache.forEach((p) => {
+			const rate = _getRate(p.market, rates);
+			const realized = ((p.realizedPnL || 0) + (p.dividendIncome || 0)) * rate;
+			if (realized !== 0) {
+				if (p.quantity > 0 && newMarketAgg[p.market]) {
+					newMarketAgg[p.market].pnl += realized;
+				} else if (p.quantity <= 0) {
+					if (!newMarketAgg[p.market]) newMarketAgg[p.market] = { marketValue: 0, pnl: 0 };
+					newMarketAgg[p.market].pnl += realized;
+				}
+			}
+		});
+		let aggTotalPnL = 0;
+		for (const mkt in newMarketAgg) {
+			newMarketAgg[mkt].marketValue = parseFloat(newMarketAgg[mkt].marketValue.toFixed(2));
+			newMarketAgg[mkt].pnl = parseFloat(newMarketAgg[mkt].pnl.toFixed(2));
+			aggTotalPnL += newMarketAgg[mkt].pnl;
+		}
+		newMarketAgg[null] = {
+			marketValue: parseFloat(totalMV.toFixed(2)),
+			pnl: parseFloat(aggTotalPnL.toFixed(2)),
+		};
+		this._marketAggCache = newMarketAgg;
+
+		// 更新汇总（全量重算，避免增量方案在 cache mutate 后读到新价格导致 delta 错误）
+		const newTotalMarketValue = parseFloat(totalMV.toFixed(2));
+		const totalRealized = allCache.reduce(
+			(s, p) => s + ((p.realizedPnL || 0) + (p.dividendIncome || 0)) * _getRate(p.market, rates),
+			0,
+		);
+		const newTotalPnL = parseFloat((totalFL + totalRealized).toFixed(2));
+		const totalInvestment = this._cachedTotalInvestment || 0;
+
+		updates._rates = rates;
+		updates.totalMarketValue = newTotalMarketValue;
+		updates.totalMarketValueText = fmt(newTotalMarketValue);
+		updates.totalPnL = newTotalPnL;
+		updates.totalPnLText = fmt(newTotalPnL);
+		updates.totalPnLPercent =
+			totalInvestment > 0 ? parseFloat(((newTotalPnL / totalInvestment) * 100).toFixed(2)) : 0;
+		updates["displayValues.totalMarketValue"] = fmt(newTotalMarketValue);
+		updates["displayValues.totalPnL"] = fmt(newTotalPnL);
+		updates["displayValues.totalPnLPercent"] = fmt(
+			totalInvestment > 0 ? parseFloat(((newTotalPnL / totalInvestment) * 100).toFixed(2)) : 0,
+		);
+
+		// 价格变动后重算占比
+		const _ratioBase = newTotalMarketValue > 0 ? newTotalMarketValue : 0;
+		tabCache.forEach((tp, i) => {
+			if (i < displayCnt && tp.mvBase != null) {
+				updates[`displayPositions[${i}].ratioPct`] =
+					_ratioBase > 0 ? parseFloat(((tp.mvBase / _ratioBase) * 100).toFixed(1)) : 0;
+			}
+		});
+
+		this.setData(updates);
 	},
 
 	async onRefreshPrice(e) {
@@ -766,7 +864,8 @@ Page({
 
 			if (priceData && priceData.currentPrice > 0) {
 				PriceCache.set(stockId, priceData.currentPrice);
-				this._loadData();
+				// [优化] 单只改价局部更新，替代整页 _loadData 全量重建
+				this._applyPriceResults([{ stockId, price: priceData.currentPrice }]);
 				hideLoading();
 				success("价格已更新");
 			} else {
@@ -838,6 +937,244 @@ Page({
 			this._shareTimer = null;
 			_sharePortfolio(this);
 		}, 50);
+	},
+
+	// ========== 一键刷新全部 ==========
+	async onRefreshAll() {
+		loading("刷新中...");
+		try {
+			await this.refresh({ force: true });
+			hideLoading();
+		} catch (_e) {
+			hideLoading();
+			catchError(_e, "刷新失败");
+		}
+	},
+
+	// ========== 单资产备注 / 标签 ==========
+	openAssetMeta(e) {
+		const stockId = parseInt(e.currentTarget.dataset.stockId, 10);
+		const stock = Stock.getById(stockId);
+		if (!stock) {
+			toast("未找到资产");
+			return;
+		}
+		this._closeAllSwipes?.();
+		this.setData({
+			assetMeta: {
+				visible: true,
+				stockId,
+				note: stock.note || "",
+				tags: (stock.tags || []).slice(),
+				tagInput: "",
+			},
+		});
+	},
+
+	closeAssetMeta() {
+		this.setData({ "assetMeta.visible": false });
+	},
+
+	onMetaNoteInput(e) {
+		this.setData({ "assetMeta.note": e.detail.value });
+	},
+
+	onMetaTagInput(e) {
+		this.setData({ "assetMeta.tagInput": e.detail.value });
+	},
+
+	onMetaAddTag() {
+		const t = (this.data.assetMeta.tagInput || "").trim();
+		if (!t) return;
+		const tags = this.data.assetMeta.tags.slice();
+		if (tags.indexOf(t) < 0) tags.push(t);
+		this.setData({ "assetMeta.tags": tags, "assetMeta.tagInput": "" });
+	},
+
+	onMetaRemoveTag(e) {
+		const t = e.currentTarget.dataset.tag;
+		const tags = this.data.assetMeta.tags.filter((x) => x !== t);
+		this.setData({ "assetMeta.tags": tags });
+	},
+
+	saveAssetMeta() {
+		const { stockId, note, tags } = this.data.assetMeta;
+		const stock = Stock.getById(stockId);
+		if (!stock) {
+			this.closeAssetMeta();
+			return;
+		}
+		stock.note = note || "";
+		stock.tags = tags.slice();
+		Stock.save(stock);
+		this.setData({ "assetMeta.visible": false });
+		success("已保存");
+		this.refresh({ fetchPrices: false });
+	},
+
+	// ========== 置顶 / 自定义排序 ==========
+	_getAssetOrder() {
+		// 以当前可见列表顺序为基础补全（保证是全集排列）
+		const visibleIds = (this.data.displayPositions || []).map((p) => p.id);
+		const stored = getPref("assetOrder", []) || [];
+		const visSet = new Set(visibleIds);
+		const kept = stored.filter((id) => visSet.has(id));
+		const keptSet = new Set(kept);
+		const missing = visibleIds.filter((id) => !keptSet.has(id));
+		return kept.concat(missing);
+	},
+
+	_saveAssetOrder(order) {
+		updatePrefs({ assetOrder: order });
+	},
+
+	togglePin(e) {
+		const stockId = parseInt(e.currentTarget.dataset.stockId, 10);
+		if (Number.isNaN(stockId)) return;
+		const order = this._getAssetOrder();
+		const at = order.indexOf(stockId);
+		if (at === 0) {
+			// 已在最前 → 取消置顶，移到末尾
+			order.shift();
+			order.push(stockId);
+		} else if (at > 0) {
+			order.splice(at, 1);
+			order.unshift(stockId);
+		} else {
+			order.unshift(stockId);
+		}
+		this._saveAssetOrder(order);
+		this.refresh({ fetchPrices: false });
+	},
+
+	enterSortMode() {
+		this._closeAllSwipes?.();
+		this.setData({ sortMode: true });
+		// 测量卡片行高，用于拖拽落点估算
+		try {
+			wx.createSelectorQuery()
+				.select(".position-card")
+				.boundingClientRect((rect) => {
+					this._rowH = rect?.height ? rect.height : 120;
+				})
+				.exec();
+		} catch (_e) {
+			this._rowH = 120;
+		}
+	},
+
+	exitSortMode() {
+		this.setData({ sortMode: false, draggingId: null });
+	},
+
+	onDragStart(e) {
+		const stockId = parseInt(e.currentTarget.dataset.stockId, 10);
+		const idx = parseInt(e.currentTarget.dataset.index, 10);
+		if (Number.isNaN(stockId) || Number.isNaN(idx)) return;
+		this._dragStartY = e.touches[0].clientY;
+		this._dragOrigIdx = idx;
+		this._dragId = stockId;
+		this.setData({ draggingId: String(stockId) });
+	},
+
+	onDragMove(e) {
+		if (this._dragId == null) return;
+		// rAF 节流：touchmove ~60次/秒，合并为每帧一次 setData，避免高频渲染 diff 卡顿。
+		// 独立于滑动手势的 _rafTicking，用 _dragRaf* 变量，排序模式下互不干扰。
+		this._dragLastY = e.touches[0].clientY;
+		if (this._dragRafTicking) return;
+		this._dragRafTicking = true;
+		this._dragRafTimer = setTimeout(() => {
+			this._dragRafTicking = false;
+			this._dragRafTimer = null;
+			if (this._detached || this._dragId == null) return;
+			const dy = this._dragLastY - this._dragStartY;
+			const idx = this._dragOrigIdx;
+			this.setData({ [`displayPositions[${idx}].dragOffset`]: dy });
+		}, 16);
+	},
+
+	onDragEnd(e) {
+		if (this._dragId == null) return;
+		// 清理拖拽 rAF 节流的挂起帧（落点位移下面会重新计算，无需 flush）
+		if (this._dragRafTimer) {
+			clearTimeout(this._dragRafTimer);
+			this._dragRafTimer = null;
+		}
+		this._dragRafTicking = false;
+		const endTouch = e.changedTouches?.[0];
+		const endY = endTouch ? endTouch.clientY : this._dragStartY;
+		const dy = endY - this._dragStartY;
+		const rowH = this._rowH || 120;
+		const origIdx = this._dragOrigIdx;
+		const list = this.data.displayPositions;
+		let targetIdx = origIdx + Math.round(dy / rowH);
+		targetIdx = Math.max(0, Math.min(list.length - 1, targetIdx));
+		if (targetIdx !== origIdx) {
+			const order = this._getAssetOrder();
+			const id = this._dragId;
+			const filtered = order.filter((x) => x !== id);
+			const targetId = list[targetIdx] ? list[targetIdx].id : null;
+			if (targetId != null) {
+				const tIdx = filtered.indexOf(targetId);
+				if (tIdx >= 0) filtered.splice(tIdx, 0, id);
+				else filtered.push(id);
+			} else {
+				filtered.push(id);
+			}
+			this._saveAssetOrder(filtered);
+		}
+		this._dragId = null;
+		this.setData({ draggingId: null, [`displayPositions[${origIdx}].dragOffset`]: 0 });
+		this.refresh({ fetchPrices: false });
+	},
+
+	// ========== 实时行情自动轮询（默认关，规避个人主体审核观感）==========
+	toggleAutoRefresh() {
+		const next = !getPref("autoRefresh", false);
+		updatePrefs({ autoRefresh: next });
+		this.setData({ autoRefresh: next });
+		if (next) this._maybeStartAutoRefresh();
+		else this._stopAutoRefresh();
+		toast(next ? "已开启自动刷新" : "已关闭自动刷新");
+	},
+
+	_maybeStartAutoRefresh() {
+		if (!getPref("autoRefresh", false)) return;
+		this._stopAutoRefresh();
+		this._autoTimer = setInterval(() => {
+			if (this._detached) return;
+			// refresh 内置 30s 节流，重复触发安全
+			this.refresh({ fetchPrices: true });
+		}, 30000);
+	},
+
+	_stopAutoRefresh() {
+		if (this._autoTimer) {
+			clearInterval(this._autoTimer);
+			this._autoTimer = null;
+		}
+	},
+
+	// 排序模式下屏蔽卡片滑动手势，避免与拖拽冲突
+	onTouchStart(e) {
+		if (this.data.sortMode) return;
+		touchGestureMixin.onTouchStart.call(this, e);
+	},
+
+	onTouchMove(e) {
+		if (this.data.sortMode) return;
+		touchGestureMixin.onTouchMove.call(this, e);
+	},
+
+	onTouchEnd(e) {
+		if (this.data.sortMode) return;
+		touchGestureMixin.onTouchEnd.call(this, e);
+	},
+
+	onHide() {
+		this._stopAutoRefresh();
+		if (this.data.sortMode) this.exitSortMode();
 	},
 
 	// ========== 分享 ==========

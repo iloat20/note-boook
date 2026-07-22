@@ -1,4 +1,5 @@
-const { STRATEGY_KEY, getData, saveData, markDataDirty } = require("../storageCore/core");
+const { STRATEGY_KEY, getData, saveData } = require("../storageCore/core");
+const { markDataDirty, CACHE_TYPES } = require("../cache/cacheManager");
 const { DEFAULT_STRATEGIES } = require("../constants/index");
 const Transaction = require("./transaction");
 
@@ -14,7 +15,7 @@ const Strategy = {
 
 	save(list) {
 		saveData(STRATEGY_KEY, list);
-		markDataDirty(["stats"]);
+		markDataDirty([CACHE_TYPES.STATS]);
 	},
 
 	add(tag) {
@@ -25,7 +26,7 @@ const Strategy = {
 		if (customs.indexOf(tag) === -1 && DEFAULT_STRATEGIES.indexOf(tag) === -1) {
 			customs.push(tag);
 			saveData(STRATEGY_KEY, customs);
-			markDataDirty(["stats"]);
+			markDataDirty([CACHE_TYPES.STATS]);
 		}
 	},
 
@@ -35,7 +36,7 @@ const Strategy = {
 		if (idx >= 0) {
 			customs.splice(idx, 1);
 			saveData(STRATEGY_KEY, customs);
-			markDataDirty(["stats"]);
+			markDataDirty([CACHE_TYPES.STATS]);
 			return true;
 		}
 		return false;

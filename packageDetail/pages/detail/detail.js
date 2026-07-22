@@ -1,5 +1,5 @@
 // pages/detail/detail.js
-const { Stock, Transaction, PriceCache } = require("../../../utils/models/index");
+const { Stock, Transaction, Dividend, PriceCache } = require("../../../utils/models/index");
 const { calculatePosition } = require("../../../utils/services/positionService");
 const { getStrategyStats } = require("../../../utils/services/statsService");
 const { fmt, fmtShortDate, fmtTime } = require("../../../utils/helpers/format");
@@ -8,6 +8,7 @@ const { getMarketLabel, getMarketColor } = require("../../../utils/constants/mar
 const pageMixin = require("../../../utils/ui/pageMixin");
 const { toast, success: fbSuccess } = require("../../../utils/ui/feedback");
 const { confirmDelete } = require("../../../utils/ui/confirmDialog");
+const { shareAsset } = require("../../../utils/render/shareHelper");
 
 Page({
 	data: {
@@ -47,10 +48,22 @@ Page({
 		heroPnLPercentText: "",
 		heroBgClass: "",
 		transactionGroups: [],
+		// 单资产分享
+		generatingShare: false,
+		// 删除资产 / 结清
+		settled: false,
+		// 备注·标签（持有本身）
+		assetNote: "",
+		assetTags: [],
+		showMetaSheet: false,
+		metaNoteInput: "",
+		metaTagInput: "",
 	},
 
 	onLoad(options) {
 		pageMixin.onLoadMixin(this);
+		// 卸载守卫：防止 800ms 延迟 navigateBack 等 pending 定时器对已销毁子页帧二次操作
+		this._unloaded = false;
 
 		const raw = options?.stockId;
 		if (raw !== undefined && raw !== null && raw !== "") {
@@ -73,13 +86,200 @@ Page({
 		}
 	},
 
+	// ========== 单资产分享卡片 ==========
+	onShareAsset() {
+		if (!this.data.stock) {
+			toast("暂无资产数据");
+			return;
+		}
+		this.setData({ generatingShare: true });
+		if (this._shareTimer) clearTimeout(this._shareTimer);
+		this._shareTimer = setTimeout(() => {
+			this._shareTimer = null;
+			shareAsset(this);
+		}, 50);
+	},
+
+	// ========== 更多操作：结清 / 删除 ==========
+	onMoreActions() {
+		if (!this.data.stock) return;
+		wx.showActionSheet({
+			itemList: ["结清处理", "删除资产"],
+			success: (res) => {
+				if (res.tapIndex === 0) this.onSettle();
+				else if (res.tapIndex === 1) this.onDeleteAsset();
+			},
+		});
+	},
+
+	// 结清处理（两者皆可）：生成转出记录 或 仅标记已结清
+	onSettle() {
+		const stock = this.data.stock;
+		const position = this.data.position;
+		if (!stock) return;
+		if (!position.quantity || position.quantity <= 0) {
+			toast("当前无持仓，无需结清");
+			return;
+		}
+		wx.showActionSheet({
+			itemList: ["生成转出记录", "仅标记已结清"],
+			success: (res) => {
+				if (res.tapIndex === 0) {
+					// 按当前价对剩余数量生成一笔「转出」，持仓归零
+					const price = position.currentPrice && position.currentPrice > 0 ? position.currentPrice : null;
+					const doSell = (sellPrice) => {
+						const sell = Transaction.create(
+							stock.id,
+							"SELL",
+							sellPrice,
+							position.quantity,
+							0,
+							new Date().toISOString(),
+							"结清",
+							"资产结清转出",
+							[],
+						);
+						Transaction.save(sell);
+						fbSuccess("已生成结清转出");
+						this.loadData();
+					};
+					if (price != null) {
+						doSell(price);
+					} else {
+						wx.showModal({
+							title: "结清价格",
+							content: "未获取到当前价，请输入结清转出价格",
+							editable: true,
+							placeholderText: "0.00",
+							success: (m) => {
+								if (m.confirm) {
+									const p = parseFloat(m.content);
+									if (!Number.isNaN(p) && p > 0) doSell(p);
+									else toast("请输入有效价格");
+								}
+							},
+						});
+					}
+				} else if (res.tapIndex === 1) {
+					// 软结清：置 settled 标记，保留全部记录、不产生新交易
+					const s = Stock.getById(stock.id);
+					if (s) {
+						s.settled = true;
+						Stock.save(s);
+					}
+					fbSuccess("已标记结清");
+					this.loadData();
+				}
+			},
+		});
+	},
+
+	// 删除资产（二次确认）：级联删除全部转入/转出与分红，不可恢复
+	onDeleteAsset() {
+		const stock = this.data.stock;
+		if (!stock) return;
+		confirmDelete({
+			content: `删除「${stock.name}」将一并删除其全部转入/转出记录与分红，且不可恢复。`,
+			onConfirm: () => {
+				wx.showModal({
+					title: "二次确认",
+					content: "此操作不可恢复，确定彻底删除该资产？",
+					confirmText: "彻底删除",
+					success: (res) => {
+						if (!res.confirm) return;
+						loading("删除中...");
+						Transaction.getByStockId(stock.id).forEach((t) => {
+							Transaction.delete(t.id);
+						});
+						Dividend.getByStockId(stock.id).forEach((d) => {
+							Dividend.delete(d.id);
+						});
+						Stock.delete(stock.id);
+						hideLoading();
+						fbSuccess("已删除");
+						if (this._unloaded) return;
+						setTimeout(() => {
+							if (this._unloaded) return;
+							try {
+								wx.navigateBack();
+							} catch (_e) {}
+						}, 300);
+					},
+				});
+			},
+		});
+	},
+
+	// ========== 备注·标签（持有本身） ==========
+	openMeta() {
+		const stock = this.data.stock;
+		if (!stock) return;
+		this.setData({
+			showMetaSheet: true,
+			metaNoteInput: stock.note || "",
+			metaTagInput: "",
+			assetTags: stock.tags || [],
+		});
+	},
+
+	closeMeta() {
+		this.setData({ showMetaSheet: false });
+	},
+
+	onMetaNoteInput(e) {
+		this.setData({ metaNoteInput: e.detail.value });
+	},
+
+	onMetaTagInput(e) {
+		this.setData({ metaTagInput: e.detail.value });
+	},
+
+	onMetaAddTag() {
+		const tag = (this.data.metaTagInput || "").trim();
+		if (!tag) return;
+		const tags = this.data.assetTags.slice();
+		if (tags.indexOf(tag) >= 0) {
+			this.setData({ metaTagInput: "" });
+			return;
+		}
+		tags.push(tag);
+		this.setData({ assetTags: tags, metaTagInput: "" });
+	},
+
+	onMetaRemoveTag(e) {
+		const tag = e.currentTarget.dataset.tag;
+		this.setData({ assetTags: this.data.assetTags.filter((t) => t !== tag) });
+	},
+
+	saveMeta() {
+		const stock = Stock.getById(this.data.stockId || this._stockId);
+		if (!stock) {
+			this.setData({ showMetaSheet: false });
+			return;
+		}
+		stock.note = this.data.metaNoteInput.trim();
+		stock.tags = this.data.assetTags.slice();
+		Stock.save(stock);
+		fbSuccess("已保存");
+		this.setData({ showMetaSheet: false });
+		this.loadData();
+	},
+
 	onUnload() {
-		// C2 契约：per-id 删除定时器 Map，unload 时全部清理（bug #16）
-		if (this._deleteTimers) {
-			this._deleteTimers.forEach((timer) => {
-				clearTimeout(timer);
-			});
-			this._deleteTimers.clear();
+		// 先置位：任何后续 pending 的 setTimeout(navigateBack) 据此放弃对已销毁子页帧操作，
+		// 避免触发框架内部 __subPageFrameEndTime__ 竞态（lib 3.16.1 已知销毁期 race）
+		this._unloaded = true;
+		if (this._shareTimer) clearTimeout(this._shareTimer);
+		try {
+			// C2 契约：per-id 删除定时器 Map，unload 时全部清理（bug #16）
+			if (this._deleteTimers) {
+				this._deleteTimers.forEach((timer) => {
+					clearTimeout(timer);
+				});
+				this._deleteTimers.clear();
+			}
+		} catch (_e) {
+			// 异常安全：teardown 抛错会打断框架自身的定时器清理，导致内部 setInterval 残留
 		}
 	},
 
@@ -113,6 +313,9 @@ Page({
 				// 入口异常（如未带参数的深链/扫码），自动返回，避免卡在空屏
 				wx.showToast({ title: "缺少资产参数", icon: "none" });
 				setTimeout(() => {
+					// 守卫：用户可能在 800ms 内已手动返回，onUnload 已置 _unloaded；
+					// 此时再 navigateBack 会对已销毁子页帧操作，触发框架 __subPageFrameEndTime__ 竞态
+					if (this._unloaded) return;
 					try {
 						wx.navigateBack();
 					} catch (_e) {}
@@ -160,6 +363,9 @@ Page({
 				emptyTitle: "资产不存在",
 				marketLabel: getMarketLabel(stock.market),
 				marketColor: getMarketColor(stock.market),
+				settled: !!stock.settled,
+				assetNote: stock.note || "",
+				assetTags: stock.tags || [],
 				position: position,
 				transactions: transactions,
 				transactionGroups: transactionGroups,

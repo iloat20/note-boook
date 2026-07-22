@@ -2,6 +2,7 @@ const { MARKETS, TIMING_CONFIG } = require("../../utils/constants/index");
 const { Stock, Transaction, Dividend, Strategy } = require("../../utils/models/index");
 const { buildStockMap } = require("../../utils/helpers/stockHelpers");
 const { buildRecordView } = require("../../utils/helpers/recordView");
+const { fmt } = require("../../utils/helpers/format");
 const { collectFilterIds, isAllSelected } = require("../../utils/helpers/batchSelect");
 const {
 	loadSearchHistory,
@@ -52,10 +53,24 @@ Page({
 		selectedMap: {},
 		selectedTypeMap: {},
 		selectAll: false,
+		// 撤销删除（误删恢复）
+		showUndo: false,
+		undoItems: [],
+		undoText: "",
+		// 关联交易合并展示（一笔转入拆多笔）
+		mergeRelated: false,
+		// 合并卡片展开态（mergeKey -> bool）
+		mergedExpanded: {},
 	},
-	onLoad() {
+	onLoad(options) {
 		pageMixin.onLoadMixin(this);
 		this.setData({ searchHistory: loadSearchHistory() });
+		// 支持从首页「在记录中搜索」带关键词进入（中性资产搜索，不触发类目）
+		if (options?.keyword) {
+			const kw = String(options.keyword);
+			this._pendingKeyword = kw.toLowerCase();
+			this.setData({ searchKeyword: kw, showSearchHistory: false });
+		}
 		// 延迟到首帧渲染后构建数据，避免阻塞入场动画
 		wx.nextTick(() => {
 			this.loadHistory();
@@ -110,22 +125,38 @@ Page({
 		// 使用预计算的数值排序，避免每次比较都创建 Date 对象
 		allRecords.sort((a, b) => b._sortKey - a._sortKey);
 		this._cachedAllRecords = allRecords;
+		// 基线数据变更，作废结构筛选缓存
+		this._structFilterSig = null;
+		this._structFilteredCache = null;
+	},
+	// 结构性筛选（类型/市场/策略）结果缓存。
+	// 搜索输入只改关键词、不改结构筛选，此时复用缓存，避免每次按键都重跑三次 filter。
+	_getStructurallyFiltered() {
+		const { currentFilter, currentMarket, currentStrategy } = this.data;
+		const sig = `${currentFilter}|${currentMarket || ""}|${currentStrategy || ""}`;
+		if (this._structFilterSig === sig && this._structFilteredCache) {
+			return this._structFilteredCache;
+		}
+		let filtered = this._cachedAllRecords || [];
+		if (currentFilter !== "ALL") {
+			filtered = filtered.filter((r) => r.type === currentFilter);
+		}
+		if (currentMarket) {
+			filtered = filtered.filter((r) => r.market === currentMarket);
+		}
+		if (currentStrategy) {
+			filtered = filtered.filter(
+				(r) => r.strategies && r.strategies.indexOf(currentStrategy) >= 0,
+			);
+		}
+		this._structFilterSig = sig;
+		this._structFilteredCache = filtered;
+		return filtered;
 	},
 	// 从缓存数据中筛选、分组、显示
 	_applyFilters() {
 		// 注意：切换筛选不再清空已选，仅重算全选态
-		let filtered = this._cachedAllRecords || [];
-		if (this.data.currentFilter !== "ALL") {
-			filtered = filtered.filter((r) => r.type === this.data.currentFilter);
-		}
-		if (this.data.currentMarket) {
-			filtered = filtered.filter((r) => r.market === this.data.currentMarket);
-		}
-		if (this.data.currentStrategy) {
-			filtered = filtered.filter(
-				(r) => r.strategies && r.strategies.indexOf(this.data.currentStrategy) >= 0,
-			);
-		}
+		let filtered = this._getStructurallyFiltered();
 		const keyword = this._pendingKeyword || this.data.searchKeyword;
 		if (keyword) {
 			const kw = keyword.toLowerCase();
@@ -146,7 +177,8 @@ Page({
 		}));
 		this._allGroupedHistory = groupedArray;
 		const displayCount = this.data.displayCount;
-		const displayData = groupedArray.slice(0, displayCount);
+		let displayData = groupedArray.slice(0, displayCount);
+		if (this.data.mergeRelated) displayData = this._mergeGroups(displayData);
 		const hasMore = groupedArray.length > displayCount;
 		const filterIds = collectFilterIds(groupedArray);
 		const selectAll = isAllSelected(this.data.selectedIds, filterIds);
@@ -205,7 +237,10 @@ Page({
 		if (this.data.loadingMore || !this.data.hasMore) return;
 		const newCount = this.data.displayCount + TIMING_CONFIG.PAGE_LOAD_COUNT;
 		const allData = this._allGroupedHistory || [];
-		const displayData = allData.slice(0, newCount);
+		let displayData = allData.slice(0, newCount);
+		if (this.data.mergeRelated) {
+			displayData = this._mergeGroups(displayData);
+		}
 		const hasMore = allData.length > newCount;
 		this.setData({
 			displayCount: newCount,
@@ -280,6 +315,12 @@ Page({
 			content: `确定要删除选中的 ${deletableIds.length} 条记录吗？`,
 			onConfirm: () => {
 				loading("删除中...");
+				const raws = deletableIds
+					.map((id) => {
+						const t = selectedTypeMap[id];
+						return t === "DIVIDEND" ? Dividend.getById(id) : Transaction.getById(id);
+					})
+					.filter((x) => x);
 				deletableIds.forEach((id) => {
 					const recordType = selectedTypeMap[id];
 					if (recordType === "DIVIDEND") {
@@ -289,7 +330,6 @@ Page({
 					}
 				});
 				hideLoading();
-				fbSuccess(`已删除 ${deletableIds.length} 条`);
 				this.setData({
 					selectMode: false,
 					selectedIds: [],
@@ -297,6 +337,7 @@ Page({
 					selectedTypeMap: {},
 				});
 				this.loadHistory();
+				this._showUndo(raws);
 			},
 		});
 	},
@@ -361,6 +402,10 @@ Page({
 					confirmDelete({
 						content: `确定要删除这笔${record.typeText}记录吗？`,
 						onConfirm: () => {
+							const raw =
+								record.type === "DIVIDEND"
+									? Dividend.getById(record.id)
+									: Transaction.getById(record.id);
 							this.setData({ dissolvingId: record.id });
 							if (this._deleteTimer) clearTimeout(this._deleteTimer);
 							this._deleteTimer = setTimeout(() => {
@@ -370,14 +415,113 @@ Page({
 								} else {
 									Transaction.delete(record.id);
 								}
-								fbSuccess("删除成功");
 								this.setData({ dissolvingId: null });
 								this.loadHistory();
+								this._showUndo(raw ? [raw] : []);
 							}, 400);
 						},
 					});
 				}
 			},
+		});
+	},
+	// ========== 撤销删除（误删恢复） ==========
+	_showUndo(items) {
+		if (!items || items.length === 0) return;
+		if (this._undoTimer) clearTimeout(this._undoTimer);
+		const undoItems = items.map((it) => ({ ...it }));
+		this.setData({
+			showUndo: true,
+			undoItems,
+			undoText: `已删除 ${undoItems.length} 笔记录`,
+		});
+		// 6 秒后自动隐藏（恢复窗口期）
+		this._undoTimer = setTimeout(() => {
+			this._undoTimer = null;
+			this.setData({ showUndo: false, undoItems: [] });
+		}, 6000);
+	},
+	onUndo() {
+		if (!this.data.showUndo) return;
+		const items = this.data.undoItems || [];
+		if (this._undoTimer) {
+			clearTimeout(this._undoTimer);
+			this._undoTimer = null;
+		}
+		if (items.length === 0) {
+			this.setData({ showUndo: false });
+			return;
+		}
+		loading("恢复中...");
+		items.forEach((it) => {
+			if (it.type === "DIVIDEND") {
+				Dividend.save(it);
+			} else {
+				Transaction.save(it);
+			}
+		});
+		hideLoading();
+		fbSuccess("已恢复");
+		this.setData({ showUndo: false, undoItems: [] });
+		this.loadHistory();
+	},
+	// ========== 关联交易合并展示 ==========
+	onToggleMerge() {
+		const mergeRelated = !this.data.mergeRelated;
+		this.setData({ mergeRelated, mergedExpanded: {} });
+		this._applyFilters();
+	},
+	onToggleMergeExpand(e) {
+		const key = e.currentTarget.dataset.key;
+		const map = { ...this.data.mergedExpanded };
+		map[key] = !map[key];
+		this.setData({ mergedExpanded: map });
+	},
+	// 把同一天、同一资产、同类型的多笔记录折叠成一张卡片
+	_mergeGroups(groups) {
+		return groups.map((group) => {
+			const buckets = {};
+			group.items.forEach((rec) => {
+				const key = `${rec.stockId}|${rec.type}`;
+				if (!buckets[key]) {
+					buckets[key] = {
+						...rec,
+						merged: true,
+						mergeKey: `${group.date}|${key}`,
+						subRecords: [],
+						mergeCount: 0,
+						mergeTotalAmount: 0,
+						mergeTotalQuantity: 0,
+					};
+				}
+				const bucket = buckets[key];
+				bucket.subRecords.push(rec);
+				bucket.mergeCount += 1;
+				bucket.mergeTotalAmount += Number(rec.amount) || 0;
+				bucket.mergeTotalQuantity += Number(rec.quantity) || 0;
+			});
+			const mergedItems = [];
+			Object.keys(buckets).forEach((key) => {
+				const bucket = buckets[key];
+				if (bucket.mergeCount <= 1) {
+					// 仅一笔则保持原样，不折叠
+					const {
+						merged,
+						mergeKey,
+						subRecords,
+						mergeCount,
+						mergeTotalAmount,
+						mergeTotalQuantity,
+						...rest
+					} = bucket;
+					mergedItems.push(rest);
+				} else {
+					bucket.mergeTotalAmountText = fmt(bucket.mergeTotalAmount);
+					bucket.mergeTotalQuantityText = fmt(bucket.mergeTotalQuantity);
+					mergedItems.push(bucket);
+				}
+			});
+			return { ...group, items: mergedItems };
 		});
 	},
 	onUnload() {
@@ -386,6 +530,7 @@ Page({
 		if (this._blurTimer) clearTimeout(this._blurTimer);
 		this._cachedAllRecords = null;
 		this._allGroupedHistory = null;
+		this._structFilteredCache = null;
 	},
 	onPullDownRefresh() {
 		try {

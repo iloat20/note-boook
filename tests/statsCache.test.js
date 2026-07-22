@@ -3,10 +3,12 @@
  * 验证 getTotalStats / getStrategyStats 的缓存命中与失效
  */
 
+const { resetCaches } = require("./helpers/resetCaches");
+
 let _mockStorage = {};
 
 describe("StatsService cache", () => {
-	let Stock, Transaction, getTotalStats, getStrategyStats, invalidateStatsCache, markDataDirty;
+	let Stock, Transaction, getTotalStats, getStrategyStats, markDataDirty;
 
 	beforeEach(() => {
 		jest.resetModules();
@@ -25,15 +27,14 @@ describe("StatsService cache", () => {
 		const statsService = require("../utils/services/statsService");
 		getTotalStats = statsService.getTotalStats;
 		getStrategyStats = statsService.getStrategyStats;
-		invalidateStatsCache = statsService.invalidateStatsCache;
 		markDataDirty = require("../utils/cache/cacheManager").markDataDirty;
 
 		// 清除缓存，确保每个测试独立
-		invalidateStatsCache();
+		resetCaches();
 	});
 
 	afterEach(() => {
-		invalidateStatsCache();
+		resetCaches();
 	});
 
 	describe("getTotalStats", () => {
@@ -48,27 +49,28 @@ describe("StatsService cache", () => {
 			expect(result1.totalInvestment).toBe(1000); // 100 * 10
 		});
 
-		test("should recompute after markDataDirty('stats')", () => {
+		test("should recompute after data mutation (Transaction.save marks stats dirty)", () => {
 			const stock = Stock.save(Stock.create("600000", "浦发银行", "A_SHARE"));
 			Transaction.save(Transaction.create(stock.id, "BUY", 100, 10, 1, "2026-01-01T00:00:00.000Z"));
 
 			const result1 = getTotalStats();
 			expect(result1.totalInvestment).toBe(1000);
 
-			// 修改数据
-			Transaction.save(Transaction.create(stock.id, "BUY", 100, 5, 1, "2026-01-02T00:00:00.000Z"));
-
-			// 未 dirty → 仍返回缓存
+			// 未变更数据 → 命中缓存（同一引用）
 			const result2 = getTotalStats();
 			expect(result2).toBe(result1);
 
-			// 标记 dirty
-			markDataDirty("stats");
+			// 修改数据：Transaction.save 内部 markDataDirty 会失效 stats 缓存
+			Transaction.save(Transaction.create(stock.id, "BUY", 100, 5, 1, "2026-01-02T00:00:00.000Z"));
 
-			// dirty 后 → 重新计算
 			const result3 = getTotalStats();
-			expect(result3).not.toBe(result1);
+			expect(result3).not.toBe(result1); // 不再返回陈旧缓存
 			expect(result3.totalInvestment).toBe(1500); // 1000 + 500
+
+			// 显式 markDataDirty('stats') 同样触发失效
+			markDataDirty("stats");
+			const result4 = getTotalStats();
+			expect(result4).not.toBe(result3);
 		});
 
 		test("should recompute after markDataDirty('all')", () => {
@@ -134,21 +136,6 @@ describe("StatsService cache", () => {
 
 			const result2 = getStrategyStats();
 			expect(result2).toHaveLength(2);
-		});
-	});
-
-	describe("invalidateStatsCache", () => {
-		test("should clear stats cache", () => {
-			const stock = Stock.save(Stock.create("600000", "浦发银行", "A_SHARE"));
-			Transaction.save(Transaction.create(stock.id, "BUY", 100, 10, 1, "2026-01-01T00:00:00.000Z"));
-
-			getTotalStats();
-
-			invalidateStatsCache();
-
-			// 缓存清除后应重新计算
-			const result = getTotalStats();
-			expect(result.totalInvestment).toBe(1000);
 		});
 	});
 });

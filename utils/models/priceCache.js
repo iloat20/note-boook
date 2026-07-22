@@ -5,11 +5,15 @@
  * 以触发重新获取行情。
  */
 
-const { PRICE_KEY, getData, saveData, markDataDirty } = require("../storageCore/core");
+const { PRICE_KEY, getData, saveData } = require("../storageCore/core");
+const { markDataDirty, CACHE_TYPES } = require("../cache/cacheManager");
 const { TIMING_CONFIG } = require("../constants/index");
 
 // 价格缓存 TTL：30 分钟（毫秒）
 const PRICE_TTL = TIMING_CONFIG.PRICE_TTL_MS;
+// 负结果缓存 TTL：5 分钟（毫秒）。仅用于「代码确实无有效行情」的短缓存，
+// 避免每轮刷新都重复打网络；过期后自动重新探测。
+const NEGATIVE_TTL = TIMING_CONFIG.NEGATIVE_TTL_MS;
 
 const PriceCache = {
 	/**
@@ -25,7 +29,7 @@ const PriceCache = {
 			timestamp: Date.now(),
 		};
 		saveData(PRICE_KEY, prices);
-		markDataDirty(["position"], stockId);
+		markDataDirty([CACHE_TYPES.POSITION], stockId);
 	},
 
 	/**
@@ -52,22 +56,21 @@ const PriceCache = {
 		});
 		saveData(PRICE_KEY, prices);
 		// 批量传递所有更新的股票 ID，按粒度清除
-		markDataDirty(["position"], updatedIds);
+		markDataDirty([CACHE_TYPES.POSITION], updatedIds);
 	},
 
 	/**
 	 * 获取股票价格缓存
 	 * @param {number} stockId - 股票 ID
-	 * @returns {number|null} 股票价格，过期返回 null
+	 * @returns {number|null} 股票价格，过期或为负结果返回 null
 	 */
 	get(stockId) {
 		const prices = this.getAll();
 		const entry = prices[stockId];
 		if (!entry) return null;
 		if (typeof entry === "number") return entry;
-		if (Date.now() - entry.timestamp > PRICE_TTL) {
-			return null;
-		}
+		const ttl = entry.negative ? NEGATIVE_TTL : PRICE_TTL;
+		if (Date.now() - entry.timestamp > ttl) return null;
 		return entry.price != null ? entry.price : null;
 	},
 
@@ -77,6 +80,28 @@ const PriceCache = {
 	 */
 	getAll() {
 		return getData(PRICE_KEY) || {};
+	},
+
+	markNegative(stockId) {
+		if (stockId == null) return;
+		const prices = { ...this.getAll() };
+		prices[stockId] = { price: null, negative: true, timestamp: Date.now() };
+		saveData(PRICE_KEY, prices);
+		markDataDirty([CACHE_TYPES.POSITION], stockId);
+	},
+
+	setBatchNegative(entries) {
+		if (!entries || entries.length === 0) return;
+		const prices = { ...this.getAll() };
+		const now = Date.now();
+		const updatedIds = [];
+		entries.forEach((id) => {
+			if (id == null) return;
+			prices[id] = { price: null, negative: true, timestamp: now };
+			updatedIds.push(id);
+		});
+		saveData(PRICE_KEY, prices);
+		markDataDirty([CACHE_TYPES.POSITION], updatedIds);
 	},
 
 	/**
@@ -99,9 +124,11 @@ const PriceCache = {
 				result[id] = entry;
 				return;
 			}
-			if (now - entry.timestamp > PRICE_TTL) {
+			const ttl = entry.negative ? NEGATIVE_TTL : PRICE_TTL;
+			if (now - entry.timestamp > ttl) {
 				expiredIds.push(id);
 			} else if (entry.price != null) {
+				// 负结果（price 为 null）不进入 result，但仍在 TTL 内视为已缓存
 				result[id] = entry.price;
 			}
 		});
@@ -118,12 +145,19 @@ const PriceCache = {
 	},
 
 	/**
-	 * 检查价格缓存是否有效
+	 * 检查价格缓存是否有效（含负结果）
 	 * @param {number} stockId - 股票 ID
-	 * @returns {boolean} 是否存在且未过期
+	 * @returns {boolean} 是否存在且未过期。已缓存的负结果（未过期）也视为 true，
+	 *   使刷新跳过重复网络请求；过期（含负结果 TTL 到期）返回 false 触发重新探测。
 	 */
 	has(stockId) {
-		return this.get(stockId) !== null;
+		const prices = this.getAll();
+		const entry = prices[stockId];
+		if (!entry) return false;
+		if (typeof entry === "number") return true;
+		const ttl = entry.negative ? NEGATIVE_TTL : PRICE_TTL;
+		if (Date.now() - entry.timestamp > ttl) return false;
+		return true;
 	},
 
 	/**
@@ -146,8 +180,9 @@ const PriceCache = {
 				pruned++;
 				return;
 			}
-			// 清理过期条目
-			if (entry && typeof entry.timestamp === "number" && now - entry.timestamp > PRICE_TTL) {
+			// 清理过期条目（按负结果/正常价各自的 TTL）
+			const ttl = entry && entry.negative ? NEGATIVE_TTL : PRICE_TTL;
+			if (entry && typeof entry.timestamp === "number" && now - entry.timestamp > ttl) {
 				delete prices[key];
 				pruned++;
 			}

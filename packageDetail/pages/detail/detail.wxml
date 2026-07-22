@@ -10,10 +10,17 @@
           <view class="hero-name-row">
             <text class="hero-stock-name">{{stock.name}}</text>
             <text class="hero-stock-code">{{stock.code}}</text>
+            <text wx:if="{{setted}}" class="hero-settled-badge">已结清</text>
           </view>
         </view>
          <view bindtap="toggleEditMode" class="hero-edit-btn {{showEditSheet ? 'hero-edit-btn-active' : ''}}">
            <text class="hero-edit-text">{{showEditSheet ? '完成' : '编辑'}}</text>
+         </view>
+         <view bindtap="onShareAsset" class="hero-icon-btn">
+           <text class="hero-icon-text">📤</text>
+         </view>
+         <view bindtap="onMoreActions" class="hero-icon-btn">
+           <text class="hero-icon-text">⋯</text>
          </view>
       </view>
       <view class="hero-pnl-row">
@@ -68,6 +75,23 @@
             <text class="data-cell-value data-cell-value-lg {{totalPnLClass}}">{{totalPnLText}}</text>
           </view>
         </view>
+      </view>
+    </view>
+
+    <!-- ===== 备注 · 标签（持有本身） ===== -->
+    <view class="detail-card animate-stagger" style="animation-delay:200ms" bindtap="openMeta">
+      <view class="detail-card-header detail-card-header-with-action">
+        <text class="detail-card-title">备注 · 标签</text>
+        <view class="detail-card-action">编辑</view>
+      </view>
+      <view class="meta-body">
+        <block wx:if="{{assetNote || assetTags.length > 0}}">
+          <text wx:if="{{assetNote}}" class="meta-note">{{assetNote}}</text>
+          <view wx:if="{{assetTags.length > 0}}" class="meta-tags">
+            <text wx:for="{{assetTags}}" wx:key="*this" class="meta-tag">#{{item}}</text>
+          </view>
+        </block>
+        <text wx:else class="meta-empty">添加备注或标签，记录这笔持有</text>
       </view>
     </view>
 
@@ -132,6 +156,42 @@
 
     <view style="height: 60px;"></view>
   </scroll-view>
+
+   <!-- ===== 备注·标签 编辑抽屉 ===== -->
+   <view wx:if="{{showMetaSheet}}" class="sheet-mask" bindtap="closeMeta"></view>
+   <view wx:if="{{showMetaSheet}}" class="edit-sheet">
+     <view class="sheet-header">
+       <text class="sheet-title">备注 · 标签</text>
+       <view class="sheet-close" bindtap="closeMeta">
+         <text class="sheet-close-icon">✕</text>
+       </view>
+     </view>
+     <view class="sheet-body">
+       <view class="meta-field">
+         <text class="edit-field-label">备注</text>
+         <textarea class="meta-textarea" placeholder="这笔持有的备注…" value="{{metaNoteInput}}" bindinput="onMetaNoteInput" maxlength="200" />
+       </view>
+       <view class="meta-field">
+         <text class="edit-field-label">标签</text>
+         <view class="meta-tag-input-row">
+           <input class="edit-input meta-tag-input" placeholder="输入后点添加" value="{{metaTagInput}}" bindinput="onMetaTagInput" bindconfirm="onMetaAddTag" />
+           <view class="meta-tag-add" bindtap="onMetaAddTag">添加</view>
+         </view>
+         <view wx:if="{{assetTags.length > 0}}" class="meta-tags">
+           <view wx:for="{{assetTags}}" wx:key="*this" class="meta-tag meta-tag-removable" bindtap="onMetaRemoveTag" data-tag="{{item}}">
+             #{{item}} <text class="meta-tag-x">✕</text>
+           </view>
+         </view>
+       </view>
+     </view>
+     <view class="sheet-footer">
+       <view class="btn-cancel" bindtap="closeMeta">取消</view>
+       <view class="btn-save" bindtap="saveMeta">保存</view>
+     </view>
+   </view>
+
+   <!-- 分享卡片画布（挂载即生成） -->
+   <canvas wx:if="{{generatingShare}}" type="2d" id="shareCanvas" style="position: fixed; left: -9999px; top: 0; width: 1px; height: 1px;"></canvas>
 
    <!-- ===== 编辑底部抽屉 ===== -->
    <view wx:if="{{showEditSheet}}" class="sheet-mask" bindtap="cancelEdit"></view>

@@ -12,31 +12,6 @@ const TRANSACTION_TYPE = {
 	SELL: "SELL",
 };
 
-const FEE_CONFIG = {
-	A_SHARE: {
-		commissionRate: 0.00025,
-		commissionMin: 5,
-		stampDutyRate: 0.001,
-		transferFeeRate: 0.00001,
-		transferFeeMin: 0,
-	},
-	HK_SHARE: {
-		commissionRate: 0.0003,
-		commissionMin: 3,
-		stampDutyRate: 0.0013,
-		transactionLevyRate: 0.0000278,
-		transactionFeeRate: 0.00005,
-		transactionFeeMin: 2,
-		clearingFeeRate: 0.00002,
-		clearingFeeMin: 2,
-	},
-	US_SHARE: {
-		commissionPerTrade: 0.99,
-		secFeeRate: 0.0000278,
-		tafFeePerShare: 0.000166,
-	},
-};
-
 const DEFAULT_STRATEGIES = [
 	"长期",
 	"短期",
@@ -56,6 +31,8 @@ const TIMING_CONFIG = {
 	NAVIGATE_BACK_DELAY: 800,
 	PAGE_LOAD_COUNT: 10,
 	PRICE_TTL_MS: 30 * 60 * 1000,
+	// 负结果（停牌/非交易日/无效代码）缓存 TTL：远短于正常价，避免反复打网络又不会永久屏蔽
+	NEGATIVE_TTL_MS: 5 * 60 * 1000,
 	RATE_CACHE_TTL_MS: 4 * 60 * 60 * 1000,
 	SEARCH_HISTORY_MAX: 20,
 	SEARCH_SUGGESTIONS_MAX: 8,
@@ -64,7 +41,6 @@ const TIMING_CONFIG = {
 module.exports = {
 	MARKETS,
 	TRANSACTION_TYPE,
-	FEE_CONFIG,
 	DEFAULT_STRATEGIES,
 	TIMING_CONFIG,
 };

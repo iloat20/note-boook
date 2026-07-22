@@ -8,7 +8,8 @@
  */
 
 const storage = require("../storageCore/core");
-const { clearMemCache, markDataDirty } = require("../cache/cacheManager");
+const { STOCK_KEY, TRANSACTION_KEY, DIVIDEND_KEY, PRICE_KEY, STRATEGY_KEY, clearMemCache } = storage;
+const { markDataDirty, CACHE_TYPES } = require("../cache/cacheManager");
 
 /**
  * 清空全部本地数据。
@@ -16,13 +17,13 @@ const { clearMemCache, markDataDirty } = require("../cache/cacheManager");
  * @returns {void}
  */
 function wipeAll() {
-	storage.saveData("stock_trade_stocks", []);
-	storage.saveData("stock_trade_transactions", []);
-	storage.saveData("stock_trade_dividends", []);
-	storage.saveData("stock_trade_prices", {});
-	storage.saveData("stock_trade_strategies", []);
+	storage.saveData(STOCK_KEY, []);
+	storage.saveData(TRANSACTION_KEY, []);
+	storage.saveData(DIVIDEND_KEY, []);
+	storage.saveData(PRICE_KEY, {});
+	storage.saveData(STRATEGY_KEY, []);
 	clearMemCache();
-	markDataDirty("all");
+	markDataDirty(CACHE_TYPES.ALL);
 	// 索引层读到空数据无需显式清空；若以后索引加内存缓存，在此 require 后调用 invalidate()
 }
 

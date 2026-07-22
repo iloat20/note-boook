@@ -1,5 +1,6 @@
 {
 	"navigationBarTitleText": "资产",
+	"enablePullDownRefresh": true,
 	"usingComponents": {
 		"quick-record": "../../components/quick-record/quick-record",
 		"liquid-slider": "../../components/liquid-slider/index",

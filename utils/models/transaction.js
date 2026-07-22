@@ -7,10 +7,10 @@ const {
 	getNextId,
 	saveData,
 	getData,
-	markDataDirty,
 	upsertAndSave,
 	deleteAndSave,
 } = require("../storageCore/core");
+const { markDataDirty, CACHE_TYPES } = require("../cache/cacheManager");
 const Stock = require("./stock");
 const { createTransaction } = require("../helpers/entityFactory");
 
@@ -50,7 +50,7 @@ const Transaction = {
 	 */
 	save(transaction) {
 		const result = upsertAndSave(TRANSACTION_KEY, transaction);
-		markDataDirty(["position", "heatmap", "periodStats"], transaction.stockId);
+		markDataDirty([CACHE_TYPES.POSITION, CACHE_TYPES.HEATMAP, CACHE_TYPES.PERIOD_STATS], transaction.stockId);
 		require("./transactionIndex").invalidate();
 		require("./dateIndex").invalidate();
 		return result;
@@ -63,6 +63,16 @@ const Transaction = {
 	getAll() {
 		const result = getData(TRANSACTION_KEY);
 		return Array.isArray(result) ? result : [];
+	},
+
+	/**
+	 * 根据 ID 获取单条交易记录（类型宽容匹配）
+	 * @param {number|string} id
+	 * @returns {Object|undefined}
+	 */
+	getById(id) {
+		const list = this.getAll();
+		return list.find((t) => t.id === id || String(t.id) === String(id));
 	},
 
 	/**
@@ -81,7 +91,7 @@ const Transaction = {
 	 * @param {number} id - 交易记录 ID
 	 */
 	delete(id) {
-		deleteAndSave(TRANSACTION_KEY, id, ["position", "heatmap", "periodStats"]);
+		deleteAndSave(TRANSACTION_KEY, id, [CACHE_TYPES.POSITION, CACHE_TYPES.HEATMAP, CACHE_TYPES.PERIOD_STATS]);
 		require("./transactionIndex").invalidate();
 		require("./dateIndex").invalidate();
 	},
@@ -93,7 +103,7 @@ const Transaction = {
 	deleteByStockId(stockId) {
 		const transactions = this.getAll().filter((t) => t.stockId !== stockId);
 		saveData(TRANSACTION_KEY, transactions);
-		markDataDirty(["position", "heatmap", "periodStats"], stockId);
+		markDataDirty([CACHE_TYPES.POSITION, CACHE_TYPES.HEATMAP, CACHE_TYPES.PERIOD_STATS], stockId);
 		require("./transactionIndex").invalidate();
 		require("./dateIndex").invalidate();
 	},

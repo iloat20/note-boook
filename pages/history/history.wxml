@@ -5,6 +5,7 @@
       <view class="title-icon-wrap">
         <image class="title-icon" src="/images/title-history.svg" mode="aspectFit" />
       </view>
+      <view class="title-actions"></view>
     </view>
   </view>
 
@@ -57,9 +58,14 @@
           bind:change="onFilterTabChange"
         />
       </view>
-      <view class="select-toggle {{selectMode ? 'select-toggle-active' : ''}}" bindtap="toggleSelectMode">
-        <view class="batch-icon"></view>
-        <text>{{selectMode ? '取消' : '选择'}}</text>
+      <view class="filter-toggles">
+        <view class="mini-toggle {{mergeRelated ? 'mini-toggle-on' : ''}}" bindtap="onToggleMerge">
+          <text>合并</text>
+        </view>
+        <view class="select-toggle {{selectMode ? 'select-toggle-active' : ''}}" bindtap="toggleSelectMode">
+          <view class="batch-icon"></view>
+          <text>{{selectMode ? '取消' : '选择'}}</text>
+        </view>
       </view>
     </view>
     <scroll-view wx:if="{{activeStrategies.length > 0}}" scroll-x class="strategy-chips" enhanced show-scrollbar="{{false}}">
@@ -84,48 +90,84 @@
         </view>
 
         <!-- 资产卡片 (XHS feed 风格) -->
-        <view wx:for="{{item.items}}" wx:key="id" wx:for-index="itemIdx" wx:for-item="record"
-          class="record-card {{dissolvingId === record.id ? 'dissolving' : ''}} {{selectMode ? 'record-card-selectable' : ''}} {{selectMode && selectedMap[record.id] ? 'record-card-selected' : ''}}"
-          data-record="{{record}}"
-          data-id="{{record.id}}"
-          data-index="{{index}}"
-          bindlongpress="{{selectMode ? '' : 'showActions'}}"
-          bindtap="{{selectMode ? 'onRecordTap' : ''}}"
-        >
-          <!-- 批量选择复选框 -->
-          <view wx:if="{{selectMode}}" class="record-checkbox" catchtap="toggleSelectItem" data-id="{{record.id}}" data-type="{{record.type}}">
-            <view class="xhs-checkbox {{selectedMap[record.id] ? 'xhs-checkbox-checked' : ''}}"></view>
+        <!-- 合并卡片 / 普通卡片 -->
+        <view wx:for="{{item.items}}" wx:key="id" wx:for-index="itemIdx" wx:for-item="record">
+          <!-- 合并卡片：同一资产、同类型多笔折叠为一张 -->
+          <view wx:if="{{record.merged}}"
+            class="record-card merged {{mergedExpanded[record.mergeKey] ? 'is-expanded' : ''}}"
+            data-key="{{record.mergeKey}}" bindtap="onToggleMergeExpand">
+            <view class="{{record.typeBarClass}}"></view>
+            <view class="record-main">
+              <view class="record-top">
+                <view class="record-info">
+                  <text class="record-code">{{record.code}}</text>
+                  <text class="record-name">{{record.name}}</text>
+                </view>
+                <view class="{{record.typeTagClass}}">{{record.typeText}}</view>
+                <text class="merge-count">×{{record.mergeCount}}</text>
+                <text class="record-time">{{record.time}}</text>
+              </view>
+              <view class="record-detail">
+                <text class="detail-price mono-num">合计</text>
+                <text class="detail-multiply">·</text>
+                <text class="merge-total-qty">{{record.mergeTotalQuantityText}}份</text>
+                <text class="{{record.amountClass}}">{{record.mergeTotalAmountText}}</text>
+              </view>
+              <view wx:if="{{mergedExpanded[record.mergeKey]}}" class="merge-subs">
+                <view wx:for="{{record.subRecords}}" wx:key="id" wx:for-item="sub" class="merge-sub">
+                  <text class="sub-time">{{sub.time}}</text>
+                  <text class="merge-sub-price mono-num" wx:if="{{sub.type !== 'DIVIDEND'}}">¥{{sub.priceText}}</text>
+                  <text class="merge-sub-x" wx:if="{{sub.type !== 'DIVIDEND'}}">×</text>
+                  <text class="merge-sub-qty">{{sub.quantity}}份</text>
+                  <text class="{{sub.amountClass}} merge-sub-amt">{{sub.amountText}}</text>
+                </view>
+              </view>
+            </view>
           </view>
 
-          <!-- 左侧: 类型色条 -->
-          <view class="{{record.typeBarClass}}"></view>
-
-          <!-- 主内容 -->
-          <view class="record-main">
-            <!-- 第一行: 资产信息(居左) + 买卖标签 + 时间(居右) -->
-            <view class="record-top">
-              <view class="record-info">
-              <text class="record-code">{{record.code}}</text>
-                <text class="record-name">{{record.name}}</text>
-              </view>
-              <view class="{{record.typeTagClass}}">
-                {{record.typeText}}
-              </view>
-              <text class="record-time">{{record.time}}</text>
+          <!-- 普通卡片 -->
+          <view wx:else
+            class="record-card {{dissolvingId === record.id ? 'dissolving' : ''}} {{selectMode ? 'record-card-selectable' : ''}} {{selectMode && selectedMap[record.id] ? 'record-card-selected' : ''}}"
+            data-record="{{record}}"
+            data-id="{{record.id}}"
+            data-index="{{index}}"
+            bindlongpress="{{selectMode ? '' : 'showActions'}}"
+            bindtap="{{selectMode ? 'onRecordTap' : ''}}">
+            <!-- 批量选择复选框 -->
+            <view wx:if="{{selectMode}}" class="record-checkbox" catchtap="toggleSelectItem" data-id="{{record.id}}" data-type="{{record.type}}">
+              <view class="xhs-checkbox {{selectedMap[record.id] ? 'xhs-checkbox-checked' : ''}}"></view>
             </view>
 
-            <!-- 第二行: 单价 × 数量 (左)  ...  金额 (右) -->
-            <view wx:if="{{record.type !== 'DIVIDEND'}}" class="record-detail">
-              <text class="detail-price mono-num">¥{{record.priceText}}</text>
-              <text class="detail-multiply">×</text>
-              <text class="detail-quantity">{{record.quantity}}份</text>
-              <text class="{{record.amountClass}}">
-                {{record.amountText}}
-              </text>
-            </view>
+            <!-- 左侧: 类型色条 -->
+            <view class="{{record.typeBarClass}}"></view>
 
-            <!-- 策略标签 -->
-            <strategy-tags wx:if="{{record.strategies.length > 0}}" tags="{{record.strategies}}" size="mini" />
+            <!-- 主内容 -->
+            <view class="record-main">
+              <!-- 第一行: 资产信息(居左) + 买卖标签 + 时间(居右) -->
+              <view class="record-top">
+                <view class="record-info">
+                  <text class="record-code">{{record.code}}</text>
+                  <text class="record-name">{{record.name}}</text>
+                </view>
+                <view class="{{record.typeTagClass}}">
+                  {{record.typeText}}
+                </view>
+                <text class="record-time">{{record.time}}</text>
+              </view>
+
+              <!-- 第二行: 单价 × 数量 (左)  ...  金额 (右) -->
+              <view wx:if="{{record.type !== 'DIVIDEND'}}" class="record-detail">
+                <text class="detail-price mono-num">¥{{record.priceText}}</text>
+                <text class="detail-multiply">×</text>
+                <text class="detail-quantity">{{record.quantity}}份</text>
+                <text class="{{record.amountClass}}">
+                  {{record.amountText}}
+                </text>
+              </view>
+
+              <!-- 策略标签 -->
+              <strategy-tags wx:if="{{record.strategies.length > 0}}" tags="{{record.strategies}}" size="mini" />
+            </view>
           </view>
         </view>
       </view>
@@ -157,6 +199,14 @@
           <view class="batch-btn-delete {{selectedIds.length === 0 ? 'batch-btn-disabled' : ''}}" bindtap="batchDelete">
             删除
           </view>
+        </view>
+      </view>
+
+      <!-- 撤销删除提示条 -->
+      <view wx:if="{{showUndo}}" class="undo-bar glass-bar">
+        <view class="undo-bar-inner">
+          <text class="undo-text">{{undoText}}</text>
+          <view class="undo-btn" bindtap="onUndo">撤销</view>
         </view>
       </view>
     </view>

@@ -1,11 +1,14 @@
 /**
  * 核心存储函数
- * 封装 wx.getStorageSync/wx.setStorageSync
+ * 封装 wx.getStorageSync/wx.setStorageSync（经 platform/storage 抽象层）
  * 提供内存缓存以减少 I/O
  */
 
 const { MARKETS, TRANSACTION_TYPE, DEFAULT_STRATEGIES } = require("../constants/index");
-const { caches, markDataDirty } = require("../cache/cacheManager");
+const storage = require("../platform/storage");
+// 注意：core 不再在顶层 require cacheManager。
+// 内存缓存（caches.mem）与 markDataDirty 均改为惰性获取（见 getMemCache / _markDirty），
+// 以打破 core ↔ cacheManager ↔ computedCache 的结构性循环依赖。
 
 const STOCK_KEY = "stock_trade_stocks";
 const TRANSACTION_KEY = "stock_trade_transactions";
@@ -15,7 +18,14 @@ const STRATEGY_KEY = "stock_trade_strategies";
 
 // 内存缓存，避免频繁读取本地存储
 // 使用 LRU 策略，防止缓存无限增长
-const _memCache = caches.mem;
+// 惰性获取 cacheManager.caches.mem，避免 core 在加载期依赖 cacheManager。
+let _memCacheRef = null;
+function getMemCache() {
+	if (!_memCacheRef) {
+		_memCacheRef = require("../cache/cacheManager").caches.mem;
+	}
+	return _memCacheRef;
+}
 
 let _lastTimestamp = 0;
 let _seq = 0;
@@ -68,21 +78,31 @@ function getNextId() {
 
 /**
  * Recursively freeze an object/array.
+ *
+ * 性能不变式：deepFreeze 保证「一个对象被冻结 ⇒ 其所有后代也已被冻结」。
+ * 因此对已冻结对象可直接返回，无需再向下递归。写操作（upsertAndSave/
+ * deleteAndSave）每次 slice 出的新数组里，绝大多数元素是上一次已冻结的旧引用，
+ * 命中此短路后为 O(1)，只有新建/合并出的对象会被真正深冻结——把每次写入的
+ * 冻结成本从 O(全部节点) 降到 O(数组长度 + 改动子树)。
  * @param {any} obj
  * @returns {any} the frozen object (same reference)
  */
 function deepFreeze(obj) {
 	if (obj === null || typeof obj !== "object") return obj;
+	// 已冻结 ⇒ 后代必然已冻结（见上方不变式），直接跳过递归。
+	if (Object.isFrozen(obj)) return obj;
 	Object.freeze(obj);
 	if (Array.isArray(obj)) {
-		obj.forEach((item) => {
+		for (let i = 0; i < obj.length; i++) {
+			const item = obj[i];
 			if (item && typeof item === "object") deepFreeze(item);
-		});
+		}
 	} else {
-		Object.keys(obj).forEach((k) => {
-			const v = obj[k];
+		const keys = Object.keys(obj);
+		for (let i = 0; i < keys.length; i++) {
+			const v = obj[keys[i]];
 			if (v && typeof v === "object") deepFreeze(v);
-		});
+		}
 	}
 	return obj;
 }
@@ -93,11 +113,11 @@ function deepFreeze(obj) {
  * @param {any} data - 数据
  */
 function saveData(key, data) {
-	wx.setStorageSync(key, data);
+	storage.setStorageSync(key, data);
 	// Freeze on write: subsequent getData cache-hits return the frozen reference
 	const frozen = deepFreeze(data);
-	_memCache.delete(key);
-	_memCache.set(key, frozen);
+	getMemCache().delete(key);
+	getMemCache().set(key, frozen);
 }
 
 /**
@@ -106,8 +126,9 @@ function saveData(key, data) {
  * @returns {any} 数据
  */
 function getData(key) {
-	if (_memCache.has(key)) return _memCache.get(key);
-	let data = wx.getStorageSync(key);
+	const mem = getMemCache();
+	if (mem.has(key)) return mem.get(key);
+	let data = storage.getStorageSync(key);
 	if (
 		data === undefined ||
 		data === null ||
@@ -121,8 +142,8 @@ function getData(key) {
 		}
 	}
 	// C1 freeze contract: freeze on every read so callers cannot mutate the shared cache ref
-	_memCache.set(key, deepFreeze(data));
-	return _memCache.get(key);
+	mem.set(key, deepFreeze(data));
+	return mem.get(key);
 }
 
 /**
@@ -141,7 +162,17 @@ function getDataCopy(key) {
  * 清除内存缓存
  */
 function clearMemCache() {
-	_memCache.clear();
+	getMemCache().clear();
+}
+
+/**
+ * 惰性调用 cacheManager.markDataDirty。
+ * 不直接依赖 cacheManager，避免 core 在加载期形成对状态层的反向依赖。
+ * @param {string|string[]} types
+ * @param {number|number[]} [stockId]
+ */
+function _markDirty(types, stockId) {
+	require("../cache/cacheManager").markDataDirty(types, stockId);
 }
 
 /**
@@ -165,7 +196,7 @@ function upsertAndSave(key, item, dirtyTags) {
 		list.push(item);
 	}
 	saveData(key, list);
-	if (dirtyTags) markDataDirty(dirtyTags, item.id);
+	if (dirtyTags) _markDirty(dirtyTags, item.id);
 	return list[index >= 0 ? index : list.length - 1];
 }
 
@@ -187,7 +218,7 @@ function deleteAndSave(key, id, dirtyTags) {
 		return x.id !== id;
 	});
 	saveData(key, newList);
-	if (dirtyTags) markDataDirty(dirtyTags, foundStockId);
+	if (dirtyTags) _markDirty(dirtyTags, foundStockId);
 }
 
 module.exports = {
@@ -204,7 +235,6 @@ module.exports = {
 	getData,
 	getDataCopy,
 	clearMemCache,
-	markDataDirty,
 	upsertAndSave,
 	deleteAndSave,
 	enqueueWrite,

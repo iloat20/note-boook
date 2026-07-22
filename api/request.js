@@ -1,9 +1,11 @@
 /**
  * 统一网络请求封装
  *
- * 精简版：去掉未使用的拦截器管道
- * 仅保留 wx.request Promise 封装 + 便捷方法
+ * 负责构建请求配置（header/timeout/responseType/method/data），
+ * 真正的请求发起与 success/fail 归一化委托给 platform/http（DIP 接缝）。
  */
+
+const { request: wxRequest } = require("../utils/platform/http");
 
 /**
  * 统一请求方法
@@ -24,19 +26,7 @@ function request(options) {
 			responseType: options.responseType || "text",
 		};
 
-		wx.request({
-			...config,
-			success: (res) => {
-				if (res.statusCode >= 200 && res.statusCode < 300) {
-					resolve(res.data);
-				} else {
-					reject({ statusCode: res.statusCode, data: res.data });
-				}
-			},
-			fail: (err) => {
-				reject({ statusCode: 0, error: err });
-			},
-		});
+		wxRequest(config).then(resolve).catch(reject);
 	});
 }
 

@@ -1,15 +1,37 @@
 /**
  * 价格行情获取工具
  * 使用公开价格数据接口（支持 HTTPS）
+ *
+ * 架构说明（架构审查 P2-5）：
+ * - 外部行情源被抽象为 PriceProvider，当前实现 TencentPriceProvider。
+ *   更换数据源只需提供新的 Provider（实现 buildUrl / buildBatchUrl / parseSingle / parseBatch），
+ *   上层 fetchStockPrice / fetchAllPrices 无需改动。
+ * - 腾讯行情以 "~" 分隔的关键字段索引用 TENCENT_FIELD 命名常量集中管理，避免散落魔法数字。
+ * - 数值合法性校验集中在 parseRawFields：关键价格 NaN / 非法时视为无效行情。
  */
 
 const { request } = require("../../api/request");
+const { decodeGBK } = require("../helpers/gbk");
+const { buildSymbol } = require("../constants/market");
 
 // 调试开关（生产环境设为 false）
 const DEBUG = false;
 const log = DEBUG ? console.log.bind(console) : () => {};
 const warn = DEBUG ? console.warn.bind(console) : () => {};
 const errLog = DEBUG ? console.error.bind(console) : () => {};
+
+// 腾讯财经行情字段索引（以 "~" 分隔）。命名常量避免魔法数字。
+const TENCENT_FIELD = {
+	NAME: 1,
+	CODE: 2,
+	CURRENT: 3,
+	YESTERDAY_CLOSE: 4,
+	TODAY_OPEN: 5,
+	VOLUME: 6,
+	HIGH: 33,
+	LOW: 34,
+	AMOUNT: 37,
+};
 
 // 请求并发控制
 const MAX_CONCURRENT_REQUESTS = 5;
@@ -23,138 +45,129 @@ const RETRY_DELAYS = [1000, 3000]; // 重试延迟：第 1 次等待 1s，第 2 
 let _activeRequests = 0;
 const _requestQueue = [];
 
-// 将腾讯 API 返回的 GBK ArrayBuffer 解码为 UTF-8 字符串
-function decodeGBK(arrayBuffer) {
-	if (!arrayBuffer) return "";
-	// 优先使用 TextDecoder（基础库 2.9.0+ 支持，gb18030 是 GBK 的超集）
-	if (typeof TextDecoder !== "undefined") {
-		try {
-			return new TextDecoder("gb18030").decode(arrayBuffer);
-		} catch (_e) {
-			// 不支持 gb18030，fallthrough
-		}
-	}
-	// 降级：按字节转 latin-1 字符串（中文会乱，但不会崩溃）
-	const bytes = new Uint8Array(arrayBuffer);
-	const chars = new Array(bytes.length);
-	for (let i = 0; i < bytes.length; i++) {
-		chars[i] = String.fromCharCode(bytes[i]);
-	}
-	return chars.join("");
-}
+// 在途价格请求表：stockId -> Promise。用于并发请求合并（去重），
+// 同一股票在途期间，后续 fetchAllPrices 调用复用同一 Promise，不重复发起网络请求。
+const _pricePromises = new Map();
 
-// 境内代码前缀映射
-function getAsharePrefix(code) {
-	const codeNum = parseInt(code, 10);
-	if (codeNum >= 600000 && codeNum < 700000) return "sh"; // 上海主板 + 科创板（600xxx-688xxx）
-	if (codeNum >= 0 && codeNum < 400000) return "sz"; // 深圳主板 + 创业板（000xxx-300xxx）
-	if (codeNum >= 800000 && codeNum < 900000) return "bj"; // 北交所（8xxxxx）
-	if (codeNum >= 400000 && codeNum < 500000) return "bj"; // 北交所（4xxxxx）
-	return "sh"; // 默认上海
-}
-
-// 获取股票符号（用于API请求）
+// 获取股票符号（用于API请求）—— 委托 market.buildSymbol，市场扩展只改注册表
 function getSymbol(market, code) {
-	switch (market) {
-		case "A_SHARE":
-			return getAsharePrefix(code) + code;
-		case "HK_SHARE":
-			return `r_hk${String(code).padStart(5, "0")}`;
-		case "US_SHARE":
-			return `us${String(code).toUpperCase()}`;
-		default:
-			return null;
-	}
+	return buildSymbol(market, code);
 }
 
-// 构建API URL - 使用腾讯财经API（支持HTTPS）
-function buildUrl(market, code) {
-	const symbol = getSymbol(market, code);
-	return symbol ? `https://qt.gtimg.cn/q=${symbol}` : null;
-}
+/**
+ * 把一条腾讯行情的字段数组解析为标准化对象。
+ * 返回 null 表示字段不足或当前价无效（非交易日 / 停牌 / 无效代码）。
+ * @param {string[]} fields
+ * @returns {Object|null}
+ */
+function parseRawFields(fields) {
+	if (!Array.isArray(fields) || fields.length < 35) return null;
 
-// 构建批量查询 URL（腾讯 API 支持逗号分隔多只股票）
-function buildBatchUrl(stocks) {
-	const symbols = stocks.map((stock) => getSymbol(stock.market, stock.code)).filter(Boolean);
-	return symbols.length > 0 ? `https://qt.gtimg.cn/q=${symbols.join(",")}` : null;
-}
+	const currentRaw = parseFloat(fields[TENCENT_FIELD.CURRENT]);
+	const yesterdayClose = parseFloat(fields[TENCENT_FIELD.YESTERDAY_CLOSE]);
+	// 现价为 0 / 非法时兜底用昨收价（非交易日 / 停牌场景）
+	const currentPrice =
+		Number.isFinite(currentRaw) && currentRaw > 0
+			? currentRaw
+			: Number.isFinite(yesterdayClose)
+				? yesterdayClose
+				: 0;
 
-// 解析单条腾讯财经 API 数据
-function parseTencentData(data) {
-	log("[parseTencentData] 原始数据:", data.substring(0, 200));
+	// 任一关键价非法（NaN）视为无效行情
+	if (!Number.isFinite(currentPrice)) return null;
 
-	// 非交易日 / 无效代码：腾讯 API 返回 v_pv_none_match="1"
-	if (data.indexOf("pv_none_match") !== -1) {
-		log("[parseTencentData] 非交易日或无数据匹配");
-		return null;
-	}
-
-	const match = data.match(/="([^"]*)"/);
-	if (!match) {
-		warn("[parseTencentData] 未匹配到数据，原始:", data.substring(0, 100));
-		return null;
-	}
-
-	const fields = match[1].split("~");
-	log("[parseTencentData] 字段数:", fields.length, "前5个:", fields.slice(0, 5));
-	if (fields.length < 35) {
-		warn("[parseTencentData] 字段数不足35:", fields.length);
-		return null;
-	}
-
-	const currentPrice = parseFloat(fields[3]) || 0;
-	// 现价为 0 时兜底用昨收价（非交易日/停牌场景）
-	const fallbackPrice = currentPrice > 0 ? currentPrice : parseFloat(fields[4]) || 0;
-
-	const result = {
-		code: fields[2],
-		name: fields[1],
-		currentPrice: fallbackPrice,
-		yesterdayClose: parseFloat(fields[4]) || 0,
-		todayOpen: parseFloat(fields[5]) || 0,
-		volume: parseInt(fields[6], 10) || 0,
-		high: parseFloat(fields[33]) || 0,
-		low: parseFloat(fields[34]) || 0,
-		amount: parseFloat(fields[37]) || 0,
+	return {
+		code: fields[TENCENT_FIELD.CODE],
+		name: fields[TENCENT_FIELD.NAME],
+		currentPrice,
+		yesterdayClose: Number.isFinite(yesterdayClose) ? yesterdayClose : 0,
+		todayOpen: Number.isFinite(parseFloat(fields[TENCENT_FIELD.TODAY_OPEN]))
+			? parseFloat(fields[TENCENT_FIELD.TODAY_OPEN])
+			: 0,
+		volume: Number.isFinite(parseInt(fields[TENCENT_FIELD.VOLUME], 10))
+			? parseInt(fields[TENCENT_FIELD.VOLUME], 10)
+			: 0,
+		high: Number.isFinite(parseFloat(fields[TENCENT_FIELD.HIGH]))
+			? parseFloat(fields[TENCENT_FIELD.HIGH])
+			: 0,
+		low: Number.isFinite(parseFloat(fields[TENCENT_FIELD.LOW]))
+			? parseFloat(fields[TENCENT_FIELD.LOW])
+			: 0,
+		amount: Number.isFinite(parseFloat(fields[TENCENT_FIELD.AMOUNT]))
+			? parseFloat(fields[TENCENT_FIELD.AMOUNT])
+			: 0,
 	};
-	log("[parseTencentData] 解析成功:", result);
-	return result;
 }
 
-// 解析批量查询响应（多条 v_xxYY="..." 数据）
-// 海外市场价格接口会在代码后附加交易所后缀（如 AAPL.OQ, BRK.B.N），需要剥离
-function parseBatchData(responseText) {
-	log("[parseBatchData] 原始响应:", responseText.substring(0, 300));
-	const results = {};
-	const regex = /v_([^=]+)="([^"]+)"/g;
-	let match;
-	let count = 0;
-	while ((match = regex.exec(responseText)) !== null) {
-		count++;
-		const fields = match[2].split("~");
-		if (fields.length >= 35) {
-			let code = fields[2];
-			// 剥离海外交易所后缀（.OQ / .N / .A / .P 等）
-			code = code.replace(/\.[A-Z]+$/i, "");
-			let batchPrice = parseFloat(fields[3]) || 0;
-			// 现价为 0 时兜底用昨收价（非交易日/停牌场景）
-			if (batchPrice <= 0) batchPrice = parseFloat(fields[4]) || 0;
-			results[code] = {
-				code: code,
-				name: fields[1],
-				currentPrice: batchPrice,
-				yesterdayClose: parseFloat(fields[4]) || 0,
-				todayOpen: parseFloat(fields[5]) || 0,
-				volume: parseInt(fields[6], 10) || 0,
-				high: parseFloat(fields[33]) || 0,
-				low: parseFloat(fields[34]) || 0,
-				amount: parseFloat(fields[37]) || 0,
-			};
-		}
+/**
+ * 腾讯财经行情 Provider：封装 URL 构造、响应解析与数值校验。
+ * 实现 PriceProvider 契约：buildUrl / buildBatchUrl / parseSingle / parseBatch。
+ */
+function createTencentProvider() {
+	function buildUrl(market, code) {
+		const symbol = getSymbol(market, code);
+		return symbol ? `https://qt.gtimg.cn/q=${symbol}` : null;
 	}
-	log("[parseBatchData] 解析到", count, "条数据，有效:", Object.keys(results).length);
-	return results;
+
+	function buildBatchUrl(stocks) {
+		const symbols = stocks.map((stock) => getSymbol(stock.market, stock.code)).filter(Boolean);
+		return symbols.length > 0 ? `https://qt.gtimg.cn/q=${symbols.join(",")}` : null;
+	}
+
+	// 解析单条腾讯财经 API 数据
+	function parseSingle(data) {
+		log("[parseSingle] 原始数据:", data.substring(0, 200));
+
+		// 非交易日 / 无效代码：腾讯 API 返回 v_pv_none_match="1"
+		if (data.indexOf("pv_none_match") !== -1) {
+			log("[parseSingle] 非交易日或无数据匹配");
+			return null;
+		}
+
+		const match = data.match(/="([^"]*)"/);
+		if (!match) {
+			warn("[parseSingle] 未匹配到数据，原始:", data.substring(0, 100));
+			return null;
+		}
+
+		const fields = match[1].split("~");
+		const result = parseRawFields(fields);
+		log("[parseSingle] 解析结果:", result);
+		return result;
+	}
+
+	// 解析批量查询响应（多条 v_xxYY="..." 数据）
+	// 海外市场价格接口会在代码后附加交易所后缀（如 AAPL.OQ, BRK.B.N），需要剥离
+	function parseBatch(responseText) {
+		log("[parseBatch] 原始响应:", responseText.substring(0, 300));
+		const results = {};
+		const regex = /v_([^=]+)="([^"]+)"/g;
+		let match;
+		let count = 0;
+		while ((match = regex.exec(responseText)) !== null) {
+			count++;
+			const fields = match[2].split("~");
+			const parsed = parseRawFields(fields);
+			if (!parsed) continue;
+			// 剥离海外交易所后缀（.OQ / .N / .A / .P 等）
+			const code = parsed.code.replace(/\.[A-Z]+$/i, "");
+			results[code] = parsed;
+		}
+		log("[parseBatch] 解析到", count, "条数据，有效:", Object.keys(results).length);
+		return results;
+	}
+
+	return {
+		name: "tencent",
+		buildUrl,
+		buildBatchUrl,
+		parseSingle,
+		parseBatch,
+	};
 }
+
+// 默认 Provider 实例（可替换：注入其它 createXxxProvider() 实现即可切换数据源）
+const priceProvider = createTencentProvider();
 
 // 带并发控制的请求执行器
 function _executeWithThrottle(fn) {
@@ -205,7 +218,7 @@ function fetchStockPrice(market, code) {
 		_withRetry(
 			() =>
 				new Promise((resolve, reject) => {
-					const url = buildUrl(market, code);
+					const url = priceProvider.buildUrl(market, code);
 					if (!url) {
 						reject(new Error("不支持的市场类型"));
 						return;
@@ -221,7 +234,7 @@ function fetchStockPrice(market, code) {
 								"[fetchStockPrice] 解析数据:",
 								typeof responseData === "string" ? responseData.substring(0, 200) : responseData,
 							);
-							const result = parseTencentData(responseData);
+							const result = priceProvider.parseSingle(responseData);
 							log("[fetchStockPrice] 解析结果:", result);
 
 							if (result && result.currentPrice > 0) {
@@ -242,12 +255,20 @@ function fetchStockPrice(market, code) {
 	);
 }
 
-function fetchPriceBatch(stocks) {
-	const url = buildBatchUrl(stocks);
-	if (!url) return Promise.resolve(stocks.map((s) => ({ stockId: s.id, price: null })));
+// 原始批量请求（带重试 + 并发节流）。
+// 返回 { results, ok }：ok=false 表示所有重试耗尽（网络故障），
+// 上层据此区分「网络故障」与「代码确实无行情」，从而决定缓存策略（负结果缓存）。
+function _fetchPriceBatchRaw(stocks) {
+	const url = priceProvider.buildBatchUrl(stocks);
+	if (!url) {
+		return Promise.resolve({
+			results: stocks.map((s) => ({ stockId: s.id, price: null })),
+			ok: true,
+		});
+	}
 
 	// 内层：带重试的请求
-	// 外层 catch：重试全部耗尽后返回 null 价格，不阻塞整体
+	// 外层 catch：重试全部耗尽后返回 null 价格 + ok:false，不阻塞整体
 	return _executeWithThrottle(
 		_withRetry(
 			() =>
@@ -256,7 +277,7 @@ function fetchPriceBatch(stocks) {
 						.get(url, null, { timeout: 15000, responseType: "arraybuffer" })
 						.then((data) => {
 							const responseText = decodeGBK(data);
-							const parsed = parseBatchData(responseText);
+							const parsed = priceProvider.parseBatch(responseText);
 							const results = stocks.map((stock) => {
 								const d = parsed[stock.code];
 								return {
@@ -264,35 +285,73 @@ function fetchPriceBatch(stocks) {
 									price: d && d.currentPrice > 0 ? d.currentPrice : null,
 								};
 							});
-							resolve(results);
+							resolve({ results, ok: true });
 						})
 						.catch((err) => {
-							errLog("[fetchPriceBatch] 批量请求失败", err);
+							errLog("[_fetchPriceBatchRaw] 批量请求失败", err);
 							reject(err);
 						});
 				}),
 		),
 	).catch(() => {
-		// 所有重试耗尽后，返回 null 价格保证可用
-		return stocks.map((s) => ({ stockId: s.id, price: null }));
+		// 所有重试耗尽后，返回 null 价格 + ok:false 标记网络失败
+		return {
+			results: stocks.map((s) => ({ stockId: s.id, price: null })),
+			ok: false,
+		};
 	});
 }
 
-// 批量获取资产价格，按固定数量分片，避免 URL 过长导致整批失败
+// 同一股票列表的并发去重签名（按 id 排序后拼接，与顺序无关）
+function _priceListSignature(stocks) {
+	return stocks
+		.map((s) => String(s.id))
+		.sort()
+		.join(",");
+}
+
+// 批量获取资产价格，按固定数量分片，避免 URL 过长导致整批失败。
+// 并发去重（瓶颈 B）：同一股票列表（signature）在途期间，后续 fetchAllPrices 调用
+// 复用同一 Promise，不重复发起网络请求（刷新连点 / onShow 重复触发时的去重）。
+// 返回的数组携带 __ok 标记：true=网络成功，false=全部重试耗尽（网络故障）。
 function fetchAllPrices(stocks) {
 	if (!stocks || stocks.length === 0) return Promise.resolve([]);
 
+	const signature = _priceListSignature(stocks);
+	const inflight = _pricePromises.get(signature);
+	if (inflight) return inflight;
+
+	const promise = _fetchAllPricesCore(stocks).finally(() => {
+		// 请求结算后移除在途记录，避免内存泄漏；下次刷新走 PriceCache 命中判断
+		_pricePromises.delete(signature);
+	});
+	_pricePromises.set(signature, promise);
+	return promise;
+}
+
+function _fetchAllPricesCore(stocks) {
 	const chunks = [];
 	for (let i = 0; i < stocks.length; i += BATCH_SIZE) {
 		chunks.push(stocks.slice(i, i + BATCH_SIZE));
 	}
 
-	return Promise.all(chunks.map(fetchPriceBatch)).then((chunkResults) =>
-		chunkResults.reduce((all, current) => all.concat(current), []),
-	);
+	return Promise.all(chunks.map(_fetchPriceBatchRaw)).then((chunkResults) => {
+		let ok = true;
+		const combined = [];
+		chunkResults.forEach(({ results, ok: chunkOk }) => {
+			if (chunkOk === false) ok = false;
+			combined.push(...results);
+		});
+		// 数组实例上携带 ok 标记，调用方用 Array.isArray + .__ok 判断
+		combined.__ok = ok;
+		return combined;
+	});
 }
 
 module.exports = {
 	fetchStockPrice,
 	fetchAllPrices,
+	// 暴露 Provider 以便测试 / 未来替换数据源
+	priceProvider,
+	createTencentProvider,
 };

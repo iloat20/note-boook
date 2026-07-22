@@ -91,7 +91,7 @@
     <view class="xhs-feed-card-full animate-stagger" style="animation-delay:320ms">
       <view class="xhs-feed-card-full-header">
         <text class="xhs-feed-card-full-title">📝 完整明细</text>
-        <view class="xhs-feed-card-full-action" bindtap="onExportMD">
+        <view class="xhs-feed-card-full-action" bindtap="onExport">
           <text class="xhs-feed-card-full-action-text">导出</text>
         </view>
       </view>
@@ -167,4 +167,7 @@
   </scroll-view>
 
   <annual-report wx:if="{{showAnnualReport}}" data="{{annualReportData}}" statusBarHeight="{{statusBarHeight}}" navBarHeight="{{navBarHeight}}" bind:close="onCloseAnnualReport" />
+
+  <!-- 完整明细长图导出用的隐藏画布（按需挂载） -->
+  <canvas wx:if="{{generatingImage}}" type="2d" id="detailCanvas" style="position: fixed; left: -9999px; top: 0; width: 1px; height: 1px;"></canvas>
 </view>

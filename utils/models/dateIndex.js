@@ -6,13 +6,19 @@
  * Invalidate after every write (Transaction.save/delete/deleteByStockId).
  */
 
+const { getData, TRANSACTION_KEY } = require("../storageCore/core");
+
 const _sortedByDate = [];
 let _built = false;
 
 function _ensureBuilt() {
 	if (_built) return;
-	const txList = require("./transaction");
-	const all = txList.getAll();
+	// 直接读存储层，而非 require 兄弟模型 Transaction，打破 transaction ↔ dateIndex 循环依赖。
+	const all = getData(TRANSACTION_KEY);
+	if (!Array.isArray(all)) {
+		_built = true;
+		return;
+	}
 	const sorted = all.map((t) => ({
 		_sortKey: t._sortKey != null ? t._sortKey : new Date(t.date).getTime(),
 		ref: t,

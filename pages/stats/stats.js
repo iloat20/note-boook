@@ -8,6 +8,8 @@ const { computeAssetHoldingPortrait, computeAllTimeAssetFlow, assembleAnnualRepo
 const { buildStockMap } = require("../../utils/helpers/stockHelpers");
 const { buildRecordView } = require("../../utils/helpers/recordView");
 const { exportMD } = require("../../utils/exporters/markdown");
+const { exportCSV } = require("../../utils/exporters/csv");
+const { exportDetailImage } = require("../../utils/render/shareHelper");
 const { getRates, getRate, getCachedRate } = require("../../utils/services/exchangeRate");
 const { wipeAll } = require("../../utils/services/dataService");
 const pageMixin = require("../../utils/ui/pageMixin");
@@ -18,14 +20,11 @@ Page({
 		entranceDone: false,
 		loading: true,
 		stats: null,
-		heatmapData: [],
-		heatmapYear: new Date().getFullYear(),
-		heatmapMonth: new Date().getMonth() + 1,
-		heatmapLabel: "",
 		completeTrades: [],
 		clearedPositions: [],
 		showAnnualReport: false,
 		annualReportData: null,
+		generatingImage: false,
 	},
 
 	onLoad() {
@@ -35,21 +34,22 @@ Page({
 	async onShow() {
 		const wasDirty = pageMixin.onShowMixin(this, 2);
 		if (wasDirty || !this.data.stats) {
-			await this.loadStats();
+			// 仅数据脏时强制重算持仓；否则复用与首页共享的 position 缓存，避免跨页缓存抖动
+			await this.loadStats(wasDirty);
 		}
 		if (!this.data.entranceDone) {
 			this.setData({ entranceDone: true });
 		}
 	},
 
-	_computeAllPositions() {
-		const positions = getAllPositions(true);
+	_computeAllPositions(forceRefresh = false) {
+		const positions = getAllPositions(forceRefresh);
 		this._positionsCache = positions;
 		return positions;
 	},
 
-	_buildTradeListAndCleared() {
-		const positions = this._computeAllPositions();
+	_buildTradeListAndCleared(forceRefresh = false) {
+		const positions = this._computeAllPositions(forceRefresh);
 		const stocks = Stock.getAll();
 		const stockMap = buildStockMap(stocks);
 		const rawTx = Transaction.getAll();
@@ -96,9 +96,9 @@ Page({
 		return { completeTrades, clearedPositions };
 	},
 
-	async loadStats() {
+	async loadStats(forceRefresh = false) {
 		try {
-			const { completeTrades, clearedPositions } = this._buildTradeListAndCleared();
+			const { completeTrades, clearedPositions } = this._buildTradeListAndCleared(forceRefresh);
 			const totalStats = getTotalStats();
 
 			// 期末资产（全历史资产持有口径，复用 computeAllTimeAssetFlow）
@@ -149,8 +149,29 @@ Page({
 		}
 	},
 
-	onExportMD() {
-		exportMD();
+	onExport() {
+		if (!this.data.completeTrades.length) {
+			wx.showToast({ title: "暂无可导出的记录", icon: "none" });
+			return;
+		}
+		wx.showActionSheet({
+			itemList: ["导出 Markdown", "导出 CSV", "导出图片"],
+			success: (res) => {
+				if (res.tapIndex === 0) {
+					exportMD();
+				} else if (res.tapIndex === 1) {
+					exportCSV();
+				} else if (res.tapIndex === 2) {
+					this.onExportImage();
+				}
+			},
+		});
+	},
+
+	onExportImage() {
+		// 先挂载隐藏 canvas，等下一帧节点就绪再绘制
+		this.setData({ generatingImage: true });
+		setTimeout(() => exportDetailImage(this), 50);
 	},
 
 	async onOpenAnnualReport() {

@@ -117,6 +117,7 @@
 - **位置**：`utils/models/PriceCache.js`（`set`/`get`/`has`）+ `pages/index/index.js:658`。
 - **改法**：无效结果也写入缓存 `{price:null, negative:true, timestamp:Date.now()}`，短 TTL（如 5min，`NEGATIVE_TTL_MS`）；`has`/`get` 对 negative 条目返回「已缓存无效」，使刷新跳过。注意与正常 TTL 区分，避免永久不刷。
 - **风险**：低。需测试「停牌股恢复交易后能否在 negative TTL 后重新拉到」。
+- **✅ 实施状态（2026-07-22）**：已落地。`utils/constants/index.js` 新增 `NEGATIVE_TTL_MS: 5*60*1000`；`PriceCache` 新增 `markNegative`/`setBatchNegative`、`get`/`getBatch`/`has`/`pruneExpired` 按 `entry.negative` 走 `NEGATIVE_TTL`；`pages/index/index.js` 的 `_fetchPrices` 在 `results.__ok !== false` 时把 `price===null` 的 stockId 批量写负结果缓存（网络失败时不写，留待重试）。新增 `tests/priceCache.test.js`（6 用例）。
 
 ### B 🟢 请求合并去重（网络/缓存）— ROI 高、成本低
 - **现象**：并发 `_fetchPrices` 对同一批股票发重复请求。
@@ -124,6 +125,7 @@
 - **位置**：`utils/services/stockPrice.js`（`fetchAllPrices`/`fetchPriceBatch`）。
 - **改法**：维护 `Map<string, Promise>` 按 `stockId` 去重；同一股票在途请求复用同一 Promise；请求完成/失败后清理。配合 A 的负结果，可进一步减少空请求。
 - **风险**：低。需测试「快速连续两次刷新不重复发网络」。
+- **✅ 实施状态（2026-07-22）**：已落地。`stockPrice.js` 新增模块级 `_pricePromises` Map（按股票列表签名去重），`fetchAllPrices` 复用在途 Promise，`.finally` 结算后清理避免泄漏；原 `fetchPriceBatch` 重命名为内部 `_fetchPriceBatchRaw`，返回 `{results, ok}`，由 `_fetchAllPricesCore` 聚合为数组并在实例上挂 `__ok`（true=网络成功 / false=全重试耗尽），供 A 区分「网络故障」与「代码无行情」。`tests/stockPrice.test.js` 新增「并发同列表仅发 1 次网络」用例。
 
 ### C 🟠 单点操作局部更新（渲染/CPU）— ROI 中、含增量聚合
 - **现象**：改价/备注/置顶/拖拽落点触发整页 `_loadData`（见 3.1）。

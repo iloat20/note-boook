@@ -9,17 +9,18 @@
  *   submit   — 资产记录保存成功
  */
 
-const { fmt } = require("../../utils/helpers/format");
+const { fmt, fmtDate } = require("../../utils/helpers/format");
 const {
 	validateStockCode,
 	getMarketLabel,
 	formatStockCode,
+	inferMarket,
 } = require("../../utils/constants/market");
 const { fetchStockPrice } = require("../../utils/services/stockPrice");
 const { searchStocks } = require("../../utils/data/stockDatabase");
-const { MARKETS } = require("../../utils/constants/index");
-const { Stock, Transaction } = require("../../utils/models/index");
+const { Stock } = require("../../utils/models/index");
 const { getSellableQuantity } = require("../../utils/services/positionService");
+const { persistTransaction } = require("../../utils/services/transactionService");
 
 Component({
 	properties: {
@@ -80,12 +81,7 @@ Component({
 			if (visible) {
 				const now = new Date();
 				this.setData({
-					qrDate:
-						now.getFullYear() +
-						"-" +
-						String(now.getMonth() + 1).padStart(2, "0") +
-						"-" +
-						String(now.getDate()).padStart(2, "0"),
+					qrDate: fmtDate(now),
 					qrTime:
 						String(now.getHours()).padStart(2, "0") +
 						":" +
@@ -121,7 +117,7 @@ Component({
 				this._marketLocked = false;
 				market = "A_SHARE";
 			} else if (!this._marketLocked) {
-				const detected = this._detectMarket(value);
+				const detected = inferMarket(value);
 				if (detected) {
 					market = detected;
 					this._marketLocked = true;
@@ -341,18 +337,6 @@ Component({
 			});
 		},
 
-		// ──── 市场检测 ────
-		_detectMarket: (code) => {
-			const upper = (code || "").toUpperCase();
-			// 优先：6 位数字 = A 股（先于 5 位，避免 6 位被误判为港股）
-			if (/^\d{6}$/.test(code)) return MARKETS.A_SHARE;
-			// 5 位数字默认 A 股（大多数中小板/创业板/科创板）；仅当有 HK 前缀才判港股
-			if (/^(?:hk|HK)\d{1,5}$/.test(upper)) return MARKETS.HK_SHARE;
-			if (/^\d{5}$/.test(code)) return MARKETS.A_SHARE;
-			if (/^[A-Z]{1,5}$/.test(upper)) return MARKETS.US_SHARE;
-			return null;
-		},
-
 		// ──── 提交 ────
 		submitQuickRecord: function () {
 			if (this._submitting) return;
@@ -418,16 +402,22 @@ Component({
 				stock = Stock.create(code, name, d.qrMarket);
 				Stock.save(stock);
 			}
-			const dateTimeStr = `${d.qrDate}T${d.qrTime || "00:00"}:00`;
-			const tx = Transaction.create(
-				stock.id,
-				d.qrType,
-				d.qrPrice,
-				d.qrQuantity,
-				d.qrFee,
-				new Date(dateTimeStr).toISOString(),
-			);
-			Transaction.save(tx);
+			const result = persistTransaction({
+				stock,
+				type: d.qrType,
+				price: d.qrPrice,
+				quantity: d.qrQuantity,
+				fee: d.qrFee,
+				date: d.qrDate,
+				time: d.qrTime || "00:00",
+				code,
+				market: d.qrMarket,
+				name,
+			});
+			if (!result.ok) {
+				_fail("转出数量超过持有");
+				return;
+			}
 
 			wx.showToast({ title: "添加成功", icon: "success" });
 			this.triggerEvent("submit", { stockId: stock.id });

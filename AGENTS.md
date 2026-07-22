@@ -42,10 +42,10 @@ Three tiers: `storageCore/core.js` → `utils/models/` → `utils/services/`.
 ### Key Gotchas
 
 - `utils/constants/config.js` does **not exist** — use `utils/constants/index.js` for constants.
-- `request.js` in `api/` is a placeholder (`api.example.com`) — not connected to any real backend.
+- `request.js` in `api/` is a **real** `wx.request` wrapper (it has no backend of its own). Live market prices come from `utils/services/stockPrice.js` → Tencent Finance API (`qt.gtimg.cn`), not from this layer.
 - Biome 2.5.0 schema: use `includes` (not `include`), `preset` (not `recommended` at top level), no `diagnostics` key.
-- Charts use ECharts custom build via `components/ec-canvas/` with Canvas 2D. Dispose in `onUnload`, not `onHide`.
-- Custom tab bar (`custom-tab-bar/index.js`) is a `Component({})` — each tab page must manually set `selected` in `onShow()`.
+- **No charting library (ECharts) is used.** Stats/annual reports render with plain WXML/WXSS — there are no `<canvas>` charts in the stats/annual flow. The only `<canvas>` is the portfolio share-card renderer in `pages/index`, mounted on-demand via `wx:if="{{generatingShare}}"`.
+- Custom tab bar (`custom-tab-bar/index.js`) is a `Component({})` that **auto-derives the selected tab** from `getCurrentPages()` — tab pages do NOT need to set `selected` manually in `onShow`.
 
 ### State Management
 
@@ -56,7 +56,7 @@ Lightweight custom store (`utils/state/store.js`) — `createStore({ state, muta
 
 ### Cache System
 
-4 LRU caches in `utils/cache/cacheManager.js`: `position` (100), `heatmap` (50), `periodStats` (50), `mem` (50). `markDataDirty(types, stockId?)` supports per-stock granularity for position cache.
+3 LRU caches in `utils/cache/cacheManager.js`: `position` (100), `stats` (20), `mem` (100). `markDataDirty(types, stockId?)` supports per-stock granularity for the `position` cache. `CACHE_TYPES` enum centralizes cache keys; `heatmap`/`periodStats` remain valid dirty tags (for backward-compat with model save calls) but no dedicated cache instance is allocated.
 
 ## Testing
 

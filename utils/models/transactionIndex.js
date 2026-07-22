@@ -6,13 +6,19 @@
  * Invalidate after every write (Transaction.save/delete/deleteByStockId).
  */
 
+const { getData, TRANSACTION_KEY } = require("../storageCore/core");
+
 const _byStockId = new Map();
 let _built = false;
 
 function _ensureBuilt() {
 	if (_built) return;
-	const txList = require("./transaction");
-	const all = txList.getAll();
+	// 直接读存储层，而非 require 兄弟模型 Transaction，打破 transaction ↔ transactionIndex 循环依赖。
+	const all = getData(TRANSACTION_KEY);
+	if (!Array.isArray(all)) {
+		_built = true;
+		return;
+	}
 	const byStockId = new Map();
 	all.forEach((t) => {
 		if (!byStockId.has(t.stockId)) byStockId.set(t.stockId, []);

@@ -7,10 +7,10 @@ const {
 	getNextId,
 	saveData,
 	getData,
-	markDataDirty,
 	upsertAndSave,
 	deleteAndSave,
 } = require("../storageCore/core");
+const { markDataDirty, CACHE_TYPES } = require("../cache/cacheManager");
 const Stock = require("./stock");
 const { createDividend } = require("../helpers/entityFactory");
 
@@ -46,7 +46,7 @@ const Dividend = {
 	 */
 	save(dividend) {
 		const result = upsertAndSave(DIVIDEND_KEY, dividend);
-		markDataDirty(["position", "heatmap", "periodStats", "stats"], dividend.stockId);
+		markDataDirty([CACHE_TYPES.POSITION, CACHE_TYPES.HEATMAP, CACHE_TYPES.PERIOD_STATS, CACHE_TYPES.STATS], dividend.stockId);
 		return result;
 	},
 
@@ -57,6 +57,16 @@ const Dividend = {
 	getAll() {
 		const result = getData(DIVIDEND_KEY);
 		return Array.isArray(result) ? result : [];
+	},
+
+	/**
+	 * 根据 ID 获取单条分红记录（类型宽容匹配）
+	 * @param {number|string} id
+	 * @returns {Object|undefined}
+	 */
+	getById(id) {
+		const list = this.getAll();
+		return list.find((d) => d.id === id || String(d.id) === String(id));
 	},
 
 	/**
@@ -75,7 +85,7 @@ const Dividend = {
 	 * @param {number} id - 分红记录 ID
 	 */
 	delete(id) {
-		deleteAndSave(DIVIDEND_KEY, id, ["position", "heatmap", "periodStats"]);
+		deleteAndSave(DIVIDEND_KEY, id, [CACHE_TYPES.POSITION, CACHE_TYPES.HEATMAP, CACHE_TYPES.PERIOD_STATS]);
 	},
 
 	/**
@@ -85,7 +95,7 @@ const Dividend = {
 	deleteByStockId(stockId) {
 		const dividends = this.getAll().filter((d) => d.stockId !== stockId);
 		saveData(DIVIDEND_KEY, dividends);
-		markDataDirty(["position", "heatmap", "periodStats", "stats"], stockId);
+		markDataDirty([CACHE_TYPES.POSITION, CACHE_TYPES.HEATMAP, CACHE_TYPES.PERIOD_STATS, CACHE_TYPES.STATS], stockId);
 	},
 
 	/**

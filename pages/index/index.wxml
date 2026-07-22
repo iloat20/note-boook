@@ -34,10 +34,10 @@
         <view class="summary-label">总资产（元）</view>
         <view class="summary-value">{{displayValues.totalMarketValue}}</view>
       </view>
-      
+
       <!-- 分割线 -->
       <view class="summary-divider"></view>
-      
+
       <!-- 统计信息 -->
       <view class="summary-stats">
         <view class="summary-stat">
@@ -53,7 +53,11 @@
           <text class="stat-value">{{positionCount}}只</text>
         </view>
       </view>
-      
+
+      <!-- 刷新全部按钮 -->
+      <view class="refresh-all-btn" bindtap="onRefreshAll">
+        <text class="refresh-all-icon">↻</text>
+      </view>
       <!-- 分享按钮 -->
       <view class="share-btn" bindtap="onSharePortfolio">
         <image src="/images/share.svg" mode="aspectFit" style="width: 32rpx; height: 32rpx;" />
@@ -84,8 +88,8 @@
             </view>
           </view>
         </view>
-        <view class="position-card {{item.entering ? 'position-card-entering' : ''}} {{item.priceFlashClass}} {{item.swiping ? 'is-swiping' : ''}} {{item.id === deletingId ? 'position-card-deleting' : ''}}"
-          style="transform: translateX({{item.swipeOffset || 0}}px);"
+        <view class="position-card {{item.entering ? 'position-card-entering' : ''}} {{item.priceFlashClass}} {{item.swiping ? 'is-swiping' : ''}} {{item.id === deletingId ? 'position-card-deleting' : ''}} {{sortMode && item.id === draggingId ? 'dragging' : ''}}"
+          style="transform: translateX({{item.swipeOffset || 0}}px) {{item.dragOffset ? 'translateY(' + item.dragOffset + 'px)' : ''}};"
           bindtouchstart="onTouchStart"
           bindtouchmove="onTouchMove"
           bindtouchend="onTouchEnd"
@@ -93,9 +97,18 @@
           bindlongpress="onPositionLongPress"
           data-stock-id="{{item.id}}"
           data-index="{{index}}">
+          <!-- 排序模式拖拽手柄 -->
+          <view wx:if="{{sortMode}}" class="drag-handle" data-stock-id="{{item.id}}" data-index="{{index}}" catchtouchstart="onDragStart" catchtouchmove="onDragMove" catchtouchend="onDragEnd">⠿</view>
+
           <view class="position-header-row">
             <text class="stock-code">{{item.code}}</text>
             <text class="stock-name">{{item.name}}</text>
+          </view>
+
+          <!-- 资产占比迷你条 -->
+          <view class="ratio-bar" wx:if="{{item.ratioPct > 0}}">
+            <view class="ratio-fill" style="width: {{item.ratioPct}}%;"></view>
+            <text class="ratio-text">{{item.ratioPct}}%</text>
           </view>
 
           <view class="position-data-row">
@@ -131,6 +144,12 @@
               <text class="mono-num">{{item.pnlPercentText}}%</text>
             </view>
           </view>
+
+          <!-- 标签 / 备注 -->
+          <view class="card-tags" wx:if="{{item.tags.length > 0}}">
+            <text wx:for="{{item.tags}}" wx:key="*this" class="card-tag">{{item}}</text>
+          </view>
+          <view class="card-note" wx:if="{{item.note}}">{{item.note}}</view>
         </view>
       </view>
       <view style="height: 160rpx;"></view>
@@ -146,11 +165,46 @@
     >
     </empty-state>
 
+    <!-- 排序模式完成栏 -->
+    <view wx:if="{{sortMode}}" class="sort-bar">
+      <text class="sort-tip">拖动 ⠿ 调整顺序</text>
+      <view class="sort-done" bindtap="exitSortMode">完成</view>
+    </view>
+
     <!-- 添加按钮 -->
-    <view class="fab {{showQuickRecord ? 'fab-hidden' : ''}}" bindtap="onQuickRecord" bindlongpress="goToAddTransaction">+</view>
+    <view class="fab {{showQuickRecord || sortMode ? 'fab-hidden' : ''}}" bindtap="onQuickRecord" bindlongpress="goToAddTransaction">+</view>
   </block>
 
   <quick-record visible="{{showQuickRecord}}" bind:close="onQuickRecordClose" bind:submit="onQuickRecordSubmit" />
+
+  <!-- 单资产备注 / 标签面板 -->
+  <view wx:if="{{assetMeta.visible}}" class="meta-mask" bindtap="closeAssetMeta"></view>
+  <view wx:if="{{assetMeta.visible}}" class="meta-sheet">
+    <view class="meta-header">
+      <text class="meta-title">备注 / 标签</text>
+      <view class="meta-close" bindtap="closeAssetMeta">
+        <text class="meta-close-icon">✕</text>
+      </view>
+    </view>
+    <view class="meta-body">
+      <view class="meta-field">
+        <text class="meta-label">标签</text>
+        <view class="meta-tag-list">
+          <view wx:for="{{assetMeta.tags}}" wx:key="*this" class="meta-tag" data-tag="{{item}}" bindtap="onMetaRemoveTag">{{item}} ×</view>
+          <input class="meta-tag-input" placeholder="输入标签" value="{{assetMeta.tagInput}}" bindinput="onMetaTagInput" bindconfirm="onMetaAddTag" />
+          <view class="meta-tag-add" bindtap="onMetaAddTag">+ 添加</view>
+        </view>
+      </view>
+      <view class="meta-field">
+        <text class="meta-label">备注</text>
+        <textarea class="meta-textarea" placeholder="记录说明（选填）" value="{{assetMeta.note}}" bindinput="onMetaNoteInput" />
+      </view>
+    </view>
+    <view class="meta-footer">
+      <view class="meta-cancel" bindtap="closeAssetMeta">取消</view>
+      <view class="meta-save" bindtap="saveAssetMeta">保存</view>
+    </view>
+  </view>
 
   <!-- 隐藏 canvas 用于生成分享图 -->
   <canvas wx:if="{{generatingShare}}" type="2d" id="shareCanvas" style="position: fixed; left: -9999px; top: 0; width: 1px; height: 1px;"></canvas>

@@ -3,70 +3,14 @@
  */
 
 const Transaction = require("../models/transaction");
-const Dividend = require("../models/dividend");
 const { getAllPositions } = require("./positionService");
 const { caches } = require("../cache/cacheManager");
-const { getByPeriod } = require("../helpers/dateRange");
 
 // 统计服务缓存键
 const STATS_CACHE_KEYS = {
 	TOTAL: "total",
 	STRATEGY: "strategy",
 };
-
-/**
- * 计算指定范围统计数据
- * @param {Array} transactions - 交易记录列表
- * @param {Array} dividends - 分红记录列表
- * @param {Date} startDate - 开始日期
- * @param {Date} endDate - 结束日期
- * @param {string} label - 标签
- * @returns {Object|null} 统计数据
- */
-function calcStatsForRange(transactions, dividends, startDate, endDate, label) {
-	const periodTrans = transactions.filter((t) => {
-		const d = new Date(t.date);
-		return d >= startDate && d <= endDate;
-	});
-	const periodDivs = dividends.filter((d) => {
-		const dd = new Date(d.date);
-		return dd >= startDate && dd <= endDate;
-	});
-
-	if (periodTrans.length === 0 && periodDivs.length === 0) return null;
-
-	let buyAmount = 0,
-		sellAmount = 0,
-		buyFee = 0,
-		sellFee = 0;
-	periodTrans.forEach((t) => {
-		const amount = parseFloat((t.price * t.quantity).toFixed(2));
-		if (t.type === "BUY") {
-			buyAmount += amount;
-			buyFee += t.fee;
-		} else {
-			sellAmount += amount;
-			sellFee += t.fee;
-		}
-	});
-	const dividendIncome = periodDivs.reduce((sum, d) => sum + d.totalAmount, 0);
-	const pnL = sellAmount - sellFee - buyAmount - buyFee + dividendIncome;
-
-	// NOTE: PnL here is realized-only — it does not include unrealized (floating) gains/losses.
-	// This is a design limitation: period stats cannot compute unrealized PnL without historical prices.
-	return {
-		label,
-		startDate: startDate.toISOString(),
-		endDate: endDate.toISOString(),
-		buyAmount: parseFloat(buyAmount.toFixed(2)),
-		sellAmount: parseFloat(sellAmount.toFixed(2)),
-		buyFee: parseFloat(buyFee.toFixed(2)),
-		sellFee: parseFloat(sellFee.toFixed(2)),
-		dividendIncome: parseFloat(dividendIncome.toFixed(2)),
-		pnL: parseFloat(pnL.toFixed(2)),
-		isRealizedOnly: true,
-	};
-}
 
 /**
  * 获取总统计数据
@@ -134,166 +78,6 @@ function getTotalStats() {
 	return result;
 }
 
-function getISOWeek(date) {
-	const d = new Date(date);
-	d.setHours(0, 0, 0, 0);
-	d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
-	const week1 = new Date(d.getFullYear(), 0, 4);
-	return Math.ceil(((d - week1) / 86400000 + 1) / 7);
-}
-
-/**
- * 生成指定周期类型的时间区间列表
- * @param {string} periodType - DAY|WEEK|MONTH|YEAR
- * @param {Date} firstDate - 起始日期
- * @param {Date} now - 当前日期
- * @returns {Array<{start: Date, end: Date, label: string}>}
- */
-function _generatePeriods(periodType, firstDate, now) {
-	const periods = [];
-
-	switch (periodType) {
-		case "WEEK": {
-			let weekStart = new Date(firstDate);
-			const dayOfWeek = weekStart.getDay() || 7;
-			weekStart = new Date(
-				weekStart.getFullYear(),
-				weekStart.getMonth(),
-				weekStart.getDate() - dayOfWeek + 1,
-			);
-
-			while (weekStart <= now) {
-				const weekEnd = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000 - 1);
-				const weekLabel = `${weekStart.getFullYear()}W${getISOWeek(weekStart)}`;
-				periods.push({ start: weekStart, end: weekEnd, label: weekLabel });
-				weekStart = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000);
-			}
-			break;
-		}
-		case "MONTH": {
-			let monthStart = new Date(firstDate.getFullYear(), firstDate.getMonth(), 1);
-
-			while (monthStart <= now) {
-				const monthEnd = new Date(
-					monthStart.getFullYear(),
-					monthStart.getMonth() + 1,
-					0,
-					23,
-					59,
-					59,
-					999,
-				);
-				const monthLabel = `${monthStart.getFullYear()}-${String(monthStart.getMonth() + 1).padStart(2, "0")}`;
-				periods.push({ start: monthStart, end: monthEnd, label: monthLabel });
-				monthStart = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 1);
-			}
-			break;
-		}
-		case "YEAR": {
-			let yearStart = new Date(firstDate.getFullYear(), 0, 1);
-
-			while (yearStart <= now) {
-				const yearEnd = new Date(yearStart.getFullYear(), 11, 31, 23, 59, 59, 999);
-				periods.push({
-					start: yearStart,
-					end: yearEnd,
-					label: String(yearStart.getFullYear()),
-				});
-				yearStart = new Date(yearStart.getFullYear() + 1, 0, 1);
-			}
-			break;
-		}
-		default: {
-			let dayStart = new Date(firstDate.getFullYear(), firstDate.getMonth(), firstDate.getDate());
-
-			while (dayStart <= now) {
-				const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000 - 1);
-				periods.push({
-					start: dayStart,
-					end: dayEnd,
-					label: `${dayStart.getMonth() + 1}/${dayStart.getDate()}`,
-				});
-				dayStart = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
-			}
-		}
-	}
-
-	return periods;
-}
-
-/**
- * 按周期获取统计数据
- * @param {string} period - 周期类型（DAY|WEEK|MONTH|YEAR）
- * @returns {Object} 周期统计数据
- */
-function getStatsByPeriod(period) {
-	const { startDate, endDate } = getByPeriod(period);
-
-	const allTx = Transaction.getAll();
-	const allDiv = Dividend.getAll();
-
-	const stat = calcStatsForRange(allTx, allDiv, startDate, endDate, period);
-
-	return {
-		period,
-		startDate: startDate.toISOString(),
-		endDate: endDate.toISOString(),
-		buyAmount: stat ? stat.buyAmount : 0,
-		sellAmount: stat ? stat.sellAmount : 0,
-		buyFee: stat ? stat.buyFee : 0,
-		sellFee: stat ? stat.sellFee : 0,
-		dividendIncome: stat ? stat.dividendIncome : 0,
-		pnL: stat ? stat.pnL : 0,
-		isRealizedOnly: true,
-	};
-}
-
-/**
- * 获取周期统计数据列表
- * @param {string} periodType - 周期类型（DAY|WEEK|MONTH|YEAR）
- * @param {number} count - 返回数量
- * @returns {Array} 周期统计数据列表
- */
-function getPeriodStatsList(periodType, count = 12) {
-	// 检查缓存
-	const cacheKey = `${periodType}-${count}`;
-	if (caches.periodStats.has(cacheKey)) {
-		return caches.periodStats.get(cacheKey).slice();
-	}
-
-	const transactions = Transaction.getAll();
-	const dividends = Dividend.getAll();
-
-	if (transactions.length === 0 && dividends.length === 0) {
-		return [];
-	}
-
-	let firstDate = null;
-	transactions.forEach((t) => {
-		const d = new Date(t.date);
-		if (!firstDate || d < firstDate) firstDate = d;
-	});
-	if (!firstDate) {
-		dividends.forEach((d) => {
-			const dd = new Date(d.date);
-			if (!firstDate || dd < firstDate) firstDate = dd;
-		});
-	}
-	const now = new Date();
-
-	const result = [];
-	const periods = _generatePeriods(periodType, firstDate, now);
-
-	periods.forEach((p) => {
-		const item = calcStatsForRange(transactions, dividends, p.start, p.end, p.label);
-		if (item) result.push(item);
-	});
-
-	const finalResult = result.slice(-count);
-	caches.periodStats.set(cacheKey, finalResult.slice());
-	return finalResult;
-}
-
 /**
  * 获取策略统计数据
  * @param {Array} [transactions] - 可选：指定的交易记录列表，默认使用全部交易
@@ -342,17 +126,5 @@ function getStrategyStats(transactions) {
 
 module.exports = {
 	getTotalStats,
-	getStatsByPeriod,
-	getPeriodStatsList,
 	getStrategyStats,
-	invalidateStatsCache,
 };
-
-/**
- * 清除统计服务缓存（stats + periodStats）
- * 在数据变更时调用，确保统计结果与数据一致
- */
-function invalidateStatsCache() {
-	caches.stats.clear();
-	caches.periodStats.clear();
-}

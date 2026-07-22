@@ -123,7 +123,10 @@ describe("Cache Size Constants", () => {
 			require("path").join(__dirname, "../utils/storageCore/core.js"),
 			"utf8",
 		);
-		expect(coreContent).toContain("const _memCache = caches.mem");
+		// core 不再在加载期 require cacheManager；改为运行时惰性引用 caches.mem
+		expect(coreContent).toContain("caches.mem");
+		// 版本语义（bumpVersion）应已收敛到独立叶子模块，core 不再持有版本号
+		expect(coreContent).not.toContain("_dataVersion");
 	});
 
 	test("cacheManager position cache max size is 100", () => {
@@ -131,15 +134,20 @@ describe("Cache Size Constants", () => {
 			require("path").join(__dirname, "../utils/cache/cacheManager.js"),
 			"utf8",
 		);
-		expect(cacheContent).toContain("position: new LRUCache(100)");
+		expect(cacheContent).toContain("[CACHE_TYPES.POSITION]: new LRUCache(100)");
+		expect(cacheContent).toContain('POSITION: "position"');
 	});
 
-	test("cacheManager heatmap cache max size is 50", () => {
+	test("cacheManager stats cache max size is 20 (heatmap/periodStats dead caches removed)", () => {
 		const cacheContent = require("fs").readFileSync(
 			require("path").join(__dirname, "../utils/cache/cacheManager.js"),
 			"utf8",
 		);
-		expect(cacheContent).toContain("heatmap: new LRUCache(50)");
+		expect(cacheContent).toContain("[CACHE_TYPES.STATS]: new LRUCache(20)");
+		// 架构审查 P1-4：heatmap / periodStats 从不写入，属死代码，已从缓存实例中移除；
+		// 但保留 CACHE_TYPES 枚举值以兼容各 model 的 dirty tag 调用（markDataDirty 会安全忽略）。
+		expect(cacheContent).not.toContain("[CACHE_TYPES.HEATMAP]: new LRUCache(50)");
+		expect(cacheContent).toContain('HEATMAP: "heatmap"');
 	});
 });
 

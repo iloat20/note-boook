@@ -10,6 +10,7 @@ const {
 	deleteAndSave,
 } = require("../storageCore/core");
 const { createStock } = require("../helpers/entityFactory");
+const { CACHE_TYPES } = require("../cache/cacheManager");
 
 const Stock = {
 	/**
@@ -29,7 +30,7 @@ const Stock = {
 	 * @returns {Object} 保存后的股票对象
 	 */
 	save(stock) {
-		return upsertAndSave(STOCK_KEY, stock, ["position", "periodStats"]);
+		return upsertAndSave(STOCK_KEY, stock, [CACHE_TYPES.POSITION, CACHE_TYPES.PERIOD_STATS]);
 	},
 
 	/**
@@ -82,7 +83,7 @@ const Stock = {
 	 * @param {number} id - 股票 ID
 	 */
 	delete(id) {
-		deleteAndSave(STOCK_KEY, id, ["position", "periodStats"]);
+		deleteAndSave(STOCK_KEY, id, [CACHE_TYPES.POSITION, CACHE_TYPES.PERIOD_STATS]);
 	},
 
 	/**

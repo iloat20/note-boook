@@ -1,4 +1,4 @@
-const { fmt, fmtDate, fmtTime, fmtShortDate } = require("../utils/helpers/format");
+const { fmt, fmtDate, fmtTime, fmtShortDate, todayISO } = require("../utils/helpers/format");
 
 describe("fmt", () => {
 	test("should format with thousands separator and two decimals", () => {
@@ -74,5 +74,13 @@ describe("fmtShortDate", () => {
 
 	test("should return empty string for invalid input", () => {
 		expect(fmtShortDate("nope")).toBe("");
+	});
+});
+
+describe("todayISO", () => {
+	test("returns today as yyyy-MM-dd and equals fmtDate(new Date())", () => {
+		const expected = fmtDate(new Date());
+		expect(todayISO()).toBe(expected);
+		expect(todayISO()).toMatch(/^\d{4}-\d{2}-\d{2}$/);
 	});
 });

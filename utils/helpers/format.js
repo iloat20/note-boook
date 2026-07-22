@@ -53,4 +53,12 @@ function fmtShortDate(date) {
 	return `${d.getMonth() + 1}/${d.getDate()}`;
 }
 
-module.exports = { fmt, fmtDate, fmtTime, fmtShortDate };
+/**
+ * 今天的日期字符串（YYYY-MM-DD）
+ * @returns {string}
+ */
+function todayISO() {
+	return fmtDate(new Date());
+}
+
+module.exports = { fmt, fmtDate, fmtTime, fmtShortDate, todayISO };

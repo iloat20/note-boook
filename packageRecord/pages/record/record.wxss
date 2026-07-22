@@ -686,3 +686,72 @@ page {
   from { transform: translateY(100%); }
   to { transform: translateY(0); }
 }
+
+/* === 最近使用资产 === */
+.recent-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-bottom: var(--xhs-space-sm);
+}
+
+.recent-hint {
+  flex-shrink: 0;
+  font-size: var(--xhs-font-xs);
+  font-weight: var(--xhs-weight-medium);
+  color: var(--xhs-caption);
+}
+
+.recent-scroll {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.recent-chip {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 10rpx 18rpx;
+  margin-right: 12rpx;
+  background: var(--xhs-bg-secondary);
+  border-radius: 16rpx;
+  vertical-align: top;
+}
+
+.recent-chip:active {
+  background: var(--xhs-divider);
+}
+
+.recent-chip-name {
+  font-size: var(--xhs-font-sm);
+  font-weight: var(--xhs-weight-semibold);
+  color: var(--xhs-title);
+}
+
+.recent-chip-code {
+  font-size: 20rpx;
+  color: var(--xhs-caption);
+  margin-top: 2rpx;
+}
+
+/* 日期行内「刚才」快捷 */
+.field-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.field-quick {
+  flex-shrink: 0;
+  font-size: var(--xhs-font-xs);
+  font-weight: var(--xhs-weight-medium);
+  color: var(--xhs-primary);
+  padding: 4rpx 16rpx;
+  background: var(--xhs-primary-bg);
+  border-radius: 20rpx;
+}
+
+.field-quick:active {
+  opacity: 0.7;
+}

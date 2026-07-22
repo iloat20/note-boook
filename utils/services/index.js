@@ -17,8 +17,6 @@ module.exports = {
 	getClearedPositions: positionService.getClearedPositions,
 
 	// Stats services
-	getStatsByPeriod: statsService.getStatsByPeriod,
-	getPeriodStatsList: statsService.getPeriodStatsList,
 	getStrategyStats: statsService.getStrategyStats,
 	getTotalStats: statsService.getTotalStats,
 

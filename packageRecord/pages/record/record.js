@@ -2,16 +2,18 @@
 const { MARKETS, TIMING_CONFIG } = require("../../../utils/constants/index");
 const { Stock, Transaction, Strategy, PriceCache } = require("../../../utils/models/index");
 const {
-	getSellableQuantity,
 	calculatePosition,
 } = require("../../../utils/services/positionService");
 const { fetchStockPrice } = require("../../../utils/services/stockPrice");
-const { fmt } = require("../../../utils/helpers/format");
+const { persistTransaction } = require("../../../utils/services/transactionService");
+const { fmt, fmtDate } = require("../../../utils/helpers/format");
 const { loadSearchHistory, saveSearchHistory } = require("../../../utils/helpers/searchHistory");
+const { getPref, updatePrefs } = require("../../../utils/storageCore/prefs");
 const {
 	getMarketLabel,
 	validateStockCode,
 	formatStockCode,
+	inferMarket,
 } = require("../../../utils/constants/market");
 const { searchStocks } = require("../../../utils/data/stockDatabase");
 const { toast, success } = require("../../../utils/ui/feedback");
@@ -42,6 +44,8 @@ Page({
 		showSuggestions: false,
 		suggestions: [],
 		highlightIndex: -1,
+		// 最近使用资产（快捷选择）
+		recentStocks: [],
 		// 股票搜索历史（空输入时展示）
 		stockSearchHistory: [],
 		keyword: "",
@@ -63,12 +67,7 @@ Page({
 
 		const now = new Date();
 		this.setData({
-			date:
-				now.getFullYear() +
-				"-" +
-				String(now.getMonth() + 1).padStart(2, "0") +
-				"-" +
-				String(now.getDate()).padStart(2, "0"),
+			date: fmtDate(now),
 			time: `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`,
 			allStrategies: Strategy.getAll(),
 		});
@@ -77,6 +76,8 @@ Page({
 			this._editId = parseInt(options.id, 10);
 			this._loadEdit(this._editId);
 		} else {
+			// 新增：默认带入最近一次使用的标签（默认标签记忆）
+			this.setData({ strategies: getPref("lastStrategies", []) });
 			if (options?.type) {
 				this.setData({ type: options.type });
 			}
@@ -97,6 +98,8 @@ Page({
 				}
 			}
 		}
+		// 载入最近使用资产（快捷选择）
+		this._loadRecentStocks();
 	},
 
 	_loadEdit(id) {
@@ -123,12 +126,7 @@ Page({
 			type: transaction.type,
 			price: String(transaction.price),
 			quantity: String(transaction.quantity),
-			date:
-				date.getFullYear() +
-				"-" +
-				String(date.getMonth() + 1).padStart(2, "0") +
-				"-" +
-				String(date.getDate()).padStart(2, "0"),
+			date: fmtDate(date),
 			time: `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`,
 			note: transaction.note || "",
 			reason: transaction.reason || "",
@@ -187,7 +185,7 @@ Page({
 	onCodeInput(e) {
 		const value = (e.detail.value || "").trim();
 		this.setData({ code: value, codeError: "", name: "", keyword: value });
-		const detected = this._detectMarket(value);
+		const detected = inferMarket(value);
 		if (detected && detected !== this.data.market) {
 			this.setData({ market: detected, marketLabel: getMarketLabel(detected) });
 		}
@@ -239,6 +237,57 @@ Page({
 		this.setData({ note: e.detail.value });
 	},
 
+	// 一键「刚才」：日期 + 时间设为当前时刻
+	onJustNow() {
+		const now = new Date();
+		this.setData({
+			date: fmtDate(now),
+			time: `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`,
+		});
+	},
+
+	// 最近使用资产：从交易记录反推，按最近交易时间取前 6 个去重资产
+	_loadRecentStocks() {
+		const txs = Transaction.getAll();
+		const latestByStock = {};
+		for (const t of txs) {
+			const prev = latestByStock[t.stockId];
+			if (!prev || new Date(t.date) > new Date(prev.date)) {
+				latestByStock[t.stockId] = { stockId: t.stockId, date: t.date };
+			}
+		}
+		const recents = Object.keys(latestByStock)
+			.map((id) => latestByStock[id])
+			.sort((a, b) => new Date(b.date) - new Date(a.date))
+			.slice(0, 6)
+			.map((r) => {
+				const stock = Stock.getById(r.stockId);
+				if (!stock) return null;
+				return { market: stock.market, code: stock.code, name: stock.name };
+			})
+			.filter(Boolean);
+		this.setData({ recentStocks: recents });
+	},
+
+	// 点选最近使用资产，快速回填市场/代码/名称并拉取行情
+	onPickRecent(e) {
+		const item = e.currentTarget.dataset.item;
+		if (!item) return;
+		this.setData({
+			market: item.market,
+			code: item.code,
+			name: item.name,
+			codeError: "",
+			marketLabel: getMarketLabel(item.market),
+			showSuggestions: false,
+			showSearchHistory: false,
+		});
+		this._clearAutoFetch();
+		this._stockValidCache = {};
+		this._checkCode();
+		this._scheduleAutoFetch(item.code);
+	},
+
 	onSelectSuggestion(e) {
 		const item = e.currentTarget.dataset.item;
 		this.setData({
@@ -287,16 +336,6 @@ Page({
 		} else {
 			this.setData({ codeError: "" });
 		}
-	},
-
-	// 根据代码格式推断市场（A股/港股/美股），无需手动选择
-	_detectMarket(code) {
-		const upper = (code || "").toUpperCase();
-		if (/^\d{6}$/.test(code)) return MARKETS.A_SHARE;
-		if (/^(?:hk|HK)\d{1,5}$/.test(upper)) return MARKETS.HK_SHARE;
-		if (/^\d{5}$/.test(code)) return MARKETS.A_SHARE;
-		if (/^[A-Z]{1,5}$/.test(upper)) return MARKETS.US_SHARE;
-		return null;
 	},
 
 	// 延迟自动获取（输入时防抖）
@@ -593,42 +632,33 @@ Page({
 			});
 	},
 
-	// 实际创建/保存逻辑（原 submit 后半段）
+	// 实际创建/保存逻辑（原 submit 后半段）—— 持久化委托 transactionService
 	_doSubmit(stock, type, price, quantity, date, time, code, market, name, fee, note, data) {
-		if (type === "SELL") {
-			const ignoredTransactionId = this._isEdit ? this._editId : null;
-			const sellableQuantity = getSellableQuantity(stock.id, ignoredTransactionId);
-			if (parseInt(quantity, 10) > sellableQuantity) {
-				toast("转出数量超过持有");
-				this._resetSubmit();
-				return;
-			}
-		}
-		if (!stock) {
-			stock = Stock.create(code, name, market);
-			Stock.save(stock);
-		}
-
-		// 提交时把价格写入 PriceCache，回到持仓页立即可用
-		const priceNum = parseFloat(price);
-		if (stock?.id && priceNum > 0) {
-			PriceCache.set(stock.id, priceNum);
-		}
-
-		const transaction = Transaction.create(
-			stock.id,
+		const result = persistTransaction({
+			stock,
 			type,
 			price,
 			quantity,
 			fee,
-			new Date(`${date}T${time}:00`).toISOString(),
+			date,
+			time,
+			code,
+			market,
+			name,
 			note,
-			data.reason,
-			data.strategies,
-		);
-		if (this._isEdit) transaction.id = this._editId;
-		Transaction.save(transaction);
+			reason: data.reason,
+			strategies: data.strategies,
+			isEdit: this._isEdit,
+			editId: this._editId,
+		});
+		if (!result.ok) {
+			toast("转出数量超过持有");
+			this._resetSubmit();
+			return;
+		}
 		success(this._isEdit ? "已修改" : "已添加");
+		// 默认标签记忆：记住本次使用的标签
+		updatePrefs({ lastStrategies: data.strategies || [] });
 		this._navTimer = setTimeout(() => {
 			wx.navigateBack();
 		}, TIMING_CONFIG.NAVIGATE_BACK_DELAY);
@@ -643,6 +673,7 @@ Page({
 
 	_refreshAuxData() {
 		this.setData({ allStrategies: Strategy.getAll() });
+		this._loadRecentStocks();
 	},
 
 	onUnload() {

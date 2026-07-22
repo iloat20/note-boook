@@ -7,10 +7,28 @@ const { fmt } = require("../../utils/helpers/format");
 const { computeAssetHoldingPortrait, computeAllTimeAssetFlow, assembleAnnualReport } = require("../../utils/helpers/annualReport");
 const { buildStockMap } = require("../../utils/helpers/stockHelpers");
 const { buildRecordView } = require("../../utils/helpers/recordView");
-const { exportMD } = require("../../utils/exporters/markdown");
-const { exportCSV } = require("../../utils/exporters/csv");
-const { exportDetailImage } = require("../../utils/render/shareHelper");
 const { getRates, getRate, getCachedRate } = require("../../utils/services/exchangeRate");
+
+// 懒加载：导出模块（markdown/csv）与分享卡片（含 canvas 绘制）依赖较重，
+// 切到统计 tab 时无需同步加载，延迟到用户点击导出时才 require，降低首屏成本。
+let _exportModule = null;
+function _ensureExportModule() {
+	if (!_exportModule) {
+		_exportModule = {
+			exportMD: require("../../utils/exporters/markdown").exportMD,
+			exportCSV: require("../../utils/exporters/csv").exportCSV,
+		};
+	}
+	return _exportModule;
+}
+
+let _shareModule = null;
+function _ensureShareModule() {
+	if (!_shareModule) {
+		_shareModule = require("../../utils/render/shareHelper");
+	}
+	return _shareModule;
+}
 const { wipeAll } = require("../../utils/services/dataService");
 const pageMixin = require("../../utils/ui/pageMixin");
 
@@ -158,9 +176,9 @@ Page({
 			itemList: ["导出 Markdown", "导出 CSV", "导出图片"],
 			success: (res) => {
 				if (res.tapIndex === 0) {
-					exportMD();
+					_ensureExportModule().exportMD();
 				} else if (res.tapIndex === 1) {
-					exportCSV();
+					_ensureExportModule().exportCSV();
 				} else if (res.tapIndex === 2) {
 					this.onExportImage();
 				}
@@ -171,7 +189,7 @@ Page({
 	onExportImage() {
 		// 先挂载隐藏 canvas，等下一帧节点就绪再绘制
 		this.setData({ generatingImage: true });
-		setTimeout(() => exportDetailImage(this), 50);
+		setTimeout(() => _ensureShareModule().exportDetailImage(this), 50);
 	},
 
 	async onOpenAnnualReport() {

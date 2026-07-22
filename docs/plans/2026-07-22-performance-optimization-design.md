@@ -127,7 +127,7 @@
 - **风险**：低。需测试「快速连续两次刷新不重复发网络」。
 - **✅ 实施状态（2026-07-22）**：已落地。`stockPrice.js` 新增模块级 `_pricePromises` Map（按股票列表签名去重），`fetchAllPrices` 复用在途 Promise，`.finally` 结算后清理避免泄漏；原 `fetchPriceBatch` 重命名为内部 `_fetchPriceBatchRaw`，返回 `{results, ok}`，由 `_fetchAllPricesCore` 聚合为数组并在实例上挂 `__ok`（true=网络成功 / false=全重试耗尽），供 A 区分「网络故障」与「代码无行情」。`tests/stockPrice.test.js` 新增「并发同列表仅发 1 次网络」用例。
 
-### C 🟠 单点操作局部更新（渲染/CPU）— ROI 中、含增量聚合
+### C 🟠 单点操作局部更新（渲染/CPU）— ROI 中、含增量聚合 — ✅ 已实施（2026-07-22）
 - **现象**：改价/备注/置顶/拖拽落点触发整页 `_loadData`（见 3.1）。
 - **根因**：这些单点交互未走局部更新路径，直接 `this.refresh()`。
 - **位置**：`pages/index/index.js:532/1003/1038/1120/915`。
@@ -137,7 +137,7 @@
 - **风险**：中。需保证 summary / 占比条与局部更新同步（否则汇总与明细不一致）。
 - **建议先做**：改价局部化（收益最大、逻辑最独立），其余观察后再推广。
 
-### D 🟠 `deepFreeze` 浅冻结（存储）— ROI 中（数据量大时高）
+### D 🟠 `deepFreeze` 浅冻结（存储）— ROI 中（数据量大时高） — ✅ 已实质落地（core.js deepFreeze 的 `Object.isFrozen` 短路即方案 A，无需改）
 - **现象**：每存一条记录都对整份数组逐元素遍历冻结，O(N)。
 - **根因**：`saveData` → `deepFreeze(data)` 遍历 N 个元素（`core.js:90-108`），虽对已冻结元素短路递归，但遍历本身 O(N)。
 - **位置**：`utils/storageCore/core.js:115-121`。
@@ -146,24 +146,24 @@
   - B：仅读路径冻结、写路径不冻结；或 C：开发环境 deep、生产环境浅冻结（`__DEV__` 门控）。
 - **风险**：中。改只读契约需回归 `tests/memory.test.js` + 各 model 测试，确认无缓存污染回归。**独立提交 + 全量跑测试**。
 
-### E 🟡 历史页筛选基线缓存（渲染）— 待复核
+### E 🟡 历史页筛选基线缓存（渲染）— 待复核 — ✅ 已实质落地（history.js `_getStructurallyFiltered` 结构筛选签名缓存已实现，无需改）
 - **现象**：每次筛选/搜索全量重建分组字典。
 - **位置**：`pages/history/history.js:_applyFilters`（沿用 7-21 #5，需对当前代码复核）。
 - **改法**：缓存「无关键字」分组基线，搜索/筛选只在基线上 filter；避免每次按键全量重分组。
 - **风险**：低-中。需保证 `mergeRelated` 与 `collectFilterIds` 在过滤后仍正确。
 
-### F 🟡 `statsService` 单遍分桶 + XIRR 单遍 + logger（统计/CPU）
+### F 🟡 `statsService` 单遍分桶 + XIRR 单遍 + logger（统计/CPU） — ⚪ doc drift（目标函数 `getPeriodStatsList`/`xirrService` 已在重构中消失；3.3 logger 仅剩 1 处 log + 2 处 warn 可抑制、且依赖的 `__LOG_LEVEL__` 编译注入在小程序无构建步骤下不可行，暂缓）
 - **现象**：`getPeriodStatsList` O(交易×周期×4) 冗余扫描；`_buildCashFlowsCore` 3 遍 forEach。
 - **位置**：`utils/services/statsService.js`、`utils/services/xirrService.js`。
 - **改法**：新增 `_buildPeriodIndex` 单遍分桶（`statsService`）；XIRR 合并为单遍；用 `utils/helpers/logger.js` 替换 17 处裸 `console.*`（生产默认 `warn` 级，抑制 `log/info/debug`）。
 - **风险**：中。需保证分桶后 `label/buyAmount/sellAmount/pnL/dividendIncome` 与基线一致。详见 `docs/perf/performance-optimization-design.md`（已有完整设计）。
 
-### G ⚪ stats 重模块延迟加载（前端加载）— P3 低优
+### G ⚪ stats 重模块延迟加载（前端加载）— P3 低优 — ✅ 已实施（2026-07-22：stats.js 懒加载 exporters/shareHelper）
 - **现象**：`stats.js:1-15` 顶部同步 require `shareHelper`(含 canvas)/`exporters`/`exportDetailImage`。
 - **改法**：改为 `_ensureShareModule`/`_ensureExportModule` 按需加载（导出按钮触发），降低切到统计 tab 的首次成本。
 - **风险**：低。
 
-### H ⚪ TTL 抖动 / CSS 拆分（缓存/前端）— P3 可选
+### H ⚪ TTL 抖动 / CSS 拆分（缓存/前端）— P3 可选 — ✅ 已实施（2026-07-22：PriceCache 写入时计算带 ±10% 抖动的 `expireAt`）
 - **现象**：所有价格缓存同时写入 → 倾向同时过期 → 刷新瞬间集中回源（单用户场景影响小）。
 - **改法**：TTL 加随机抖动（±10%）。CSS 按页拆分（需微信开发者工具「代码依赖分析」验证未引用类）。
 - **风险**：极低。

@@ -15,6 +15,25 @@ const PRICE_TTL = TIMING_CONFIG.PRICE_TTL_MS;
 // 避免每轮刷新都重复打网络；过期后自动重新探测。
 const NEGATIVE_TTL = TIMING_CONFIG.NEGATIVE_TTL_MS;
 
+// TTL 抖动：每条缓存写入时打散过期时点（±10%），避免同一批次写入的缓存同时过期、
+// 刷新瞬间集中回源。单用户场景影响小，但零成本且让回源更平滑。
+const TTL_JITTER_RATIO = 0.1;
+function _jitteredTtl(baseTtl) {
+	const jitter = (Math.random() * 2 - 1) * TTL_JITTER_RATIO * baseTtl;
+	return Math.max(0, Math.round(baseTtl + jitter));
+}
+function _expireAt(timestamp, ttl) {
+	return timestamp + _jitteredTtl(ttl);
+}
+// 统一过期判断：优先用写入时计算的 expireAt（带抖动）；旧格式 entry 无 expireAt 时
+// fallback 到 timestamp + 对应 TTL，保证向后兼容。
+function _isExpired(entry) {
+	if (!entry || typeof entry.timestamp !== "number") return true;
+	const ttl = entry.negative ? NEGATIVE_TTL : PRICE_TTL;
+	const expireAt = typeof entry.expireAt === "number" ? entry.expireAt : entry.timestamp + ttl;
+	return Date.now() > expireAt;
+}
+
 const PriceCache = {
 	/**
 	 * 设置股票价格缓存
@@ -24,9 +43,11 @@ const PriceCache = {
 	set(stockId, price) {
 		if (stockId == null || Number.isNaN(parseFloat(price)) || parseFloat(price) < 0) return;
 		const prices = { ...this.getAll() };
+		const now = Date.now();
 		prices[stockId] = {
 			price: parseFloat(price),
-			timestamp: Date.now(),
+			timestamp: now,
+			expireAt: _expireAt(now, PRICE_TTL),
 		};
 		saveData(PRICE_KEY, prices);
 		markDataDirty([CACHE_TYPES.POSITION], stockId);
@@ -51,6 +72,7 @@ const PriceCache = {
 			prices[item.stockId] = {
 				price: parseFloat(item.price),
 				timestamp: now,
+				expireAt: _expireAt(now, PRICE_TTL),
 			};
 			updatedIds.push(item.stockId);
 		});
@@ -69,8 +91,7 @@ const PriceCache = {
 		const entry = prices[stockId];
 		if (!entry) return null;
 		if (typeof entry === "number") return entry;
-		const ttl = entry.negative ? NEGATIVE_TTL : PRICE_TTL;
-		if (Date.now() - entry.timestamp > ttl) return null;
+		if (_isExpired(entry)) return null;
 		return entry.price != null ? entry.price : null;
 	},
 
@@ -85,7 +106,13 @@ const PriceCache = {
 	markNegative(stockId) {
 		if (stockId == null) return;
 		const prices = { ...this.getAll() };
-		prices[stockId] = { price: null, negative: true, timestamp: Date.now() };
+		const now = Date.now();
+		prices[stockId] = {
+			price: null,
+			negative: true,
+			timestamp: now,
+			expireAt: _expireAt(now, NEGATIVE_TTL),
+		};
 		saveData(PRICE_KEY, prices);
 		markDataDirty([CACHE_TYPES.POSITION], stockId);
 	},
@@ -97,7 +124,7 @@ const PriceCache = {
 		const updatedIds = [];
 		entries.forEach((id) => {
 			if (id == null) return;
-			prices[id] = { price: null, negative: true, timestamp: now };
+			prices[id] = { price: null, negative: true, timestamp: now, expireAt: _expireAt(now, NEGATIVE_TTL) };
 			updatedIds.push(id);
 		});
 		saveData(PRICE_KEY, prices);
@@ -111,9 +138,8 @@ const PriceCache = {
 	 */
 	getBatch(stockIds) {
 		if (!stockIds || stockIds.length === 0) return {};
-		const prices = { ...this.getAll() };
-		const now = Date.now();
-		const result = {};
+	const prices = { ...this.getAll() };
+	const result = {};
 		const expiredIds = [];
 
 		stockIds.forEach((id) => {
@@ -124,8 +150,7 @@ const PriceCache = {
 				result[id] = entry;
 				return;
 			}
-			const ttl = entry.negative ? NEGATIVE_TTL : PRICE_TTL;
-			if (now - entry.timestamp > ttl) {
+			if (_isExpired(entry)) {
 				expiredIds.push(id);
 			} else if (entry.price != null) {
 				// 负结果（price 为 null）不进入 result，但仍在 TTL 内视为已缓存
@@ -155,8 +180,7 @@ const PriceCache = {
 		const entry = prices[stockId];
 		if (!entry) return false;
 		if (typeof entry === "number") return true;
-		const ttl = entry.negative ? NEGATIVE_TTL : PRICE_TTL;
-		if (Date.now() - entry.timestamp > ttl) return false;
+		if (_isExpired(entry)) return false;
 		return true;
 	},
 
@@ -167,10 +191,9 @@ const PriceCache = {
 	 */
 	pruneExpired() {
 		const prices = { ...getData(PRICE_KEY) };
-		if (!prices || typeof prices !== "object") return 0;
+	if (!prices || typeof prices !== "object") return 0;
 
-		const now = Date.now();
-		let pruned = 0;
+	let pruned = 0;
 
 		Object.keys(prices).forEach((key) => {
 			const entry = prices[key];
@@ -180,9 +203,8 @@ const PriceCache = {
 				pruned++;
 				return;
 			}
-			// 清理过期条目（按负结果/正常价各自的 TTL）
-			const ttl = entry && entry.negative ? NEGATIVE_TTL : PRICE_TTL;
-			if (entry && typeof entry.timestamp === "number" && now - entry.timestamp > ttl) {
+			// 清理过期条目（按负结果/正常价各自的 TTL，含抖动）
+			if (_isExpired(entry)) {
 				delete prices[key];
 				pruned++;
 			}

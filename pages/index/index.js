@@ -528,8 +528,9 @@ Page({
 		const price = parseFloat(e.detail.value);
 		if (!Number.isNaN(price) && price > 0) {
 			PriceCache.set(stockId, price);
+			// [优化] 改价局部更新，替代整页 _loadData 全量重建（同 onRefreshPrice 路径）
+			this._applyPriceResults([{ stockId, price }]);
 		}
-		this.refresh({ fetchPrices: false });
 	},
 
 	// 跳转到详情

@@ -195,8 +195,10 @@ Page({
 	async onOpenAnnualReport() {
 		const year = new Date().getFullYear();
 
-		const yearStart = new Date(year, 0, 1);
-		const yearEnd = new Date(year, 11, 31, 23, 59, 59, 999);
+		// 用 UTC 构造年边界，与 getByDateRange 内部按 _sortKey(UTC) 比较保持一致，
+		// 避免本地时区下跨年午夜交易被误分到相邻年份。
+		const yearStart = new Date(Date.UTC(year, 0, 1));
+		const yearEnd = new Date(Date.UTC(year, 11, 31, 23, 59, 59, 999));
 		const yearTx = Transaction.getByDateRange(yearStart, yearEnd);
 		let rates = {};
 		try {

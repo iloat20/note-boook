@@ -93,17 +93,23 @@ function getStrategyStats(transactions) {
 	const stats = {};
 	txList.forEach((t) => {
 		if (!t.strategies?.length) return;
+		const nTags = t.strategies.length;
 		const amount = parseFloat((t.price * t.quantity).toFixed(2));
+		const fee = t.fee || 0;
+		// 多标签交易按比例分摊到每个标签，避免跨标签求和时同一笔金额被重复计入。
+		const perTagAmount = parseFloat((amount / nTags).toFixed(2));
+		const perTagFee = parseFloat((fee / nTags).toFixed(2));
 		t.strategies.forEach((tag) => {
 			if (!stats[tag])
 				stats[tag] = { tag: tag, count: 0, buyAmount: 0, sellAmount: 0, buyFee: 0, sellFee: 0 };
+			// count 计该标签下的交易笔数（每笔交易在其每个标签各计一次）
 			stats[tag].count++;
 			if (t.type === "BUY") {
-				stats[tag].buyAmount += amount;
-				stats[tag].buyFee += t.fee || 0;
+				stats[tag].buyAmount += perTagAmount;
+				stats[tag].buyFee += perTagFee;
 			} else {
-				stats[tag].sellAmount += amount;
-				stats[tag].sellFee += t.fee || 0;
+				stats[tag].sellAmount += perTagAmount;
+				stats[tag].sellFee += perTagFee;
 			}
 		});
 	});

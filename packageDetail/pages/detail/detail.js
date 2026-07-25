@@ -343,7 +343,8 @@ Page({
 				position.currentPrice && position.quantity > 0
 					? position.currentPrice * position.quantity
 					: 0;
-			const totalPnL = position.realizedPnL + position.floatingPnL;
+			// 与 calcPosition / 统计页口径一致：总盈亏 = 已实现 + 浮动 + 分红
+			const totalPnL = position.realizedPnL + position.floatingPnL + position.dividendIncome;
 
 			const costBasis = position.avgCost * (position.quantity || 0);
 			const totalPnLPercent = costBasis > 0 ? (totalPnL / costBasis) * 100 : 0;

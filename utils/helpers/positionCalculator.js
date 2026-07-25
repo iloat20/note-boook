@@ -14,6 +14,11 @@
  * @returns {Object} 持仓信息
  */
 function calcPosition(stockId, transactions, dividends, currentPrice) {
+	// 按时间升序计算：调用方可能传入降序（如 transactionIndex.getByStockId 返回日期降序），
+	// 而下方 FIFO 批次匹配与跨轮次均价均依赖时间顺序，必须在此归一化，使结果与调用方顺序无关。
+	transactions = [...transactions].sort(
+		(a, b) => (a._sortKey ?? Date.parse(a.date)) - (b._sortKey ?? Date.parse(b.date)),
+	);
 	let totalBuyQuantity = 0;
 	let _totalBuyAmount = 0;
 	let totalSellQuantity = 0;
@@ -48,10 +53,10 @@ function calcPosition(stockId, transactions, dividends, currentPrice) {
 
 	// 第 1 段：基于 lot 数组 + FIFO 批次匹配计算 realizedPnL。
 	// 跨轮次结算（清仓后重新买入）: 前一轮清仓利润不污染新一轮。
-	// 验证示例: buy100@10 fee5 → sell100@12 → buy50@11 fee5 → sell50@15
-	//   第一轮 lot: costBasis=1005, matchedSell=100, sellAmt=1200, realized=1200-1005=195
-	//   第二轮 lot: costBasis=555, matchedSell=50, sellAmt=150, realized=150-555=-405 (待 fee 分摊)
-	//   realized 总计 = 195 + (-405) = -210 (再扣除 sellFee 即 total realized)
+// 验证示例: buy100@10 fee5 → sell100@12 → buy50@11 fee5 → sell50@15
+//   第一轮 lot: costBasis=1005, matchedSell=100, sellAmt=1200, realized=1200-1005=195
+//   第二轮 lot: costBasis=555, matchedSell=50, sellAmt=750, realized=750-555=195
+//   realized 总计 = 195 + 195 = 390 (再扣除 sellFee 即 total realized)
 	const lots = [];
 	for (const t of transactions) {
 		if (t.type === "BUY") {

@@ -1,4 +1,4 @@
-const { showShareActions } = require("../../utils/render/shareHelper");
+const { previewShareImage } = require("../../utils/render/shareHelper");
 
 Component({
 	properties: {
@@ -25,7 +25,7 @@ Component({
 			this.triggerEvent("close");
 		},
 
-		// 生成报告图片 → 弹出「保存到相册 / 转发给朋友」
+		// 生成报告图片 → 原生预览（长按可保存/转发，不调用相册写入隐私接口）
 		onShare: function () {
 			if (this.data.exporting) return;
 			this.setData({ exporting: true });
@@ -58,7 +58,7 @@ Component({
 						canvas: canvas,
 						success: (tmp) => {
 							this.setData({ exporting: false });
-							showShareActions(tmp.tempFilePath);
+							previewShareImage(tmp.tempFilePath);
 						},
 						fail: () => {
 							this.setData({ exporting: false });

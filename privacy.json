@@ -1,10 +1,5 @@
 {
 	"desc": "隐私保护指引",
 	"version": "1.0.0",
-	"privacyItems": [
-		{
-			"key": "scope.album",
-			"text": "用于保存资产截图到相册"
-		}
-	]
+	"privacyItems": []
 }

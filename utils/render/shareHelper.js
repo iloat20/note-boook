@@ -4,7 +4,7 @@
  *
  * 注意：canvasRenderer.js 已弃用，渲染逻辑内联在此处。
  */
-const { toast, success, hideLoading, loading } = require("../ui/feedback");
+const { toast, hideLoading, loading } = require("../ui/feedback");
 const { fmt, fmtDate } = require("../helpers/format");
 
 /**
@@ -167,7 +167,7 @@ function sharePortfolio(page) {
 					success: (fileRes) => {
 						hideLoading();
 						page.setData({ generatingShare: false });
-						showShareActions(fileRes.tempFilePath);
+						previewShareImage(fileRes.tempFilePath);
 					},
 					fail: () => {
 						hideLoading();
@@ -186,67 +186,15 @@ function sharePortfolio(page) {
 }
 
 /**
- * 显示分享操作面板
+ * 预览分享图片（原生查看器，长按可保存/转发）。
+ * 不调用 wx.saveImageToPhotosAlbum 等相册写入隐私接口，符合「不采集用户隐私」定位：
+ * 保存动作由微信客户端原生长按菜单处理，不经过小程序隐私 API。
  * @param {string} imagePath - 截图临时路径
  */
-function showShareActions(imagePath) {
-	wx.showActionSheet({
-		itemList: ["保存到相册", "转发给朋友"],
-		success: (res) => {
-			if (res.tapIndex === 0) {
-				wx.authorize({
-					scope: "scope.writePhotosAlbum",
-					success: () => {
-						wx.saveImageToPhotosAlbum({
-							filePath: imagePath,
-							success: () => {
-								success("已保存到相册");
-							},
-							fail: () => {
-								toast("保存失败");
-							},
-						});
-					},
-					fail: () => {
-						wx.showModal({
-							title: "需要权限",
-							content: "请在设置中允许保存到相册",
-							confirmText: "去设置",
-							success: (modalRes) => {
-								if (modalRes.confirm) wx.openSetting();
-							},
-						});
-					},
-				});
-			} else if (res.tapIndex === 1) {
-				if (typeof wx.shareImageMessage === "function") {
-					wx.shareImageMessage({
-						imageUrl: imagePath,
-						success: () => {
-							success("分享成功");
-						},
-						fail: () => {
-							wx.saveImageToPhotosAlbum({
-								filePath: imagePath,
-								success: () => {
-									toast("已保存到相册，请手动分享");
-								},
-							});
-						},
-					});
-				} else {
-					wx.saveImageToPhotosAlbum({
-						filePath: imagePath,
-						success: () => {
-							toast("已保存到相册，请手动分享");
-						},
-						fail: () => {
-							toast("保存失败");
-						},
-					});
-				}
-			}
-		},
+function previewShareImage(imagePath) {
+	wx.previewImage({
+		current: imagePath,
+		urls: [imagePath],
 	});
 }
 
@@ -427,7 +375,7 @@ function shareAsset(page) {
 					success: (fileRes) => {
 						hideLoading();
 						page.setData({ generatingShare: false });
-						showShareActions(fileRes.tempFilePath);
+						previewShareImage(fileRes.tempFilePath);
 					},
 					fail: () => {
 						hideLoading();
@@ -615,7 +563,7 @@ function exportDetailImage(page) {
 					success: (fileRes) => {
 						hideLoading();
 						page.setData({ generatingImage: false });
-						showShareActions(fileRes.tempFilePath);
+						previewShareImage(fileRes.tempFilePath);
 					},
 					fail: () => {
 						hideLoading();
@@ -635,7 +583,7 @@ function exportDetailImage(page) {
 
 module.exports = {
 	sharePortfolio,
-	showShareActions,
+	previewShareImage,
 	shareAsset,
 	exportDetailImage,
 };
